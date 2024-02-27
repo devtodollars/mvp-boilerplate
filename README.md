@@ -1,4 +1,4 @@
-# Supabase Flutter Template Features
+# Supabase Flutter Template
 
 The Supabase Flutter Template is designed to accelerate your app development with a comprehensive, ready-to-use stack. Here's what's included:
 
