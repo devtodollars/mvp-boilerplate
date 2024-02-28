@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:test/components/reset_password_dialog.dart';
 import 'package:test/services/auth_notifier.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -22,7 +24,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authNotif = ref.read(authProvider.notifier);
+    ref.listen(authProvider, (previous, next) {
+      next.whenData((user) {
+        if (user?.authEvent == AuthChangeEvent.passwordRecovery) {
+          return showDialog(
+            context: context,
+            builder: (_) => const ResetPasswordDialog(),
+          );
+        }
+        return null;
+      });
+    });
+    final authNotif = ref.watch(authProvider.notifier);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,

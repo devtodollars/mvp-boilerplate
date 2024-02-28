@@ -12,16 +12,17 @@ GoRouter router(RouterRef ref) {
   final user = ref.watch(authProvider).value;
   return GoRouter(
     redirect: (context, state) async {
-      if (user == null) {
-        return "/login";
-      } else {
-        return "/";
-      }
+      if (user == null) return "/login";
+      return null;
     },
     routes: <RouteBase>[
       GoRoute(
         name: 'login',
         path: '/login',
+        redirect: (context, state) {
+          if (user != null) return "/";
+          return null;
+        },
         builder: (context, state) {
           return const AuthScreen();
         },
