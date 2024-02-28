@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:test/services/auth_notifier.dart';
 
-class RecoverPasswordDialog extends StatefulWidget {
+class RecoverPasswordDialog extends ConsumerStatefulWidget {
   const RecoverPasswordDialog({
     super.key,
     required this.email,
-    required this.onResetPassword,
   });
 
   final String email;
-  final Function onResetPassword;
 
   @override
-  State<RecoverPasswordDialog> createState() => _RecoverPasswordDialogState();
+  ConsumerState<RecoverPasswordDialog> createState() =>
+      _RecoverPasswordDialogState();
 }
 
-class _RecoverPasswordDialogState extends State<RecoverPasswordDialog> {
+class _RecoverPasswordDialogState extends ConsumerState<RecoverPasswordDialog> {
   String errMessage = '';
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -28,6 +29,7 @@ class _RecoverPasswordDialogState extends State<RecoverPasswordDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final authNotif = ref.read(authProvider.notifier);
     return AlertDialog(
       title: const Text("Recover Password"),
       content: Column(
@@ -66,8 +68,8 @@ class _RecoverPasswordDialogState extends State<RecoverPasswordDialog> {
           child: const Text("Send"),
           onPressed: () async {
             try {
-              Navigator.of(context).pop();
-              await widget.onResetPassword(_emailController.text);
+              await authNotif.recoverPassword(_emailController.text);
+              if (context.mounted) Navigator.of(context).pop();
             } on AuthException catch (e) {
               setState(() {
                 errMessage = e.message;

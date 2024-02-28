@@ -1,29 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test/components/recover_password_dialog.dart';
+import 'package:test/services/auth_notifier.dart';
 
 enum AuthAction { signIn, signUp }
 
-class EmailForm extends StatefulWidget {
-  const EmailForm({
-    super.key,
-    required this.onSubmit,
-    required this.onResetPassword,
-  });
-
-  final Function onSubmit;
-  final Function onResetPassword;
+class EmailForm extends ConsumerStatefulWidget {
+  const EmailForm({super.key});
 
   @override
-  State<EmailForm> createState() => _EmailFormState();
+  ConsumerState<EmailForm> createState() => _EmailFormState();
 }
 
-class _EmailFormState extends State<EmailForm> {
+class _EmailFormState extends ConsumerState<EmailForm> {
   AuthAction action = AuthAction.signUp;
   String email = '';
   String password = '';
   String confirmPassword = '';
   String errorMessage = '';
+  bool loading = false;
   final _formKey = GlobalKey<FormState>();
 
   String? validateEmailField() {
@@ -60,10 +56,21 @@ class _EmailFormState extends State<EmailForm> {
   void submitForm() async {
     if (_formKey.currentState!.validate()) {
       try {
-        throw AuthException("Hello world");
-        await widget.onSubmit(email, password);
+        setState(() => loading = true);
+        final authNotif = ref.read(authProvider.notifier);
+
+        if (action == AuthAction.signIn) {
+          await authNotif.signInWithPassword(email, password);
+        } else if (action == AuthAction.signUp) {
+          await authNotif.signUp(email, password);
+          await authNotif.signInWithPassword(email, password);
+        }
+        setState(() => loading = false);
       } on AuthException catch (e) {
-        setState(() => errorMessage = e.message);
+        setState(() {
+          loading = false;
+          errorMessage = e.message;
+        });
       }
     }
   }
@@ -83,6 +90,7 @@ class _EmailFormState extends State<EmailForm> {
                 style: textTheme.titleLarge),
             const SizedBox(height: 16),
             TextFormField(
+              enabled: !loading,
               autofocus: true,
               decoration: const InputDecoration(
                   labelText: "Email", border: OutlineInputBorder()),
@@ -97,6 +105,7 @@ class _EmailFormState extends State<EmailForm> {
             ),
             const SizedBox(height: 16),
             TextFormField(
+                enabled: !loading,
                 decoration: const InputDecoration(
                     labelText: "Password", border: OutlineInputBorder()),
                 obscureText: true,
@@ -113,6 +122,7 @@ class _EmailFormState extends State<EmailForm> {
                     children: [
                       const SizedBox(height: 16),
                       TextFormField(
+                          enabled: !loading,
                           decoration: const InputDecoration(
                             labelText: "Confirm Password",
                             border: OutlineInputBorder(),
@@ -161,10 +171,7 @@ class _EmailFormState extends State<EmailForm> {
                       showDialog(
                         context: context,
                         builder: (_) {
-                          return RecoverPasswordDialog(
-                            email: email,
-                            onResetPassword: widget.onResetPassword,
-                          );
+                          return RecoverPasswordDialog(email: email);
                         },
                       );
                     },
@@ -178,7 +185,7 @@ class _EmailFormState extends State<EmailForm> {
               ),
             ),
             ElevatedButton(
-              onPressed: submitForm,
+              onPressed: (loading) ? null : submitForm,
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
