@@ -33,7 +33,17 @@ class Auth extends _$Auth {
   Future<void> refreshUser(supa.AuthState state) async {
     final session = state.session;
     if (session == null) return authStateController.add(null);
-    final user = AppUser(session: session, authEvent: state.event);
+
+    final metadata = await client
+        .from("user_metadata")
+        .select()
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+    final user = AppUser(
+      session: session,
+      authEvent: state.event,
+      paymentTier: metadata?["tier"],
+    );
     authStateController.add(user);
   }
 
