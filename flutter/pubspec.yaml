@@ -41,6 +41,7 @@ dependencies:
   supabase_flutter: ^2.3.4
   flutter_riverpod: ^2.4.10
   riverpod_annotation: ^2.3.4
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:

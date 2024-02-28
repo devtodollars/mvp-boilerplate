@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test/components/reset_password_dialog.dart';
 import 'package:test/services/auth_notifier.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, required this.title});
@@ -15,11 +16,20 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _counter = 0;
+  bool loading = false;
 
   void _incrementCounter() {
     setState(() {
       _counter++;
     });
+  }
+
+  void goToPayments() async {
+    setState(() => loading = true);
+    final authNotif = ref.read(authProvider.notifier);
+    final url = await authNotif.getUserStripeLink();
+    if (url != null) launchUrl(url);
+    setState(() => loading = false);
   }
 
   @override
@@ -41,6 +51,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
         actions: [
+          TextButton(
+            onPressed: (loading) ? null : goToPayments,
+            child: const Text("Payments"),
+          ),
           TextButton(onPressed: authNotif.signOut, child: const Text("Logout")),
         ],
       ),

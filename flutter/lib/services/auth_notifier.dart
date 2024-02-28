@@ -68,6 +68,25 @@ class Auth extends _$Auth {
     );
   }
 
+  Future<Uri?> getUserStripeLink() async {
+    Uri baseUri = Uri.base;
+    String baseUrl = Uri(
+            scheme: baseUri.scheme,
+            host: baseUri.host,
+            port: baseUri.hasPort ? baseUri.port : null)
+        .toString();
+
+    var res = await client.functions.invoke("get_stripe_url", body: {
+      "return_url": baseUrl,
+      "price": const String.fromEnvironment("STRIPE_PREMIUM_PRICE"),
+    });
+    String? redirectUrl = res.data["redirect_url"];
+    if (redirectUrl is String) {
+      return Uri.parse(redirectUrl);
+    }
+    return null;
+  }
+
   Future<void> signOut() async {
     await client.auth.signOut();
   }
