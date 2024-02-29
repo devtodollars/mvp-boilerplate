@@ -17,15 +17,30 @@ final initUrl = Uri.base; // necessary for pw reset
 @riverpod
 GoRouter router(RouterRef ref) {
   // Using riverpod *directly* for authentication redirection.
-  final user = ref.watch(authProvider).value;
+  final authState = ref.watch(authProvider);
+  final user = authState.value;
   return GoRouter(
     navigatorKey: navigatorKey,
     redirect: (context, state) async {
-      if (user == null) return "/login";
-      if (initUrl.path == "/login") return null;
-      return initUrl.path;
+      return authState.when(
+        data: (user) {
+          if (user == null) return "/login";
+          // below are paths we don't redirect to, to prevent loops
+          if (["/login", "/loading"].contains(initUrl.path)) return null;
+          return initUrl.path;
+        },
+        error: (_, __) => "/loading",
+        loading: () => "/loading",
+      );
     },
     routes: <RouteBase>[
+      GoRoute(
+        name: 'loading',
+        path: '/loading',
+        builder: (context, state) {
+          return const Center(child: CircularProgressIndicator());
+        },
+      ),
       GoRoute(
         name: 'login',
         path: '/login',
