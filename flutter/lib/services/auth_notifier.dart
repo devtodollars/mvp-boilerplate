@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import 'package:test/models/app_user.dart';
+// ignore: depend_on_referenced_packages
+import 'package:path/path.dart' as p;
 
 part 'auth_notifier.g.dart';
 
@@ -56,8 +58,8 @@ class Auth extends _$Auth {
   }
 
   Future<void> recoverPassword(String email) async {
-    final currUrl = Uri.base.origin;
-    await client.auth.resetPasswordForEmail(email, redirectTo: currUrl);
+    final resetUrl = p.join(Uri.base.origin, "reset");
+    await client.auth.resetPasswordForEmail(email, redirectTo: resetUrl);
   }
 
   Future<void> updatePassword(String password) async {
