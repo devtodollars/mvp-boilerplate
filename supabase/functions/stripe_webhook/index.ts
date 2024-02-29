@@ -36,7 +36,7 @@ async function onSubscriptionUpdated(
 ) {
   // update subscription (overrides whatever subscription they have currently)
   const prod = subscription.items.data[0].plan.product;
-  await supabase.from("customers").update({
+  await supabase.from("stripe").update({
     active_subscription_product: deleted ? null : prod,
     active_subscription_status: deleted ? null : subscription.status,
   }).eq(
@@ -49,7 +49,7 @@ async function onCheckoutComplete(session: Stripe.Session) {
   // skip if checkout session is recurring
   // const items: Stripe[] = session.line_items.data
   //
-  // const { data } = await supabase.from("customers").select(
+  // const { data } = await supabase.from("stripe").select(
   //   "one_time_payment_products",
   // ).eq(
   //   "stripe_customer_id",
@@ -58,7 +58,7 @@ async function onCheckoutComplete(session: Stripe.Session) {
   // prods = data?.one_time_payment_products
   // // update subscription (overrides whatever subscription they have currently)
   // const prod = subscription.items.data[0].plan.product;
-  // await supabase.from("customers").update({
+  // await supabase.from("stripe").update({
   //   active_subscription_product: prod,
   //   active_subscription_status: subscription.status,
   // }).eq(

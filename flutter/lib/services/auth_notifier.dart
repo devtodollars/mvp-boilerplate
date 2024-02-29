@@ -35,7 +35,7 @@ class Auth extends _$Auth {
     if (session == null) return authStateController.add(null);
 
     final metadata = await client
-        .from("customers")
+        .from("stripe")
         .select()
         .eq("user_id", session.user.id)
         .maybeSingle();

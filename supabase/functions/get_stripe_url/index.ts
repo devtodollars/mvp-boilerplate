@@ -4,8 +4,8 @@ import { stripe } from "../_shared/stripe.ts";
 
 clientRequestHandler(async (req, user) => {
   const { price, return_url } = await req.json();
-  // get stripe information from customers table!
-  const { data } = await supabase.from("customers").select().eq(
+  // get stripe information from stripe table!
+  const { data } = await supabase.from("stripe").select().eq(
     "user_id",
     user.id,
   ).maybeSingle();
@@ -24,7 +24,7 @@ clientRequestHandler(async (req, user) => {
       },
     });
     stripeCustomerId = customer.id;
-    await supabase.from("customers").upsert({
+    await supabase.from("stripe").upsert({
       user_id: user.id,
       stripe_customer_id: customer.id,
     });
