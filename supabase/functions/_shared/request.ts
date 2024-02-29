@@ -1,4 +1,4 @@
-import { User } from "supabase";
+import { User } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { supabase } from "./supabase.ts";
 
 async function getUserFromRequest(req: Request) {

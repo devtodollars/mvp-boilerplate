@@ -11,7 +11,8 @@ clientRequestHandler(async (req, user) => {
   ).maybeSingle();
   let stripeCustomerId = data?.stripe_customer_id;
   const paidProducts: string[] = data?.one_time_payment_products;
-  const activeSubscriptionProduct: string = data?.active_subscription_product;
+  const activeSubscriptionProduct: string | undefined = data
+    ?.active_subscription_product;
   if (!stripeCustomerId) {
     // create stripe customer if doesn't exist
     console.log("create stripe customer");
@@ -35,8 +36,14 @@ clientRequestHandler(async (req, user) => {
   // get price based on product
   let redirect_url: string | undefined;
 
-  if ([...paidProducts, activeSubscriptionProduct].includes(priceObj.product)) {
-    // open billing portal if product has been purchased
+  // check if user paid for product OR
+  // if they already have an active subscription AND price is recurring
+  // it's because we assume they can only have one subscription
+  if (
+    paidProducts.includes(priceObj.product) ||
+    (priceObj.type == "recurring" && activeSubscriptionProduct)
+  ) {
+    // open billing portal if product/subscription has been purchased
     console.log("open billing portal session");
     const session = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
@@ -44,7 +51,7 @@ clientRequestHandler(async (req, user) => {
     });
     redirect_url = session?.url;
   } else {
-    // if tier is null go to checkout page
+    // open checkout session to purchase product
     console.log("open checkout session");
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
