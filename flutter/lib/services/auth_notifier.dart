@@ -42,7 +42,8 @@ class Auth extends _$Auth {
     final user = AppUser(
       session: session,
       authEvent: state.event,
-      oneTimePaymentProducts: metadata?["one_time_payment_products"],
+      oneTimePaymentProducts:
+          List<String>.from(metadata?["one_time_payment_products"]),
       activeSubscriptionProduct: metadata?["active_subscription_product"],
     );
     authStateController.add(user);
