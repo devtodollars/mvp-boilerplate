@@ -14,7 +14,7 @@ The Supabase Flutter Template is designed to accelerate your app development wit
 
 ## Backend - Supabase
 
-- **Authentication**: Pre-configured setup with `user_metadata` for a seamless sign-in/sign-up experience.
+- **Authentication**: Pre-configured setup for a seamless sign-in/sign-up experience.
 - **Local Development**: Fully configured environment for local development from day one.
 
 ## Analytics - Posthog

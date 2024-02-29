@@ -35,14 +35,15 @@ class Auth extends _$Auth {
     if (session == null) return authStateController.add(null);
 
     final metadata = await client
-        .from("user_metadata")
+        .from("customers")
         .select()
         .eq("user_id", session.user.id)
         .maybeSingle();
     final user = AppUser(
       session: session,
       authEvent: state.event,
-      paymentTier: metadata?["tier"],
+      oneTimePaymentProducts: metadata?["one_time_payment_products"],
+      activeSubscriptionProduct: metadata?["active_subscription_product"],
     );
     authStateController.add(user);
   }

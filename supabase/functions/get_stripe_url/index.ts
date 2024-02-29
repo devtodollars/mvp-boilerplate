@@ -4,15 +4,14 @@ import { stripe } from "../_shared/stripe.ts";
 
 clientRequestHandler(async (req, user) => {
   const { price, return_url } = await req.json();
-  // get stripe information from user_metadata table!
-  const { data: metadata } = await supabase.from("user_metadata").select(
-    "stripe_customer_id,tier",
-  ).eq(
+  // get stripe information from customers table!
+  const { data } = await supabase.from("customers").select().eq(
     "user_id",
     user.id,
   ).maybeSingle();
-  let stripeCustomerId = metadata?.stripe_customer_id;
-  const tier = metadata?.tier;
+  let stripeCustomerId = data?.stripe_customer_id;
+  const paidProducts: string[] = data?.one_time_payment_products;
+  const activeSubscriptionProduct: string = data?.active_subscription_product;
   if (!stripeCustomerId) {
     // create stripe customer if doesn't exist
     console.log("create stripe customer");
@@ -24,14 +23,20 @@ clientRequestHandler(async (req, user) => {
       },
     });
     stripeCustomerId = customer.id;
-    await supabase.from("user_metadata").upsert({
+    await supabase.from("customers").upsert({
       user_id: user.id,
       stripe_customer_id: customer.id,
     });
   }
+
+  // query price product based on price
+  const priceObj = await stripe.prices.retrieve(price);
+
+  // get price based on product
   let redirect_url: string | undefined;
-  if (tier) {
-    // open billing portal
+
+  if ([...paidProducts, activeSubscriptionProduct].includes(priceObj.product)) {
+    // open billing portal if product has been purchased
     console.log("open billing portal session");
     const session = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
@@ -43,7 +48,7 @@ clientRequestHandler(async (req, user) => {
     console.log("open checkout session");
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
-      mode: "payment",
+      mode: (priceObj.type == "recurring") ? "subscription" : "payment",
       line_items: [{
         price,
         quantity: 1,
