@@ -156,11 +156,14 @@ class _EmailFormState extends ConsumerState<EmailForm> {
                 children: [
                   TextButton(
                     onPressed: () {
-                      if (action == AuthAction.signIn) {
-                        setState(() => action = AuthAction.signUp);
-                      } else {
-                        setState(() => action = AuthAction.signIn);
-                      }
+                      setState(() {
+                        if (action == AuthAction.signIn) {
+                          action = AuthAction.signUp;
+                        } else {
+                          action = AuthAction.signIn;
+                        }
+                        errorMessage = "";
+                      });
                     },
                     child: Text((action == AuthAction.signIn)
                         ? "Don't have an account?"

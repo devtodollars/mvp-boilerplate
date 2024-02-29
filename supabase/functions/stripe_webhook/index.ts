@@ -1,6 +1,6 @@
-// import Stripe from "stripe";
 import { processWebhookRequest } from "../_shared/stripe.ts";
 import { supabase } from "../_shared/supabase.ts";
+import { stripe } from "../_shared/stripe.ts";
 import Stripe from "stripe";
 
 Deno.serve(async (req) => {
@@ -34,35 +34,50 @@ async function onSubscriptionUpdated(
   subscription: Stripe.Subscription,
   deleted = false,
 ) {
-  // update subscription (overrides whatever subscription they have currently)
-  const prod = subscription.items.data[0].plan.product;
+  const prods = await getActiveProducts(subscription.customer);
+  const subscriptionItems = subscription.items.data;
+  const validStatuses = ["incomplete", "trialing", "active"];
+  for (const item of subscriptionItems) {
+    const prod = item.plan.product;
+
+    if (deleted || !validStatuses.includes(subscription.status)) {
+      // removes product from purchased products
+      const i = prods.indexOf(prod);
+      if (i !== -1) prods.splice(i, 1);
+    } else if (!prods.includes(prod)) {
+      prods.push(prod);
+    }
+  }
+  // updates purchased_products
   await supabase.from("stripe").update({
-    active_subscription_product: deleted ? null : prod,
-    active_subscription_status: deleted ? null : subscription.status,
-  }).eq(
-    "stripe_customer_id",
-    subscription.customer,
-  );
+    active_products: prods,
+  }).eq("stripe_customer_id", subscription.customer);
 }
 
 async function onCheckoutComplete(session: Stripe.Session) {
-  // skip if checkout session is recurring
-  // const items: Stripe[] = session.line_items.data
-  //
-  // const { data } = await supabase.from("stripe").select(
-  //   "one_time_payment_products",
-  // ).eq(
-  //   "stripe_customer_id",
-  //   subscription.customer,
-  // ).single();
-  // prods = data?.one_time_payment_products
-  // // update subscription (overrides whatever subscription they have currently)
-  // const prod = subscription.items.data[0].plan.product;
-  // await supabase.from("stripe").update({
-  //   active_subscription_product: prod,
-  //   active_subscription_status: subscription.status,
-  // }).eq(
-  //   "stripe_customer_id",
-  //   subscription.customer,
-  // );
+  const prods = await getActiveProducts(session.customer);
+  const { data: lineItems } = await stripe.checkout.sessions.listLineItems(
+    session.id,
+  );
+
+  for (const item of lineItems) {
+    const prod = item.price.product;
+    // skip if product is subscription or already purchased
+    if (item.mode === "subscription" || prods.includes(prod)) continue;
+    prods.push(prod);
+  }
+  await supabase.from("stripe").update({
+    active_products: prods,
+  }).eq("stripe_customer_id", session.customer);
+}
+
+async function getActiveProducts(customer: string): Promise<string[]> {
+  const { data } = await supabase.from("stripe").select(
+    "active_products",
+  ).eq(
+    "stripe_customer_id",
+    customer,
+  ).single();
+  const purchasedProds: string[] = data?.active_products || [];
+  return purchasedProds;
 }
