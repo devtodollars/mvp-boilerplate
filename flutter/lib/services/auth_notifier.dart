@@ -70,7 +70,7 @@ class Auth extends _$Auth {
     );
   }
 
-  Future<Uri?> getUserStripeLink() async {
+  Future<Uri?> getUserStripeLink({String? price}) async {
     Uri baseUri = Uri.base;
     String baseUrl = Uri(
             scheme: baseUri.scheme,
@@ -80,7 +80,7 @@ class Auth extends _$Auth {
 
     var res = await client.functions.invoke("get_stripe_url", body: {
       "return_url": baseUrl,
-      "price": const String.fromEnvironment("STRIPE_PREMIUM_PRICE"),
+      "price": price,
     });
     String? redirectUrl = res.data["redirect_url"];
     if (redirectUrl is String) {

@@ -5,6 +5,7 @@ import 'package:test/components/dialog_page.dart';
 import 'package:test/components/reset_password_dialog.dart';
 import 'package:test/screens/auth_screen.dart';
 import 'package:test/screens/home_screen.dart';
+import 'package:test/screens/payments_screen.dart';
 import 'package:test/services/auth_notifier.dart';
 
 part 'router_notifier.g.dart';
@@ -12,22 +13,34 @@ part 'router_notifier.g.dart';
 // This is crucial for making sure that the same navigator is used
 // when rebuilding the GoRouter and not throwing away the whole widget tree.
 final navigatorKey = GlobalKey<NavigatorState>();
-final initUrl = Uri.base; // necessary for pw reset
+Uri? initUrl = Uri.base; // needed to set intiial url state
 
 @riverpod
 GoRouter router(RouterRef ref) {
-  // Using riverpod *directly* for authentication redirection.
   final authState = ref.watch(authProvider);
-  final user = authState.value;
   return GoRouter(
+    initialLocation: initUrl?.path, // DO NOT REMOVE
     navigatorKey: navigatorKey,
     redirect: (context, state) async {
       return authState.when(
         data: (user) {
-          if (user == null) return "/login";
-          // below are paths we don't redirect to, to prevent loops
-          if (["/login", "/loading"].contains(initUrl.path)) return null;
-          return initUrl.path;
+          // build initial path
+          String? path = initUrl?.path;
+          final queryString = initUrl?.query.trim() ?? "";
+          if (queryString.isNotEmpty && path != null) {
+            path += "?$queryString";
+          }
+          // If user is not authenticated, direct to login screen
+          if (user == null && path != '/login') {
+            return '/login';
+          }
+          // If user is authenticated and trying to access login or loading, direct to home
+          if (user != null && (path == '/login' || path == '/loading')) {
+            return "/";
+          }
+          // After handling initial redirection, clear initUrl to prevent repeated redirections
+          initUrl = null;
+          return path;
         },
         error: (_, __) => "/loading",
         loading: () => "/loading",
@@ -44,11 +57,6 @@ GoRouter router(RouterRef ref) {
       GoRoute(
         name: 'login',
         path: '/login',
-        redirect: (context, state) {
-          if (user != null) return "/";
-          if (initUrl.path == "/") return null;
-          return null;
-        },
         builder: (context, state) {
           return const AuthScreen();
         },
@@ -68,6 +76,14 @@ GoRouter router(RouterRef ref) {
             },
           )
         ],
+      ),
+      GoRoute(
+        name: 'payments',
+        path: '/payments',
+        builder: (BuildContext context, GoRouterState state) {
+          final qp = state.uri.queryParameters;
+          return PaymentsScreen(price: qp["price"]);
+        },
       ),
     ],
   );

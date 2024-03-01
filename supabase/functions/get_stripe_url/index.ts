@@ -28,15 +28,14 @@ clientRequestHandler(async (req, user) => {
     });
   }
 
-  // query price product based on price
-  const priceObj = await stripe.prices.retrieve(price);
-
   // get price based on product
   let redirect_url: string | undefined;
 
   // check if user paid for product
-  if (activeProducts.includes(priceObj.product)) {
+  const priceObj = price ? await stripe.prices.retrieve(price) : null;
+  if (priceObj === null || activeProducts.includes(priceObj.product)) {
     // open billing portal if product/subscription has been purchased
+    // or if price is null
     console.log("open billing portal session");
     const session = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
