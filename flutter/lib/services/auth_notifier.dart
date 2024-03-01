@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import 'package:test/models/app_user.dart';
@@ -71,12 +72,7 @@ class Auth extends _$Auth {
   }
 
   Future<Uri?> getUserStripeLink({String? price}) async {
-    Uri baseUri = Uri.base;
-    String baseUrl = Uri(
-            scheme: baseUri.scheme,
-            host: baseUri.host,
-            port: baseUri.hasPort ? baseUri.port : null)
-        .toString();
+    String? baseUrl = (kIsWeb) ? Uri.base.origin : null;
 
     var res = await client.functions.invoke("get_stripe_url", body: {
       "return_url": baseUrl,

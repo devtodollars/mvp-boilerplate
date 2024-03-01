@@ -39,7 +39,7 @@ clientRequestHandler(async (req, user) => {
     console.log("open billing portal session");
     const session = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
-      return_url,
+      return_url: return_url || undefined,
     });
     redirect_url = session?.url;
   } else {
@@ -53,8 +53,8 @@ clientRequestHandler(async (req, user) => {
         quantity: 1,
       }],
       allow_promotion_codes: true,
-      success_url: return_url,
-      cancel_url: return_url,
+      success_url: return_url || undefined,
+      cancel_url: return_url || undefined,
     });
     redirect_url = session?.url;
   }
