@@ -13,8 +13,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  permissions: write-all
   build-web:
+    permissions: write-all
     runs-on: ubuntu-latest
     defaults:
       run:
