@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import 'package:devtodollars/models/app_user.dart';
@@ -20,7 +21,20 @@ class Auth extends _$Auth {
   @override
   Stream<AppUser?> build() {
     final streamSub = client.auth.onAuthStateChange.listen((authState) async {
-      await refreshUser(authState);
+      final appUser = await refreshUser(authState);
+
+      if (appUser != null) {
+        await Posthog()
+            .identify(userId: appUser.session.user.id, userProperties: {
+          "email": appUser.session.user.email ?? "",
+          "active_products": appUser.activeProducts,
+        });
+      } else {
+        await Posthog().reset();
+      }
+      await Posthog().capture(eventName: "user auth change", properties: {
+        "auth_change_event": authState.event.name,
+      });
     });
 
     ref.onDispose(() {
@@ -33,9 +47,12 @@ class Auth extends _$Auth {
   supa.SupabaseClient get client => supa.Supabase.instance.client;
   supa.Session? get currentSession => client.auth.currentSession;
 
-  Future<void> refreshUser(supa.AuthState state) async {
+  Future<AppUser?> refreshUser(supa.AuthState state) async {
     final session = state.session;
-    if (session == null) return authStateController.add(null);
+    if (session == null) {
+      authStateController.add(null);
+      return null;
+    }
 
     final metadata = await client
         .from("stripe")
@@ -48,6 +65,7 @@ class Auth extends _$Auth {
       activeProducts: List<String>.from(metadata?["active_products"] ?? []),
     );
     authStateController.add(user);
+    return user;
   }
 
   Future<void> signInWithPassword(String email, String password) async {
