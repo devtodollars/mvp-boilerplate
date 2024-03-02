@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:test/components/email_form.dart';
+import 'package:devtodollars/components/email_form.dart';
 
 class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key});

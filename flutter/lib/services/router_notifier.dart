@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:test/components/dialog_page.dart';
-import 'package:test/components/reset_password_dialog.dart';
-import 'package:test/screens/auth_screen.dart';
-import 'package:test/screens/home_screen.dart';
-import 'package:test/screens/payments_screen.dart';
-import 'package:test/services/auth_notifier.dart';
+import 'package:devtodollars/components/dialog_page.dart';
+import 'package:devtodollars/components/reset_password_dialog.dart';
+import 'package:devtodollars/screens/auth_screen.dart';
+import 'package:devtodollars/screens/home_screen.dart';
+import 'package:devtodollars/screens/payments_screen.dart';
+import 'package:devtodollars/services/auth_notifier.dart';
 
 part 'router_notifier.g.dart';
 

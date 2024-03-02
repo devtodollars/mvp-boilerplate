@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
-import 'package:test/models/app_user.dart';
+import 'package:devtodollars/models/app_user.dart';
 // ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as p;
 
