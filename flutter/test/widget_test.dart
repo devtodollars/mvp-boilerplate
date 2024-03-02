@@ -1,3 +1,5 @@
+import 'package:flutter_test/flutter_test.dart';
+
 void main() {
-  // TODO: add tests
+  testWidgets('TODO: add tests', (WidgetTester tester) async {});
 }
