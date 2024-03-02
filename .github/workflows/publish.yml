@@ -1,0 +1,59 @@
+name: publish
+on:
+  # Allows manual trigger from Actions tab
+  workflow_dispatch:
+  release:
+    types: [published]
+jobs:
+  publish-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - uses: robinraju/release-downloader@v1.8
+        id: get_release
+        with: 
+          latest: true
+          fileName: "web.zip"
+          out-file-path: "release-asset"
+
+      - name: Extract Release Asset
+        run: unzip release-asset/web.zip -d release-asset/web
+
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v2.0
+        with:
+          publish-dir: './release-asset/web'
+          production-deploy: true
+          production-branch: main
+          alias: ${{steps.get_release.outputs.tag_name}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Deploy from GitHub Actions"
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        timeout-minutes: 1
+
+  publish-supabase:
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Adding retry step: https://github.com/supabase/setup-cli/issues/146
+      - name: Deploy Supabase Functions with Retry
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 10 # Optional timeout for the retry block
+          max_attempts: 3
+          command: supabase functions deploy --project-ref $SUPABASE_PROJECT_ID
+
