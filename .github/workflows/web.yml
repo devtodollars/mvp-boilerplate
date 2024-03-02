@@ -1,0 +1,62 @@
+name: web
+on:
+  # Triggers workflow on PR but only for main branch
+  push:
+    branches: [ main ]
+    # for release
+    tags:
+      - "v*.*.*"
+  pull_request:
+    branches: [ main ]
+  
+  # Allows manual trigger from Actions tab
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./flutter
+    steps:
+    - uses: actions/checkout@v3
+    - uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.2'
+        cache: true
+        channel: 'stable'
+    - run: flutter doctor -v
+    - run: flutter analyze
+    - run: flutter pub get
+    - run: flutter test
+    - name: Build and zip
+      run: |
+        flutter build web --dart-define-from-file=env.json
+        cd ./build/web
+        zip -r ../web.zip .
+    - name: Release 
+      uses: softprops/action-gh-release@v1 
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          flutter/build/web.zip
+        draft: true
+        fail_on_unmatched_files: true
+    - name: Deploy to Netlify
+      uses: nwtgck/actions-netlify@v2.0
+      if: github.event_name == 'pull_request'
+      with:
+        publish-dir: './flutter/build/web'
+        production-branch: main
+        alias: ${{ github.sha }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        deploy-message: "Deploy from GitHub Actions"
+        enable-pull-request-comment: true
+        enable-commit-comment: true
+        overwrites-pull-request-comment: false
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      timeout-minutes: 1
+

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:test/components/recover_password_dialog.dart';
-import 'package:test/services/auth_notifier.dart';
+import 'package:devtodollars/components/recover_password_dialog.dart';
+import 'package:devtodollars/services/auth_notifier.dart';
 
 enum AuthAction { signIn, signUp }
 
