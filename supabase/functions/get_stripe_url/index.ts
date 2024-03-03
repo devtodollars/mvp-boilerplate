@@ -11,7 +11,6 @@ clientRequestHandler(async (req, user) => {
     user.id,
   ).maybeSingle();
   let stripeCustomerId = data?.stripe_customer_id;
-  const activeProducts: string[] = data?.active_products || [];
   if (!stripeCustomerId) {
     // create stripe customer if doesn't exist
     const customer = await stripe.customers.create({
@@ -35,7 +34,7 @@ clientRequestHandler(async (req, user) => {
 
   // check if user paid for product
   const priceObj = price ? await stripe.prices.retrieve(price) : null;
-  if (priceObj === null || activeProducts.includes(priceObj.product)) {
+  if (priceObj === null) {
     // open billing portal if product/subscription has been purchased
     // or if price is null
     event = "user opens billing portal";
@@ -65,6 +64,8 @@ clientRequestHandler(async (req, user) => {
     distinctId: user.id,
     event,
     properties: {
+      price,
+      product: priceObj?.product,
       $set: {
         "stripe_customer_id": stripeCustomerId,
       },

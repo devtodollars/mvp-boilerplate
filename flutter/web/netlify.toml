@@ -1,0 +1,5 @@
+# https://github.com/flutter/flutter/issues/113140#issuecomment-1302868727
+[[redirects]]
+  from = "/*"
+  to = "/"
+  status = 200
