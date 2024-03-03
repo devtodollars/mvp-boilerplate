@@ -23,11 +23,13 @@ class Auth extends _$Auth {
     final streamSub = client.auth.onAuthStateChange.listen((authState) async {
       final appUser = await refreshUser(authState);
 
+      // capture posthog events for analytics
       if (appUser != null) {
         await Posthog()
             .identify(userId: appUser.session.user.id, userProperties: {
           "email": appUser.session.user.email ?? "",
           "active_products": appUser.activeProducts,
+          "stripe_customer_id": appUser.stripeCustomerId ?? "",
         });
       } else {
         await Posthog().reset();
@@ -63,6 +65,7 @@ class Auth extends _$Auth {
       session: session,
       authEvent: state.event,
       activeProducts: List<String>.from(metadata?["active_products"] ?? []),
+      stripeCustomerId: metadata?["stripe_customer_id"],
     );
     authStateController.add(user);
     return user;
