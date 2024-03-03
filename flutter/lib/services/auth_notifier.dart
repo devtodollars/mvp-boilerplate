@@ -34,9 +34,6 @@ class Auth extends _$Auth {
       } else {
         await Posthog().reset();
       }
-      await Posthog().capture(eventName: "user auth change", properties: {
-        "auth_change_event": authState.event.name,
-      });
     });
 
     ref.onDispose(() {
