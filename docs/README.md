@@ -4,7 +4,7 @@
 
 **Demo**: [https://app.devtodollars.com](https://app.devtodollars.com)
 
-**Free Documentation:** [https://docs.devtodollars.com](https://docs.devtodollars.com)
+**Documentation:** [See Pricing](./#pricing)
 
 ***
 
