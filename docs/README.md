@@ -6,11 +6,15 @@
 
 **Free Documentation:** [https://docs.devtodollars.com](https://docs.devtodollars.com)
 
+***
+
 ### About Me
 
 I'm Matt, the creator of this boilerplate and a former YC founder. Throughout my journey, I went from $0 - $10k of revenue 2 separate times. Before my third time I wanted to create a startup template for building apps (Flutter / Supabase) to expedite this process. I figured that this template could help a lot of other people as well so I decided to clean it up and share it with the world!
 
 [Follow me on twitter](https://twitter.com/IThinkWong)
+
+***
 
 ### What's Included:
 
@@ -60,6 +64,8 @@ I'm Matt, the creator of this boilerplate and a former YC founder. Throughout my
 #### 🚧 Error Monitoring ([Sentry](https://sentry.io/welcome/)) 🚧
 
 TODO: based on demand.
+
+***
 
 ### Pricing
 
