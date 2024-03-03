@@ -1,6 +1,7 @@
 import { clientRequestHandler, corsHeaders } from "../_shared/request.ts";
 import { supabase } from "../_shared/supabase.ts";
 import { stripe } from "../_shared/stripe.ts";
+import { posthog } from "../_shared/posthog.ts";
 
 clientRequestHandler(async (req, user) => {
   const { price, return_url } = await req.json();
@@ -30,13 +31,14 @@ clientRequestHandler(async (req, user) => {
 
   // get price based on product
   let redirect_url: string | undefined;
+  let event: string;
 
   // check if user paid for product
   const priceObj = price ? await stripe.prices.retrieve(price) : null;
   if (priceObj === null || activeProducts.includes(priceObj.product)) {
     // open billing portal if product/subscription has been purchased
     // or if price is null
-    console.log("open billing portal session");
+    event = "user opens billing portal";
     const session = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
       return_url: return_url || undefined,
@@ -44,7 +46,7 @@ clientRequestHandler(async (req, user) => {
     redirect_url = session?.url;
   } else {
     // open checkout session to purchase product
-    console.log("open checkout session");
+    event = "user starts checkout";
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: (priceObj.type == "recurring") ? "subscription" : "payment",
@@ -58,6 +60,17 @@ clientRequestHandler(async (req, user) => {
     });
     redirect_url = session?.url;
   }
+
+  posthog.capture({
+    distinctId: user.id,
+    event,
+    properties: {
+      $set: {
+        "stripe_customer_id": stripeCustomerId,
+      },
+    },
+  });
+
   return new Response(
     JSON.stringify({ redirect_url }),
     {

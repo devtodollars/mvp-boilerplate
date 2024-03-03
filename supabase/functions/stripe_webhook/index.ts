@@ -2,6 +2,7 @@ import { processWebhookRequest } from "../_shared/stripe.ts";
 import { supabase } from "../_shared/supabase.ts";
 import { stripe } from "../_shared/stripe.ts";
 import Stripe from "stripe";
+import { posthog } from "../_shared/posthog.ts";
 
 Deno.serve(async (req) => {
   let receivedEvent;
@@ -49,9 +50,27 @@ async function onSubscriptionUpdated(
     }
   }
   // updates purchased_products
-  await supabase.from("stripe").update({
+  const { data } = await supabase.from("stripe").update({
     active_products: prods,
-  }).eq("stripe_customer_id", subscription.customer);
+  }).eq("stripe_customer_id", subscription.customer).select();
+  const row = data?.[0];
+
+  // posthog
+  if (row) {
+    const products = subscriptionItems.map((
+      item: { plan: { product: string } },
+    ) => item.plan.product);
+    posthog.capture({
+      distinctId: row.user_id,
+      event: "user completes checkout",
+      properties: {
+        products,
+        $set: {
+          "stripe_customer_id": row.stripe_customer_id,
+        },
+      },
+    });
+  }
 }
 
 async function onCheckoutComplete(session: Stripe.Session) {

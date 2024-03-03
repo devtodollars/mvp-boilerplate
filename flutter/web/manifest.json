@@ -1,6 +1,6 @@
 {
-    "name": "test",
-    "short_name": "test",
+    "name": "Dev to Dollars",
+    "short_name": "devtodollars",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
