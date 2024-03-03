@@ -1,6 +1,4 @@
-# README
-
-## Flutter / Supabase Production Template for Startups
+# Flutter / Supabase Production Template for Startups
 
 **Demo**: [https://app.devtodollars.com](https://app.devtodollars.com)
 
@@ -8,7 +6,7 @@
 
 ***
 
-### About Me
+## About Me
 
 I'm Matt, the creator of this boilerplate and a former YC founder. Throughout my journey, I went from $0 - $10k of revenue 2 separate times. Before my third time I wanted to create a startup template for building apps (Flutter / Supabase) to expedite this process. I figured that this template could help a lot of other people as well so I decided to clean it up and share it with the world!
 
@@ -16,7 +14,7 @@ I'm Matt, the creator of this boilerplate and a former YC founder. Throughout my
 
 ***
 
-### Pricing
+## Pricing
 
 I open sourced the code but decided to close source the detailed documentation. You could either **spend 20+ hours** piecing together documentation from separate websites or support me and purchase detailed guides to get you up and running as fast as possible.
 
@@ -31,9 +29,9 @@ I open sourced the code but decided to close source the detailed documentation. 
 
 ***
 
-### What's Included:
+## What's Included:
 
-#### Frontend ([Flutter](https://flutter.dev/))
+### Frontend ([Flutter](https://flutter.dev/))
 
 * State Management ([riverpod](https://pub.dev/packages/riverpod))
 * Routing ([go\_router](https://pub.dev/packages/go\_router))
@@ -43,7 +41,7 @@ I open sourced the code but decided to close source the detailed documentation. 
   * home\_screen
 * 🚧 frontend tests 🚧
 
-#### Backend ([Supabase](https://supabase.com/))
+### Backend ([Supabase](https://supabase.com/))
 
 * Authentication
   * Email + PW
@@ -51,7 +49,7 @@ I open sourced the code but decided to close source the detailed documentation. 
 * Fully configured for local development from day one
 * 🚧 backend tests 🚧
 
-#### Analytics ([Posthog](https://posthog.com/))
+### Analytics ([Posthog](https://posthog.com/))
 
 * Unified analytics across frontend and backend based on `user_id`
   * Frontend analytics comes pre-installed for iOS, Android, Web, and MacOS
@@ -64,20 +62,20 @@ I open sourced the code but decided to close source the detailed documentation. 
   * `user opens billing portal`
   * `user completes checkout`
 
-#### Payments ([Stripe](https://stripe.com/en-ca))
+### Payments ([Stripe](https://stripe.com/en-ca))
 
 * Stripe fully setup and works with one-time payments and subscriptions
   * `stripe` table to store `stripe_customer_id` and current `active_products`
   * Stripe webhook to sync user subscriptions from stripe to supabase
   * Deno function to retrieve the billing portal url or a checkout session url which works with the `payments_screen`
 
-#### Release Pipelines ([Github Actions](https://github.com/features/actions))
+### Release Pipelines ([Github Actions](https://github.com/features/actions))
 
 * Script to `bumpversion.sh` following semantic versioning
 * Deploys a web preview on Netlify for every PR
 * Publishing pipeline to publish to Netlify and to publish supabase functions
 * 🚧 Workflow to create signed releases for Android and iOS 🚧
 
-#### 🚧 Error Monitoring ([Sentry](https://sentry.io/welcome/)) 🚧
+### 🚧 Error Monitoring ([Sentry](https://sentry.io/welcome/)) 🚧
 
 TODO: based on demand.
