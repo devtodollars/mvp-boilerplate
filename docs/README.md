@@ -18,16 +18,16 @@ I'm Matt, the creator of this boilerplate and a former YC founder. Throughout my
 
 ### Pricing
 
-I open sourced the code but decided to close source the detailed documentation. You could either **spend 20+ hours** piecing together documentation from separate websites or support me and purchase detailed guides to get you up and running as fast as possible.&#x20;
+I open sourced the code but decided to close source the detailed documentation. You could either **spend 20+ hours** piecing together documentation from separate websites or support me and purchase detailed guides to get you up and running as fast as possible.
 
-**Early Bird Special:** Prices will go up by $50 on April 20th.&#x20;
+**Early Bird Special:** Prices will go up by $50 on April 20th.
 
-| Docs ($99)                              | Docs + Support ($129)                   | 1 Hour Consulting with Matt ($99)       |
-| --------------------------------------- | --------------------------------------- | --------------------------------------- |
-| Private Documentation                   | Private Documentation                   | Startup Advice / Help                   |
-|                                         | 1 Hour Consulting w/ Matt               | Template Troubleshooting / Tips         |
-|                                         | Discord community                       |                                         |
-| [Buy Now](https://app.devtodollars.com) | [Buy Now](https://app.devtodollars.com) | [Buy Now](https://app.devtodollars.com) |
+| Docs ($99)                                                                             | Docs + Support ($129)                                                                  | 1 Hour Consulting with Matt ($99)                                                      |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Private Documentation                                                                  | Private Documentation                                                                  | Startup Advice / Help                                                                  |
+|                                                                                        | 1 Hour Consulting w/ Matt                                                              | Template Troubleshooting / Tips                                                        |
+|                                                                                        | Discord community                                                                      |                                                                                        |
+| [Buy Now](https://app.devtodollars.com/payments?price=price\_1Oq6bXFttF99a1NCdZqHlQ8J) | [Buy Now](https://app.devtodollars.com/payments?price=price\_1OqIefFttF99a1NCezXvAtcM) | [Buy Now](https://app.devtodollars.com/payments?price=price\_1Oq6ePFttF99a1NCwsJ3JrKJ) |
 
 ***
 
@@ -74,13 +74,10 @@ I open sourced the code but decided to close source the detailed documentation. 
 #### Release Pipelines ([Github Actions](https://github.com/features/actions))
 
 * Script to `bumpversion.sh` following semantic versioning
-* Deploys a web preview on Netlify for every PR&#x20;
+* Deploys a web preview on Netlify for every PR
 * Publishing pipeline to publish to Netlify and to publish supabase functions
 * 🚧 Workflow to create signed releases for Android and iOS 🚧
 
 #### 🚧 Error Monitoring ([Sentry](https://sentry.io/welcome/)) 🚧
 
 TODO: based on demand.
-
-
-
