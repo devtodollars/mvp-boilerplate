@@ -64,6 +64,8 @@ clientRequestHandler(async (req, user) => {
     distinctId: user.id,
     event,
     properties: {
+      price,
+      product: priceObj?.product,
       $set: {
         "stripe_customer_id": stripeCustomerId,
       },
