@@ -16,11 +16,11 @@ I'm Matt, the creator of this boilerplate and a former YC founder. Throughout my
 
 ## Pricing
 
-I open sourced the code but decided to close source the detailed documentation. You could either **spend 20+ hours** piecing together documentation from separate websites or support me and purchase detailed guides to get you up and running as fast as possible.
+I open sourced the code but decided to close source the detailed documentation. You could either **spend 20+ hours** piecing together documentation from separate websites or support me and purchase detailed guides to get you up and running in 17 minutes.
 
 **Early Bird Special:** Prices will go up by $50 on April 20th.
 
-| Docs ($99)                                                                             | Docs + Support ($129)                                                                  | 1 Hour Consulting with Matt ($99)                                                      |
+| Docs ($99)                                                                             | Docs + Support ($129)                                                                  | Consulting w/ Matt ($99/hr)                                                            |
 | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | Private Documentation                                                                  | Private Documentation                                                                  | Startup Advice / Help                                                                  |
 |                                                                                        | 1 Hour Consulting w/ Matt                                                              | Template Troubleshooting / Tips                                                        |
@@ -42,15 +42,15 @@ I open sourced the code but decided to close source the detailed documentation. 
   * auth\_screen
   * payments\_screen (to redirect to stripe)
   * home\_screen
-* 🚧 frontend tests 🚧
+* 🚧 [frontend tests](https://github.com/devtodollars/flutter-supabase-production-template/issues/4) 🚧
 
 ### Backend ([Supabase](https://supabase.com/))
 
 * Authentication
   * Email + PW
-  * 🚧 SSO (Google, Github, Apple, etc.) 🚧
+  * 🚧 [SSO (Google, Github, Apple, etc.)](https://github.com/devtodollars/flutter-supabase-production-template/issues/21) 🚧
 * Fully configured for local development from day one
-* 🚧 backend tests 🚧
+* 🚧 [backend tests](https://github.com/devtodollars/flutter-supabase-production-template/issues/16) 🚧
 
 ### Analytics ([Posthog](https://posthog.com/))
 
@@ -72,13 +72,17 @@ I open sourced the code but decided to close source the detailed documentation. 
   * Stripe webhook to sync user subscriptions from stripe to supabase
   * Deno function to retrieve the billing portal url or a checkout session url which works with the `payments_screen`
 
-### Release Pipelines ([Github Actions](https://github.com/features/actions))
+### Release ([Github Actions](https://github.com/features/actions))
 
 * Script to `bumpversion.sh` following semantic versioning
 * Deploys a web preview on Netlify for every PR
 * Publishing pipeline to publish to Netlify and to publish supabase functions
-* 🚧 Workflow to create signed releases for Android and iOS 🚧
+* 🚧 [Workflow to create signed releases for Android and iOS](https://github.com/devtodollars/flutter-supabase-production-template/issues/22) 🚧
+
+### 🚧 Emails ([Postmark](https://postmarkapp.com/)) 🚧
+
+TODO: based on [demand](https://github.com/devtodollars/flutter-supabase-production-template/issues/17).
 
 ### 🚧 Error Monitoring ([Sentry](https://sentry.io/welcome/)) 🚧
 
-TODO: based on demand.
+TODO: based on [demand](https://github.com/devtodollars/flutter-supabase-production-template/issues/18).
