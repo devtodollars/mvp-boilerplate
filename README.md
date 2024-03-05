@@ -42,15 +42,15 @@ I open sourced the code but decided to close source the detailed documentation. 
   * auth\_screen
   * payments\_screen (to redirect to stripe)
   * home\_screen
-* 🚧 frontend tests 🚧
+* 🚧 [frontend tests](https://github.com/devtodollars/flutter-supabase-production-template/issues/4) 🚧
 
 ### Backend ([Supabase](https://supabase.com/))
 
 * Authentication
   * Email + PW
-  * 🚧 SSO (Google, Github, Apple, etc.) 🚧
+  * 🚧 [SSO (Google, Github, Apple, etc.)](https://github.com/devtodollars/flutter-supabase-production-template/issues/21) 🚧
 * Fully configured for local development from day one
-* 🚧 backend tests 🚧
+* 🚧 [backend tests](https://github.com/devtodollars/flutter-supabase-production-template/issues/16) 🚧
 
 ### Analytics ([Posthog](https://posthog.com/))
 
@@ -77,12 +77,12 @@ I open sourced the code but decided to close source the detailed documentation. 
 * Script to `bumpversion.sh` following semantic versioning
 * Deploys a web preview on Netlify for every PR
 * Publishing pipeline to publish to Netlify and to publish supabase functions
-* 🚧 Workflow to create signed releases for Android and iOS 🚧
+* 🚧 [Workflow to create signed releases for Android and iOS](https://github.com/devtodollars/flutter-supabase-production-template/issues/22) 🚧
 
 ### 🚧 Emails ([Postmark](https://postmarkapp.com/)) 🚧
 
-TODO: based on demand.
+TODO: based on [demand](https://github.com/devtodollars/flutter-supabase-production-template/issues/17).
 
 ### 🚧 Error Monitoring ([Sentry](https://sentry.io/welcome/)) 🚧
 
-TODO: based on demand.
+TODO: based on [demand](https://github.com/devtodollars/flutter-supabase-production-template/issues/18).
