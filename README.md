@@ -20,7 +20,7 @@ I open sourced the code but decided to close source the detailed documentation. 
 
 **Early Bird Special:** Prices will go up by $50 on April 20th.
 
-| Docs ($99)                                                                             | Docs + Support ($129)                                                                  | 1 Hour Consulting with Matt ($99)                                                      |
+| Docs ($99)                                                                             | Docs + Support ($129)                                                                  | Consulting w/ Matt ($99/hr)                                                            |
 | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | Private Documentation                                                                  | Private Documentation                                                                  | Startup Advice / Help                                                                  |
 |                                                                                        | 1 Hour Consulting w/ Matt                                                              | Template Troubleshooting / Tips                                                        |
