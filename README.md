@@ -16,7 +16,7 @@ I'm Matt, the creator of this boilerplate and a former YC founder. Throughout my
 
 ## Pricing
 
-I open sourced the code but decided to close source the detailed documentation. You could either **spend 20+ hours** piecing together documentation from separate websites or support me and purchase detailed guides to get you up and running as fast as possible.
+I open sourced the code but decided to close source the detailed documentation. You could either **spend 20+ hours** piecing together documentation from separate websites or support me and purchase detailed guides to get you up and running in 17 minutes.
 
 **Early Bird Special:** Prices will go up by $50 on April 20th.
 
@@ -72,12 +72,16 @@ I open sourced the code but decided to close source the detailed documentation. 
   * Stripe webhook to sync user subscriptions from stripe to supabase
   * Deno function to retrieve the billing portal url or a checkout session url which works with the `payments_screen`
 
-### Release Pipelines ([Github Actions](https://github.com/features/actions))
+### Release ([Github Actions](https://github.com/features/actions))
 
 * Script to `bumpversion.sh` following semantic versioning
 * Deploys a web preview on Netlify for every PR
 * Publishing pipeline to publish to Netlify and to publish supabase functions
 * 🚧 Workflow to create signed releases for Android and iOS 🚧
+
+### 🚧 Emails ([Postmark](https://postmarkapp.com/)) 🚧
+
+TODO: based on demand.
 
 ### 🚧 Error Monitoring ([Sentry](https://sentry.io/welcome/)) 🚧
 
