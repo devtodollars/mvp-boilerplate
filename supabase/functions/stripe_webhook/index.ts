@@ -94,7 +94,7 @@ async function onCheckoutComplete(session: Stripe.Session) {
   const checkoutProducts = lineItems.map((i: Stripe.LineItem) =>
     i.price.product
   );
-  await sendPurchaseEmail(checkoutProducts, session.customer_email);
+  await sendPurchaseEmail(checkoutProducts, session.customer_details.email);
 }
 
 async function getActiveProducts(customer: string): Promise<string[]> {
