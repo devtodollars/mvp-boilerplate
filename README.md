@@ -79,9 +79,11 @@ I open sourced the code but decided to close source the detailed documentation. 
 * Publishing pipeline to publish to Netlify and to publish supabase functions
 * 🚧 [Workflow to create signed releases for Android and iOS](https://github.com/devtodollars/flutter-supabase-production-template/issues/22) 🚧
 
-### 🚧 Emails ([Postmark](https://postmarkapp.com/)) 🚧
+### Emails ([Postmark](https://postmarkapp.com/))
 
-TODO: based on [demand](https://github.com/devtodollars/flutter-supabase-production-template/issues/17).
+* Send transactional emails
+* DNS setup to avoid spam folder (DKIM, DMARC, SPF in subdomain)
+* Simplify email updates by using postmark templates
 
 ### 🚧 Error Monitoring ([Sentry](https://sentry.io/welcome/)) 🚧
 
