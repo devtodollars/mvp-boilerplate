@@ -3,6 +3,7 @@ import { supabase } from "../_shared/supabase.ts";
 import { stripe } from "../_shared/stripe.ts";
 import Stripe from "stripe";
 import { posthog } from "../_shared/posthog.ts";
+import { sendEmail } from "../_shared/postmark.ts";
 
 Deno.serve(async (req) => {
   let receivedEvent;
@@ -88,6 +89,12 @@ async function onCheckoutComplete(session: Stripe.Session) {
   await supabase.from("stripe").update({
     active_products: prods,
   }).eq("stripe_customer_id", session.customer);
+
+  // Sends email based on purchase
+  const checkoutProducts = lineItems.map((i: Stripe.LineItem) =>
+    i.price.product
+  );
+  await sendPurchaseEmail(checkoutProducts, session.customer_email);
 }
 
 async function getActiveProducts(customer: string): Promise<string[]> {
@@ -99,4 +106,20 @@ async function getActiveProducts(customer: string): Promise<string[]> {
   ).single();
   const purchasedProds: string[] = data?.active_products || [];
   return purchasedProds;
+}
+
+async function sendPurchaseEmail(products: string[], to: string) {
+  // TODO: update this function based on your emailing needs
+  const product = products[0];
+  let template = "";
+  if (product === "prod_PfRVCVqv8fBrxN") {
+    template = "paid-docs-support";
+  } else if (product === "prod_PfRUhnTnwtHLvw") {
+    template = "paid-docs";
+  } else if (product === "prod_PfRXymhiBMCUZo") {
+    template = "paid-consulting";
+  }
+  if (template) {
+    await sendEmail({ to, template });
+  }
 }
