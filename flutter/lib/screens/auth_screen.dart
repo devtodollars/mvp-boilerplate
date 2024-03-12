@@ -48,20 +48,25 @@ class _AuthScreenState extends State<AuthScreen> {
               onSuccess: (_) {},
             ),
             const SizedBox(height: 16),
-            if (showEmailForm)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: Divider(),
-              ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: (showEmailForm)
-                  ? const EmailForm()
-                  : TextButton(
+              child: Column(
+                children: [
+                  if (showEmailForm)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 16),
+                      child: Divider(),
+                    ),
+                  if (showEmailForm)
+                    const EmailForm()
+                  else
+                    TextButton(
                       onPressed: () => setState(() => showEmailForm = true),
                       child: const Text("Continue with Email"),
                     ),
-            ),
+                ],
+              ),
+            )
           ],
         ),
       ),
