@@ -43,6 +43,7 @@ dependencies:
   riverpod_annotation: ^2.3.4
   url_launcher: ^6.2.5
   posthog_flutter: ^4.1.0
+  supabase_auth_ui: ^0.4.1
 
 dev_dependencies:
   flutter_test:
