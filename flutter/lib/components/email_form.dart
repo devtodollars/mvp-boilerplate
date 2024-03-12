@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:devtodollars/components/recover_password_dialog.dart';
 import 'package:devtodollars/services/auth_notifier.dart';
@@ -63,9 +64,23 @@ class _EmailFormState extends ConsumerState<EmailForm> {
           await authNotif.signInWithPassword(email, password);
         } else if (action == AuthAction.signUp) {
           await authNotif.signUp(email, password);
-          await authNotif.signInWithPassword(email, password);
+          if (mounted) {
+            setState(() => action = AuthAction.signIn);
+            showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text("Check your Email!"),
+                content: const Text(
+                    "We sent an email from pleasereply@devtodollars.com to verify your email"),
+                actions: [
+                  TextButton(
+                      onPressed: context.pop, child: const Text("Ok Matt."))
+                ],
+              ),
+            );
+          }
         }
-        setState(() => loading = false);
+        if (mounted) setState(() => loading = false);
       } on AuthException catch (e) {
         setState(() {
           loading = false;
