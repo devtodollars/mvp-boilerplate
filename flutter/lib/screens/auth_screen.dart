@@ -1,8 +1,9 @@
+import 'package:devtodollars/components/social_auth_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:devtodollars/components/email_form.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_auth_ui/supabase_auth_ui.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -30,27 +31,27 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    String? baseUrl = (kIsWeb) ? Uri.base.origin : null;
+    String? baseUrl = (kIsWeb) ? Uri.base.toString() : null;
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SupaSocialsAuth(
-              redirectUrl: baseUrl,
-              socialProviders: const [
-                OAuthProvider.google,
-                OAuthProvider.github,
-              ],
-              onSuccess: (_) {},
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Column(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SocialAuthButton(
+                socialProvider: OAuthProvider.github,
+                onPressed: () {},
+              ),
+              const SizedBox(height: 12),
+              SocialAuthButton(
+                socialProvider: OAuthProvider.google,
+                onPressed: () {},
+              ),
+              const SizedBox(height: 24),
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (showEmailForm)
@@ -66,9 +67,9 @@ class _AuthScreenState extends State<AuthScreen> {
                       child: const Text("Continue with Email"),
                     ),
                 ],
-              ),
-            )
-          ],
+              )
+            ],
+          ),
         ),
       ),
     );
