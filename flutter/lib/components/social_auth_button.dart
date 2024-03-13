@@ -1,4 +1,6 @@
+import 'package:devtodollars/services/auth_notifier.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -48,14 +50,14 @@ extension on OAuthProvider {
   String get capitalizedName => name[0].toUpperCase() + name.substring(1);
 }
 
-class SocialAuthButton extends StatelessWidget {
+class RawSocialAuthButton extends StatelessWidget {
   final OAuthProvider socialProvider;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool colored;
-  const SocialAuthButton({
+  const RawSocialAuthButton({
     super.key,
     required this.socialProvider,
-    required this.onPressed,
+    this.onPressed,
     this.colored = true,
   });
 
@@ -130,6 +132,29 @@ class SocialAuthButton extends StatelessWidget {
       style: authButtonStyle,
       onPressed: onPressed,
       label: Text('Continue with ${socialProvider.capitalizedName}'),
+    );
+  }
+}
+
+class SocialAuthButton extends ConsumerWidget {
+  final OAuthProvider socialProvider;
+  final VoidCallback? onPressed;
+  final bool colored;
+  const SocialAuthButton({
+    super.key,
+    required this.socialProvider,
+    this.onPressed,
+    this.colored = true,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authNotifier = ref.watch(authProvider.notifier);
+    return RawSocialAuthButton(
+      socialProvider: socialProvider,
+      onPressed:
+          onPressed ?? () => authNotifier.signInWithOAuth(socialProvider),
+      colored: colored,
     );
   }
 }

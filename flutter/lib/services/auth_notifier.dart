@@ -72,6 +72,16 @@ class Auth extends _$Auth {
     await client.auth.signInWithPassword(password: password, email: email);
   }
 
+  Future<void> signInWithOAuth(supa.OAuthProvider provider) async {
+    // For some reason I need the slash to make it work
+    String? baseUrl = (kIsWeb) ? '${Uri.base.origin}/' : null;
+    await client.auth
+        .signInWithOAuth(provider, redirectTo: baseUrl, queryParams: {
+      'access_type': 'offline',
+      'prompt': 'consent',
+    });
+  }
+
   Future<void> signUp(String email, String password) async {
     await client.auth.signUp(password: password, email: email);
   }

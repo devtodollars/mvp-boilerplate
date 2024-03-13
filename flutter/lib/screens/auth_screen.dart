@@ -31,7 +31,6 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    String? baseUrl = (kIsWeb) ? Uri.base.toString() : null;
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -41,15 +40,9 @@ class _AuthScreenState extends State<AuthScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SocialAuthButton(
-                socialProvider: OAuthProvider.github,
-                onPressed: () {},
-              ),
+              const SocialAuthButton(socialProvider: OAuthProvider.github),
               const SizedBox(height: 12),
-              SocialAuthButton(
-                socialProvider: OAuthProvider.google,
-                onPressed: () {},
-              ),
+              const SocialAuthButton(socialProvider: OAuthProvider.google),
               const SizedBox(height: 24),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -64,7 +57,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   else
                     TextButton(
                       onPressed: () => setState(() => showEmailForm = true),
-                      child: const Text("Continue with Email"),
+                      child: const Text("or continue with email"),
                     ),
                 ],
               )
