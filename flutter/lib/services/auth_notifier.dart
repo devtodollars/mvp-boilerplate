@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 import 'package:devtodollars/models/app_user.dart';
 // ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as p;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 part 'auth_notifier.g.dart';
 
@@ -70,6 +71,18 @@ class Auth extends _$Auth {
 
   Future<void> signInWithPassword(String email, String password) async {
     await client.auth.signInWithPassword(password: password, email: email);
+  }
+
+  Future<void> signInWithOAuth(supa.OAuthProvider provider) async {
+    String? baseUrl = (kIsWeb) ? Uri.base.origin : null;
+    await client.auth.signInWithOAuth(
+      provider,
+      redirectTo: baseUrl,
+      queryParams: {
+        'access_type': 'offline',
+        'prompt': 'consent',
+      },
+    );
   }
 
   Future<void> signUp(String email, String password) async {

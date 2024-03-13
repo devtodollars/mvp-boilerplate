@@ -16,14 +16,16 @@ class EmailForm extends ConsumerStatefulWidget {
 
 class _EmailFormState extends ConsumerState<EmailForm> {
   AuthAction action = AuthAction.signUp;
-  String email = '';
-  String password = '';
-  String confirmPassword = '';
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController pwController = TextEditingController();
+  final TextEditingController confirmPwController = TextEditingController();
+
   String errorMessage = '';
   bool loading = false;
   final _formKey = GlobalKey<FormState>();
 
   String? validateEmailField() {
+    final email = emailController.text;
     if (email.isEmpty) {
       return "Email is required";
     }
@@ -35,6 +37,7 @@ class _EmailFormState extends ConsumerState<EmailForm> {
   }
 
   String? validatePasswordField() {
+    final password = pwController.text;
     if (password.isEmpty) {
       return "Password is required";
     }
@@ -45,6 +48,8 @@ class _EmailFormState extends ConsumerState<EmailForm> {
   }
 
   String? validateConfirmPasswordField() {
+    final password = pwController.text;
+    final confirmPassword = confirmPwController.text;
     if (confirmPassword.isEmpty) {
       return "Password confirmation is required";
     }
@@ -55,6 +60,8 @@ class _EmailFormState extends ConsumerState<EmailForm> {
   }
 
   void submitForm() async {
+    final email = emailController.text;
+    final password = pwController.text;
     if (_formKey.currentState!.validate()) {
       try {
         setState(() => loading = true);
@@ -105,52 +112,42 @@ class _EmailFormState extends ConsumerState<EmailForm> {
                 style: textTheme.titleLarge),
             const SizedBox(height: 16),
             TextFormField(
+              controller: emailController,
               enabled: !loading,
               autofocus: true,
               decoration: const InputDecoration(
                   labelText: "Email", border: OutlineInputBorder()),
-              onChanged: (String value) {
-                setState(() {
-                  email = value;
-                });
-              },
               validator: (_) => validateEmailField(),
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email],
             ),
             const SizedBox(height: 16),
             TextFormField(
-                enabled: !loading,
-                decoration: const InputDecoration(
-                    labelText: "Password", border: OutlineInputBorder()),
-                obscureText: true,
-                onChanged: (String value) {
-                  setState(() {
-                    password = value;
-                  });
-                },
-                validator: (_) => validatePasswordField(),
-                autofillHints: const [AutofillHints.password],
-                keyboardType: TextInputType.text),
+              controller: pwController,
+              enabled: !loading,
+              decoration: const InputDecoration(
+                  labelText: "Password", border: OutlineInputBorder()),
+              obscureText: true,
+              validator: (_) => validatePasswordField(),
+              autofillHints: const [AutofillHints.password],
+              keyboardType: TextInputType.text,
+            ),
             (action == AuthAction.signUp)
                 ? Column(
                     children: [
                       const SizedBox(height: 16),
                       TextFormField(
-                          enabled: !loading,
-                          decoration: const InputDecoration(
-                            labelText: "Confirm Password",
-                            border: OutlineInputBorder(),
-                          ),
-                          obscureText: true,
-                          onChanged: (String value) {
-                            setState(() {
-                              confirmPassword = value;
-                            });
-                          },
-                          validator: (_) => validateConfirmPasswordField(),
-                          autofillHints: const [AutofillHints.password],
-                          keyboardType: TextInputType.text),
+                        controller: confirmPwController,
+                        enabled: !loading,
+                        decoration: const InputDecoration(
+                          labelText: "Confirm Password",
+                          border: OutlineInputBorder(),
+                        ),
+                        obscureText: true,
+                        validator: (_) => validateConfirmPasswordField(),
+                        autofillHints: const [AutofillHints.password],
+                        keyboardType: TextInputType.text,
+                      ),
                     ],
                   )
                 : const SizedBox(height: 0),
@@ -189,7 +186,8 @@ class _EmailFormState extends ConsumerState<EmailForm> {
                       showDialog(
                         context: context,
                         builder: (_) {
-                          return RecoverPasswordDialog(email: email);
+                          return RecoverPasswordDialog(
+                              email: emailController.text);
                         },
                       );
                     },
