@@ -2,7 +2,9 @@
 
 **Demo**: [https://app.devtodollars.com](https://app.devtodollars.com)
 
-**Documentation + Support** [See Pricing](https://devtodollars.com/#pricing)
+**Documentation + Support**: [See Pricing](https://devtodollars.com/#pricing)
+
+---
 
 ### Frontend ([Flutter](https://flutter.dev/))
 
