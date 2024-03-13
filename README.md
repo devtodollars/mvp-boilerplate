@@ -48,7 +48,7 @@ I open sourced the code but decided to close source the detailed documentation. 
 
 * Authentication
   * Email + PW
-  * 🚧 [SSO (Google, Github, Apple, etc.)](https://github.com/devtodollars/flutter-supabase-production-template/issues/21) 🚧
+  * SSO (Google, Github, etc.)
 * Fully configured for local development from day one
 * 🚧 [backend tests](https://github.com/devtodollars/flutter-supabase-production-template/issues/16) 🚧
 
