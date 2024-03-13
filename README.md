@@ -2,31 +2,9 @@
 
 **Demo**: [https://app.devtodollars.com](https://app.devtodollars.com)
 
-**Documentation:** [See Pricing](./#pricing)
+**Docs**: [See Pricing](https://devtodollars.com/#pricing)
 
-**Landing**: https://devtodollars.com
-
-***
-
-## Pricing
-
-**Free, open-source code** but paid documentation and support
-
-| Docs ($99)                                                                             | Docs + Support ($129)                                                                  | Consulting ($99/hr)                                                                    |
-| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Private Documentation                                                                  | Private Documentation                                                                  | Tech / Startup Advice                                                                  |
-| Exclusive Discord Community                                                            | Exclusive Discord Community                                                            | Literally what it says                                                                 |
-|                                                                                        | 1 Hour Consulting ($99 value)                                                          |                                                                                        |
-|                                                                                        | Discord – Priority Text Support                                                        |                                                                                        |
-|                                                                                        | Discord – Weekly Office Hours                                                          |                                                                                        |
-| [Buy Now](https://app.devtodollars.com/payments?price=price\_1Oq6bXFttF99a1NCdZqHlQ8J) | [Buy Now](https://app.devtodollars.com/payments?price=price\_1OqIefFttF99a1NCezXvAtcM) | [Buy Now](https://app.devtodollars.com/payments?price=price\_1Oq6ePFttF99a1NCwsJ3JrKJ) |
-
-### Documentation Preview
-![DevToDollars Docs Preview](https://github.com/devtodollars/flutter-supabase-production-template/assets/20890995/de22956d-210b-4027-84f5-5640f508d45c)
-
-***
-
-## What's Included:
+---
 
 ### Frontend ([Flutter](https://flutter.dev/))
 
