@@ -2,37 +2,7 @@
 
 **Demo**: [https://app.devtodollars.com](https://app.devtodollars.com)
 
-**Documentation:** [See Pricing](./#pricing)
-
-***
-
-## About Me
-
-I'm Matt, the creator of this boilerplate and a former CTO of a YC backed company. Throughout my journey, I went from $0 - $10k of revenue 2 separate times. Before my third time I wanted to create a startup template for building apps (Flutter / Supabase) to expedite this process. I figured that this template could help a lot of other people as well so I decided to clean it up and share it with the world!
-
-[Follow me on twitter](https://twitter.com/IThinkWong)
-
-***
-
-## Pricing
-
-I open sourced the code but decided to close source the detailed documentation. You could either **spend 20+ hours** piecing together documentation from separate websites or support me and purchase detailed guides to get you up and running in 17 minutes.
-
-**Early Bird Special:** Prices will go up by $50 on April 20th.
-
-| Docs ($99)                                                                             | Docs + Support ($129)                                                                  | Consulting w/ Matt ($99/hr)                                                            |
-| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Private Documentation                                                                  | Private Documentation                                                                  | Startup Advice / Help                                                                  |
-|                                                                                        | 1 Hour Consulting w/ Matt                                                              | Template Troubleshooting / Tips                                                        |
-|                                                                                        | Discord community                                                                      |                                                                                        |
-| [Buy Now](https://app.devtodollars.com/payments?price=price\_1Oq6bXFttF99a1NCdZqHlQ8J) | [Buy Now](https://app.devtodollars.com/payments?price=price\_1OqIefFttF99a1NCezXvAtcM) | [Buy Now](https://app.devtodollars.com/payments?price=price\_1Oq6ePFttF99a1NCwsJ3JrKJ) |
-
-### Documentation Preview
-![DevToDollars Docs Preview](https://github.com/devtodollars/flutter-supabase-production-template/assets/20890995/de22956d-210b-4027-84f5-5640f508d45c)
-
-***
-
-## What's Included:
+**Documentation + Support** [See Pricing](https://devtodollars.com/#pricing)
 
 ### Frontend ([Flutter](https://flutter.dev/))
 
