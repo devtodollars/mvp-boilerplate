@@ -233,6 +233,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.6"
+  email_validator:
+    dependency: transitive
+    description:
+      name: email_validator
+      sha256: e9a90f27ab2b915a27d7f9c2a7ddda5dd752d6942616ee83529b686fc086221b
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.17"
   fake_async:
     dependency: transitive
     description:
@@ -845,6 +853,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.8"
+  supabase_auth_ui:
+    dependency: "direct main"
+    description:
+      name: supabase_auth_ui
+      sha256: "9c12964ee213a0b6d5f26d4e7d5818a57df6a7060a7cf8a16bb54c4e5f46c666"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.1"
   supabase_flutter:
     dependency: "direct main"
     description:

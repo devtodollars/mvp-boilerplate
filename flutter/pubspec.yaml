@@ -44,6 +44,7 @@ dependencies:
   url_launcher: ^6.2.5
   posthog_flutter: ^4.1.0
   font_awesome_flutter: ^10.7.0
+  supabase_auth_ui: ^0.4.1
 
 dev_dependencies:
   flutter_test:

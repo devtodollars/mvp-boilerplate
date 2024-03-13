@@ -1,8 +1,8 @@
-import 'package:devtodollars/components/social_auth_button.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:devtodollars/components/email_form.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_auth_ui/supabase_auth_ui.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -39,26 +39,35 @@ class _AuthScreenState extends State<AuthScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SocialAuthButton(socialProvider: OAuthProvider.github),
-              const SizedBox(height: 12),
-              const SocialAuthButton(socialProvider: OAuthProvider.google),
-              const SizedBox(height: 24),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (showEmailForm)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 16),
-                      child: Divider(),
-                    ),
-                  if (showEmailForm)
-                    const EmailForm()
-                  else
-                    TextButton(
-                      onPressed: () => setState(() => showEmailForm = true),
-                      child: const Text("or continue with email"),
-                    ),
+              SupaSocialsAuth(
+                socialProviders: const [
+                  OAuthProvider.github,
+                  OAuthProvider.google
                 ],
+                onSuccess: (_) {},
+                showSuccessSnackBar: false,
+                redirectUrl: (kIsWeb) ? Uri.base.origin : null,
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (showEmailForm)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 16),
+                        child: Divider(),
+                      ),
+                    if (showEmailForm)
+                      const EmailForm()
+                    else
+                      TextButton(
+                        onPressed: () => setState(() => showEmailForm = true),
+                        child: const Text("or continue with email"),
+                      ),
+                  ],
+                ),
               )
             ],
           ),
