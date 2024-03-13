@@ -2,7 +2,7 @@
 
 **Demo**: [https://app.devtodollars.com](https://app.devtodollars.com)
 
-**Documentation + Support**: [See Pricing](https://devtodollars.com/#pricing)
+**Docs**: [See Pricing](https://devtodollars.com/#pricing)
 
 ---
 
