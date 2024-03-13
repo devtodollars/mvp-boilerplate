@@ -4,27 +4,21 @@
 
 **Documentation:** [See Pricing](./#pricing)
 
-***
-
-## About Me
-
-I'm Matt, the creator of this boilerplate and a former CTO of a YC backed company. Throughout my journey, I went from $0 - $10k of revenue 2 separate times. Before my third time I wanted to create a startup template for building apps (Flutter / Supabase) to expedite this process. I figured that this template could help a lot of other people as well so I decided to clean it up and share it with the world!
-
-[Follow me on twitter](https://twitter.com/IThinkWong)
+**Landing**: https://devtodollars.com
 
 ***
 
 ## Pricing
 
-I open sourced the code but decided to close source the detailed documentation. You could either **spend 20+ hours** piecing together documentation from separate websites or support me and purchase detailed guides to get you up and running in 17 minutes.
+**Free, open-source code** but paid documentation and support
 
-**Early Bird Special:** Prices will go up by $50 on April 20th.
-
-| Docs ($99)                                                                             | Docs + Support ($129)                                                                  | Consulting w/ Matt ($99/hr)                                                            |
+| Docs ($99)                                                                             | Docs + Support ($129)                                                                  | Consulting ($99/hr)                                                                    |
 | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Private Documentation                                                                  | Private Documentation                                                                  | Startup Advice / Help                                                                  |
-|                                                                                        | 1 Hour Consulting w/ Matt                                                              | Template Troubleshooting / Tips                                                        |
-|                                                                                        | Discord community                                                                      |                                                                                        |
+| Private Documentation                                                                  | Private Documentation                                                                  | Tech / Startup Advice                                                                  |
+| Exclusive Discord Community                                                            | Exclusive Discord Community                                                            | Literally what it says                                                                 |
+|                                                                                        | 1 Hour Consulting ($99 value)                                                          |                                                                                        |
+|                                                                                        | Discord – Priority Text Support                                                        |                                                                                        |
+|                                                                                        | Discord – Weekly Office Hours                                                          |                                                                                        |
 | [Buy Now](https://app.devtodollars.com/payments?price=price\_1Oq6bXFttF99a1NCdZqHlQ8J) | [Buy Now](https://app.devtodollars.com/payments?price=price\_1OqIefFttF99a1NCezXvAtcM) | [Buy Now](https://app.devtodollars.com/payments?price=price\_1Oq6ePFttF99a1NCwsJ3JrKJ) |
 
 ### Documentation Preview
