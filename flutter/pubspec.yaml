@@ -43,7 +43,6 @@ dependencies:
   riverpod_annotation: ^2.3.4
   url_launcher: ^6.2.5
   posthog_flutter: ^4.1.0
-  font_awesome_flutter: ^10.7.0
   supabase_auth_ui: ^0.4.1
 
 dev_dependencies:
@@ -66,9 +65,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-  assets:
-    - assets/logos/
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
