@@ -1,4 +1,4 @@
-# Flutter / Supabase Production Template for Startups
+# Flutter Production Template for Startups
 
 **Demo**: [https://app.devtodollars.com](https://app.devtodollars.com)
 
