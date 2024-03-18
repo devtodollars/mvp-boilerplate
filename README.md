@@ -4,6 +4,8 @@
 
 **Docs**: [See Pricing](https://devtodollars.com/#pricing)
 
+**Community**: [Join Discord](https://discord.gg/NH8u36Rwxh)
+
 ---
 
 ### Frontend ([Flutter](https://flutter.dev/))
