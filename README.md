@@ -6,7 +6,6 @@
 
 **Community**: [Join Discord](https://discord.gg/NH8u36Rwxh)
 
----
 ## Pricing
 
 Either spend *13+ hours* piecing together documentation from separate websites or support me and get up and running in **under 30 minutes**
@@ -23,7 +22,6 @@ Either spend *13+ hours* piecing together documentation from separate websites o
 
 **Note**: Click "Buy Now" to see how the payment redirection works in the demo
 
----
 ## What's Included:
 
 ### Frontend ([Flutter](https://flutter.dev/))
