@@ -10,7 +10,7 @@
 
 Either spend *13+ hours* piecing together documentation from separate websites or support me and get up and running in **under 30 minutes**
 
-**Early Bird Special**: Use Code `MARCH30` to get 50% OFF (Expires March 30th, 2024)
+🎁 **Early Bird Special**: Use Code `MARCH30` to get 50% OFF (Expires March 30th, 2024)
 
 | Docs (**$99**)                                                                        | Docs + Support (**$129**)                                                             | I'll Build Your MVP (**$5000**)                                      |
 | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
