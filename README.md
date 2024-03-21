@@ -9,7 +9,7 @@
 ---
 ## Pricing
 
-Either spend **13+ hours** piecing together documentation from separate websites or get up and running in <u>under 30 minutes</u>
+Either spend **13+ hours** piecing together documentation from separate websites or get up and running in -==under 30 minutes==
 
 **Early Bird Special**: Use Code `MARCH30` to get 50% OFF (Expires March 30th, 2024)
 
