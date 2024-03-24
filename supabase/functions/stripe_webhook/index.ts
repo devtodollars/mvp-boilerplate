@@ -51,27 +51,9 @@ async function onSubscriptionUpdated(
     }
   }
   // updates purchased_products
-  const { data } = await supabase.from("stripe").update({
+  await supabase.from("stripe").update({
     active_products: prods,
-  }).eq("stripe_customer_id", subscription.customer).select();
-  const row = data?.[0];
-
-  // posthog
-  if (row) {
-    const products = subscriptionItems.map((
-      item: { plan: { product: string } },
-    ) => item.plan.product);
-    posthog.capture({
-      distinctId: row.user_id,
-      event: "user completes checkout",
-      properties: {
-        products,
-        $set: {
-          "stripe_customer_id": row.stripe_customer_id,
-        },
-      },
-    });
-  }
+  }).eq("stripe_customer_id", subscription.customer);
 }
 
 async function onCheckoutComplete(session: Stripe.Session) {
@@ -86,15 +68,28 @@ async function onCheckoutComplete(session: Stripe.Session) {
     if (item.mode === "subscription" || prods.includes(prod)) continue;
     prods.push(prod);
   }
-  await supabase.from("stripe").update({
+  const { data: row } = await supabase.from("stripe").update({
     active_products: prods,
-  }).eq("stripe_customer_id", session.customer);
+  }).eq("stripe_customer_id", session.customer).select().maybeSingle();
 
   // Sends email based on purchase
   const checkoutProducts = lineItems.map((i: Stripe.LineItem) =>
     i.price.product
   );
   await sendPurchaseEmail(checkoutProducts, session.customer_details.email);
+
+  // posthog capture
+  if (!row) return;
+  posthog.capture({
+    distinctId: row.user_id,
+    event: "user completes checkout",
+    properties: {
+      prods,
+      $set: {
+        "stripe_customer_id": row.stripe_customer_id,
+      },
+    },
+  });
 }
 
 async function getActiveProducts(customer: string): Promise<string[]> {
