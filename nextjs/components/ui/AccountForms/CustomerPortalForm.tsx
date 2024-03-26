@@ -3,28 +3,14 @@
 import Button from '@/components/ui/Button';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { createStripePortal } from '@/utils/stripe/server';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
-import { Tables } from '@/types_db';
 
-type Subscription = Tables<'subscriptions'>;
-type Price = Tables<'prices'>;
-type Product = Tables<'products'>;
-
-type SubscriptionWithPriceAndProduct = Subscription & {
-  prices:
-    | (Price & {
-        products: Product | null;
-      })
-    | null;
-};
-
-interface Props {
-  subscription: SubscriptionWithPriceAndProduct | null;
-}
-
-export default function CustomerPortalForm({ subscription }: Props) {
+export default function CustomerPortalForm({
+  subscription
+}: {
+  subscription: any;
+}) {
   const router = useRouter();
   const currentPath = usePathname();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,10 +24,11 @@ export default function CustomerPortalForm({ subscription }: Props) {
     }).format((subscription?.prices?.unit_amount || 0) / 100);
 
   const handleStripePortalRequest = async () => {
+    // TODO: finish this function
     setIsSubmitting(true);
-    const redirectUrl = await createStripePortal(currentPath);
+    // const redirectUrl = await createStripePortal(currentPath);
     setIsSubmitting(false);
-    return router.push(redirectUrl);
+    // return router.push(redirectUrl);
   };
 
   return (

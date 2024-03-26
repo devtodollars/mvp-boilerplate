@@ -2,81 +2,54 @@
 
 import Button from '@/components/ui/Button';
 import LogoCloud from '@/components/ui/LogoCloud';
-import type { Tables } from '@/types_db';
-import { getStripe } from '@/utils/stripe/client';
-import { checkoutWithStripe } from '@/utils/stripe/server';
-import { getErrorRedirect } from '@/utils/helpers';
-import { User } from '@supabase/supabase-js';
 import cn from 'classnames';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState } from 'react';
 
-type Subscription = Tables<'subscriptions'>;
-type Product = Tables<'products'>;
-type Price = Tables<'prices'>;
-interface ProductWithPrices extends Product {
-  prices: Price[];
-}
-interface PriceWithProduct extends Price {
-  products: Product | null;
-}
-interface SubscriptionWithProduct extends Subscription {
-  prices: PriceWithProduct | null;
-}
-
-interface Props {
-  user: User | null | undefined;
-  products: ProductWithPrices[];
-  subscription: SubscriptionWithProduct | null;
-}
-
 type BillingInterval = 'lifetime' | 'year' | 'month';
 
-export default function Pricing({ user, products, subscription }: Props) {
-  const intervals = Array.from(
-    new Set(
-      products.flatMap((product) =>
-        product?.prices?.map((price) => price?.interval)
-      )
-    )
-  );
+export default function Pricing({ user }: Props) {
   const router = useRouter();
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>('month');
   const [priceIdLoading, setPriceIdLoading] = useState<string>();
   const currentPath = usePathname();
 
-  const handleStripeCheckout = async (price: Price) => {
+  const products: string[] = [];
+  const subscription = null;
+
+  const handleStripeCheckout = async (price: { id: string }) => {
     setPriceIdLoading(price.id);
+    // TODO: finish this function
 
-    if (!user) {
-      setPriceIdLoading(undefined);
-      return router.push('/signin/signup');
-    }
-
-    const { errorRedirect, sessionId } = await checkoutWithStripe(
-      price,
-      currentPath
-    );
-
-    if (errorRedirect) {
-      setPriceIdLoading(undefined);
-      return router.push(errorRedirect);
-    }
-
-    if (!sessionId) {
-      setPriceIdLoading(undefined);
-      return router.push(
-        getErrorRedirect(
-          currentPath,
-          'An unknown error occurred.',
-          'Please try again later or contact a system administrator.'
-        )
-      );
-    }
-
-    const stripe = await getStripe();
-    stripe?.redirectToCheckout({ sessionId });
+    // if (!user) {
+    //   setPriceIdLoading(undefined);
+    //   return router.push('/signin/signup');
+    // }
+    //
+    // const { errorRedirect, sessionId } = await checkoutWithStripe(
+    //   price,
+    //   currentPath
+    // );
+    //
+    // if (errorRedirect) {
+    //   setPriceIdLoading(undefined);
+    //   return router.push(errorRedirect);
+    // }
+    //
+    // if (!sessionId) {
+    //   setPriceIdLoading(undefined);
+    //   return router.push(
+    //     getErrorRedirect(
+    //       currentPath,
+    //       'An unknown error occurred.',
+    //       'Please try again later or contact a system administrator.'
+    //     )
+    //   );
+    // }
+    //
+    // const stripe = await getStripe();
+    // stripe?.redirectToCheckout({ sessionId });
 
     setPriceIdLoading(undefined);
   };

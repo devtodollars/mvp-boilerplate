@@ -11,25 +11,11 @@ export default async function Account() {
     data: { user }
   } = await supabase.auth.getUser();
 
-  const { data: userDetails } = await supabase
-    .from('users')
-    .select('*')
-    .single();
-
-  const { data: subscription, error } = await supabase
-    .from('subscriptions')
-    .select('*, prices(*, products(*))')
-    .in('status', ['trialing', 'active'])
-    .maybeSingle();
-
-  if (error) {
-    console.log(error);
-  }
-
   if (!user) {
     return redirect('/signin');
   }
 
+  // TODO: Look into adding back the NameForm
   return (
     <section className="mb-32 bg-black">
       <div className="max-w-6xl px-4 py-8 mx-auto sm:px-6 sm:pt-24 lg:px-8">
@@ -43,8 +29,7 @@ export default async function Account() {
         </div>
       </div>
       <div className="p-4">
-        <CustomerPortalForm subscription={subscription} />
-        <NameForm userName={userDetails?.full_name ?? ''} />
+        <CustomerPortalForm subscription={null} />
         <EmailForm userEmail={user.email} />
       </div>
     </section>
