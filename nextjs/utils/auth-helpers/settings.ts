@@ -1,6 +1,6 @@
 // Boolean toggles to determine which auth types are allowed
 const allowOauth = true;
-const allowEmail = true;
+const allowEmail = false;
 const allowPassword = true;
 
 // Boolean toggle to determine whether auth interface should route through server or client
