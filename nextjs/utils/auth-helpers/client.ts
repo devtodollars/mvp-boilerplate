@@ -38,7 +38,11 @@ export async function signInWithOAuth(e: React.FormEvent<HTMLFormElement>) {
   await supabase.auth.signInWithOAuth({
     provider: provider,
     options: {
-      redirectTo: redirectURL
+      redirectTo: redirectURL,
+      queryParams: {
+        'access_type': 'offline',
+        'prompt': 'consent',
+      }
     }
   });
 }
