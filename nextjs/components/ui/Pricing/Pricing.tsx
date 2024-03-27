@@ -53,7 +53,7 @@ const prices = [
       '✓ Code Documentation'
     ],
     cost: '$5000',
-    redirectURL: 'https://google.com'
+    redirectURL: 'https://usemotion.com/meet/ithinkwong/mvp-consulting?d=30'
   }
 ] as Price[];
 
@@ -70,7 +70,7 @@ export default function Pricing({ user }: Props) {
 
   const handleClick = async (price: Price) => {
     if (price.redirectURL) {
-      return window.open(price.redirectURL, '_blank');
+      return router.push(price.redirectURL);
     }
     setPriceIdLoading(price.id);
 
@@ -103,7 +103,7 @@ export default function Pricing({ user }: Props) {
         )
       );
     }
-    window.open(redirectUrl, '_blank');
+    router.push(redirectUrl);
     setPriceIdLoading(null);
   };
 

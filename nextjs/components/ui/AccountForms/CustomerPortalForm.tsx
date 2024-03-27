@@ -5,6 +5,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
+import { createClient } from '@/utils/supabase/client';
+import { getURL } from '@/utils/helpers';
 
 export default function CustomerPortalForm({
   subscription
@@ -24,11 +26,16 @@ export default function CustomerPortalForm({
     }).format((subscription?.prices?.unit_amount || 0) / 100);
 
   const handleStripePortalRequest = async () => {
-    // TODO: finish this function
     setIsSubmitting(true);
-    // const redirectUrl = await createStripePortal(currentPath);
+    const supabase = createClient();
+    const { data } = await supabase.functions.invoke('get_stripe_url', {
+      body: {
+        return_url: getURL("/account"),
+      }
+    });
+    const redirectUrl = data?.redirect_url;
     setIsSubmitting(false);
-    // return router.push(redirectUrl);
+    return router.push(redirectUrl);
   };
 
   return (
