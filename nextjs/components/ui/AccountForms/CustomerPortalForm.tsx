@@ -14,7 +14,6 @@ export default function CustomerPortalForm({
   subscription: any;
 }) {
   const router = useRouter();
-  const currentPath = usePathname();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const subscriptionPrice =
