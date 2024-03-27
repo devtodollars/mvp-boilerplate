@@ -27,13 +27,13 @@ type Price = {
 
 const prices = [
   {
-    id: 'price_1OovJ2FttF99a1NC1hbOKGdg',
+    id: process.env.NEXT_PUBLIC_STRIPE_DOCS_PRICE_ID!,
     name: 'Docs',
     features: ['✓ Private Documentation'],
     cost: '$99'
   },
   {
-    id: 'price_1OqIefFttF99a1NCezXvAtcM',
+    id: process.env.NEXT_PUBLIC_STRIPE_DOCS_AND_SUPPORT_PRICE_ID!,
     name: 'Docs + Support',
     features: [
       '✓ Private Documentation',
