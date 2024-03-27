@@ -8,6 +8,6 @@ export default async function PricingPage() {
     data: { user }
   } = await supabase.auth.getUser();
 
-  // TODO: don't pass in products or subscription
-  return <Pricing user={user} products={[]} subscription={null} />;
+  // TODO: don't pass in prices or subscription
+  return <Pricing user={user} />;
 }

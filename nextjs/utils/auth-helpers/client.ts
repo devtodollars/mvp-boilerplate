@@ -40,8 +40,8 @@ export async function signInWithOAuth(e: React.FormEvent<HTMLFormElement>) {
     options: {
       redirectTo: redirectURL,
       queryParams: {
-        'access_type': 'offline',
-        'prompt': 'consent',
+        access_type: 'offline',
+        prompt: 'consent'
       }
     }
   });

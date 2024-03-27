@@ -2,59 +2,112 @@
 
 import Button from '@/components/ui/Button';
 import LogoCloud from '@/components/ui/LogoCloud';
+import { createClient } from '@/utils/supabase/client';
+import { User } from '@supabase/supabase-js';
+import { getErrorRedirect } from '@/utils/helpers';
 import cn from 'classnames';
+import { getURL } from '@/utils/helpers';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState } from 'react';
 
-type BillingInterval = 'lifetime' | 'year' | 'month';
+type Props = {
+  user?: User | null;
+};
+
+type Price = {
+  id: string;
+  redirectURL?: string;
+  emphasize?: boolean;
+  description?: string;
+  interval?: string;
+  name: string;
+  cost: string;
+  features: string[];
+};
+
+const prices = [
+  {
+    id: 'price_1OovJ2FttF99a1NC1hbOKGdg',
+    name: 'Docs',
+    features: ['✓ Private Documentation'],
+    cost: '$99'
+  },
+  {
+    id: 'price_1OqIefFttF99a1NCezXvAtcM',
+    name: 'Docs + Support',
+    features: [
+      '✓ Private Documentation',
+      '✓ Discord – Text Support',
+      '✓ Discord – Weekly Office Hours',
+      '✓ 30 min Consulting ($50 value)'
+    ],
+    cost: '$129',
+    emphasize: true
+  },
+  {
+    name: "I'll Build Your MVP",
+    features: [
+      '✓ Technical Co-founder',
+      '✓ Completed MVP',
+      '✓ Landing Page',
+      '✓ Code Documentation'
+    ],
+    cost: '$5000',
+    redirectURL: 'https://google.com'
+  }
+] as Price[];
 
 export default function Pricing({ user }: Props) {
   const router = useRouter();
-  const [billingInterval, setBillingInterval] =
-    useState<BillingInterval>('month');
-  const [priceIdLoading, setPriceIdLoading] = useState<string>();
+  const intervals = Array.from(new Set(prices.map((p) => p.interval)));
+  const [billingInterval, setBillingInterval] = useState<string | undefined>(
+    intervals.find((i) => i)
+  );
+  const [priceIdLoading, setPriceIdLoading] = useState<string | null>(null);
   const currentPath = usePathname();
 
-  const products: string[] = [];
   const subscription = null;
 
-  const handleStripeCheckout = async (price: { id: string }) => {
+  const handleClick = async (price: Price) => {
+    if (price.redirectURL) {
+      return window.open(price.redirectURL, '_blank');
+    }
     setPriceIdLoading(price.id);
-    // TODO: finish this function
 
-    // if (!user) {
-    //   setPriceIdLoading(undefined);
-    //   return router.push('/signin/signup');
-    // }
-    //
-    // const { errorRedirect, sessionId } = await checkoutWithStripe(
-    //   price,
-    //   currentPath
-    // );
-    //
-    // if (errorRedirect) {
-    //   setPriceIdLoading(undefined);
-    //   return router.push(errorRedirect);
-    // }
-    //
-    // if (!sessionId) {
-    //   setPriceIdLoading(undefined);
-    //   return router.push(
-    //     getErrorRedirect(
-    //       currentPath,
-    //       'An unknown error occurred.',
-    //       'Please try again later or contact a system administrator.'
-    //     )
-    //   );
-    // }
-    //
-    // const stripe = await getStripe();
-    // stripe?.redirectToCheckout({ sessionId });
+    if (!user) {
+      setPriceIdLoading(null);
+      return router.push('/signin/signup');
+    }
 
-    setPriceIdLoading(undefined);
+    const supabase = createClient();
+    const { data, error } = await supabase.functions.invoke('get_stripe_url', {
+      body: {
+        return_url: getURL(),
+        price: price.id
+      }
+    });
+    if (error) {
+      setPriceIdLoading(null);
+      return router.push(
+        getErrorRedirect(currentPath, 'Error Occured', error.message)
+      );
+    }
+    const redirectUrl = data?.redirect_url;
+    if (!redirectUrl) {
+      setPriceIdLoading(null);
+      return router.push(
+        getErrorRedirect(
+          currentPath,
+          'An unknown error occurred.',
+          'Please try again later or contact a system administrator.'
+        )
+      );
+    }
+    window.open(redirectUrl, '_blank');
+    setPriceIdLoading(null);
   };
 
-  if (!products.length) {
+  if (!prices.length) {
     return (
       <section className="bg-black">
         <div className="max-w-6xl px-4 py-8 mx-auto sm:py-24 sm:px-6 lg:px-8">
@@ -84,8 +137,8 @@ export default function Pricing({ user }: Props) {
               Pricing Plans
             </h1>
             <p className="max-w-2xl m-auto mt-5 text-xl text-zinc-200 sm:text-center sm:text-2xl">
-              Start building for free, then add a site plan to go live. Account
-              plans unlock additional features.
+              <b>Free, open-source code</b>,<br />
+              but paid documentation and support
             </p>
             <div className="relative self-center mt-6 bg-zinc-900 rounded-lg p-0.5 flex sm:mt-8 border border-zinc-800">
               {intervals.includes('month') && (
@@ -117,49 +170,50 @@ export default function Pricing({ user }: Props) {
             </div>
           </div>
           <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 flex flex-wrap justify-center gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0">
-            {products.map((product) => {
-              const price = product?.prices?.find(
-                (price) => price.interval === billingInterval
-              );
-              if (!price) return null;
-              const priceString = new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: price.currency!,
-                minimumFractionDigits: 0
-              }).format((price?.unit_amount || 0) / 100);
+            {prices.map((price, i) => {
+              if (!price || billingInterval != price.interval) return null;
               return (
                 <div
-                  key={product.id}
+                  key={i}
                   className={cn(
                     'flex flex-col rounded-lg shadow-sm divide-y divide-zinc-600 bg-zinc-900',
                     {
-                      'border border-pink-500': subscription
-                        ? product.name === subscription?.prices?.products?.name
-                        : product.name === 'Freelancer'
+                      'border border-pink-500': price.emphasize
                     },
                     'flex-1', // This makes the flex item grow to fill the space
                     'basis-1/3', // Assuming you want each card to take up roughly a third of the container's width
                     'max-w-xs' // Sets a maximum width to the cards to prevent them from getting too large
                   )}
                 >
-                  <div className="p-6">
+                  <div className="p-6 h-full flex flex-col justify-between">
                     <h2 className="text-2xl font-semibold leading-6 text-white">
-                      {product.name}
+                      {price.name}
                     </h2>
-                    <p className="mt-4 text-zinc-300">{product.description}</p>
-                    <p className="mt-8">
+                    <p className="mt-4 text-zinc-300">{price.description}</p>
+                    <p className="my-8">
                       <span className="text-5xl font-extrabold white">
-                        {priceString}
+                        {price.cost}
                       </span>
-                      <span className="text-base font-medium text-zinc-100">
-                        /{billingInterval}
-                      </span>
+                      {price.interval && (
+                        <span className="text-base font-medium text-zinc-100">
+                          /{price.interval}
+                        </span>
+                      )}
                     </p>
+                    <div className="flex-grow">
+                      {price.features.map((f, i) => {
+                        return (
+                          <p key={i} className="mb-4 text-zinc-300">
+                            {f}
+                          </p>
+                        );
+                      })}
+                    </div>
                     <Button
                       variant="slim"
                       type="button"
-                      loading={priceIdLoading === price.id}
-                      onClick={() => handleStripeCheckout(price)}
+                      loading={priceIdLoading !== null}
+                      onClick={() => handleClick(price)}
                       className="block w-full py-2 mt-8 text-sm font-semibold text-center text-white rounded-md hover:bg-zinc-900"
                     >
                       {subscription ? 'Manage' : 'Subscribe'}
