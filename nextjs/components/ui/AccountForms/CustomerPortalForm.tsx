@@ -30,7 +30,7 @@ export default function CustomerPortalForm({
     const supabase = createClient();
     const { data } = await supabase.functions.invoke('get_stripe_url', {
       body: {
-        return_url: getURL("/account"),
+        return_url: getURL('/account')
       }
     });
     const redirectUrl = data?.redirect_url;
