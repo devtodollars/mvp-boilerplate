@@ -29,7 +29,7 @@ export default async function Account() {
         </div>
       </div>
       <div className="p-4">
-        <CustomerPortalForm subscription={null} />
+        <CustomerPortalForm />
         <EmailForm userEmail={user.email} />
       </div>
     </section>
