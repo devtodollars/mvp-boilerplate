@@ -34,6 +34,7 @@
     "clsx": "^2.1.0",
     "lucide-react": "0.330.0",
     "next": "14.1.0",
+    "posthog-js": "^1.116.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-merge-refs": "^2.1.1",

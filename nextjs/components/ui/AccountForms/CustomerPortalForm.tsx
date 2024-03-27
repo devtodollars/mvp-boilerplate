@@ -30,7 +30,9 @@ export default function CustomerPortalForm() {
       title="Billing Portal"
       footer={
         <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
-          <p className="pb-4 sm:pb-0">Manage invoices, payments, and subscriptions on Stripe.</p>
+          <p className="pb-4 sm:pb-0">
+            Manage invoices, payments, and subscriptions on Stripe.
+          </p>
           <Button
             variant="slim"
             onClick={handleStripePortalRequest}
