@@ -24,9 +24,10 @@ cp .env.example .env
 npm install
 npm run dev
 ```
+5. [Setup your own Supabase instance](../supabase)
 
 ## Stack
 
+- Next.JS (App Router)
 - Typescript
-- Next.JS App Router
 - Tailwind
