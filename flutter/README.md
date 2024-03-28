@@ -2,9 +2,7 @@
 
 ## Demo
 
-- https://app.devtodollars.com
-
-[![Screenshot of demo](./public/demo.png)](https://subscription-payments.vercel.app/)
+- https://flutter.devtodollars.com
 
 ## Getting Started
 
