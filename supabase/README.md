@@ -1,5 +1,7 @@
 # Supabase Production Template
 
+Supabase Backend configured with stripe integration, posthog analytics, and postmark transactional emails. 
+
 ## Pricing
 
 Either spend *13+ hours* piecing together documentation from separate websites or support me and get started in **under 30 minutes**
