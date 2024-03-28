@@ -17,6 +17,7 @@ cd YOUR_APP_NAME
 ```
 3. Use `.env` file from DevToDollars
 ```
+cd nextjs
 cp .env.example .env
 ```
 4. Run your local development server
