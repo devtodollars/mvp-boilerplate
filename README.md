@@ -24,17 +24,14 @@ Either spend *13+ hours* piecing together documentation from separate websites o
 
 ## What's Included:
 
-### Frontend ([Flutter](https://flutter.dev/))
+### Frontend ([Flutter](./flutter) or [NextJS](./nextjs))
 
-* State Management ([riverpod](https://pub.dev/packages/riverpod))
-* Routing ([go\_router](https://pub.dev/packages/go\_router))
-* UI Includes:
-  * auth\_screen
-  * payments\_screen (to redirect to stripe)
-  * home\_screen
-* 🚧 [frontend tests](https://github.com/devtodollars/flutter-supabase-production-template/issues/4) 🚧
+- **Choose [Flutter](./flutter)** if you plan to build or expand into a cross-platform apps (e.g. Uber, Fitbit, Spotify, Tinder, etc.)
+- **Choose [NextJS](./nextjs)** if you page load speeds are extremely important and web specific libraries are integral to your app (e.g. Amazon, Medium, Ticketmaster, etc.)
 
-### Backend ([Supabase](https://supabase.com/))
+Additionally, it's also possible to start with one-platform and move onto the next one depending on your needs. For example, start with Next.JS and then move to Flutter when a mobile app is needed. Both are configured to work straight out of the box.
+
+### Backend ([Supabase](./supabase))
 
 * Authentication
   * Email + PW
