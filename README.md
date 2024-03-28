@@ -4,18 +4,18 @@
 
 ## Getting Started
 
-Choose: [Flutter](./flutter) or [NextJS](./nextjs)
+Choose: [Flutter](./flutter/README.md) or [NextJS](./nextjs/README.md)
 
-- **Choose [Flutter](./flutter)** if you plan to build or expand into a cross-platform apps (e.g. Uber, Fitbit, Spotify, Tinder, etc.)
-- **Choose [NextJS](./nextjs)** if you page load speeds are extremely important and web specific libraries are integral to your app (e.g. Amazon, Medium, Ticketmaster, etc.)
+- [Choose Flutter](./flutter/README.md) if you plan to build or expand into a cross-platform apps (e.g. Uber, Fitbit, Spotify, Tinder, etc.)
+- [Choose NextJS](./nextjs/README.md) if you page load speeds are extremely important and web specific libraries are integral to your app (e.g. Amazon, Medium, Ticketmaster, etc.)
 
 Additionally, it's also possible to start with one-platform and move onto the next one depending on your needs. For example, start with Next.JS and then move to Flutter when a mobile app is needed. Both are configured to work straight out of the box.
 
 ## What's Included:
 
-### Frontend ([Flutter](./flutter) or [NextJS](./nextjs))
+### Frontend ([Flutter](./flutter/README.md) or [NextJS](./nextjs/README.md))
 
-### Backend ([Supabase](./supabase))
+### Backend ([Supabase](./supabase/README.md))
 
 * Authentication
   * Email + PW
