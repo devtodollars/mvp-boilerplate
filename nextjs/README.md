@@ -20,7 +20,7 @@ cd YOUR_APP_NAME
 cd nextjs
 cp .env.example .env
 ```
-4. Run your local development server
+4. Run the local development server
 ```
 npm install
 npm run dev
