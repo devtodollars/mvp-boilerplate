@@ -4,7 +4,7 @@
 
 ## Getting Started
 
-Choose: [Flutter](./flutter/README.md) or [NextJS](./nextjs/README.md)
+Choose: Flutter or NextJS
 
 - [Choose Flutter](./flutter/README.md) if you plan to build or expand into cross-platform apps (e.g. Duolingo, Fitbit, Spotify, Tinder, etc.)
 - [Choose NextJS](./nextjs/README.md) if SEO, page load speeds, and web-specific libraries are integral to your app (e.g. Shopify, Medium, etc.)
