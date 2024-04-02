@@ -4,6 +4,8 @@ import 'package:devtodollars/components/email_form.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_auth_ui/supabase_auth_ui.dart';
 
+final Uri initUrl = Uri.base;
+
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -46,7 +48,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 ],
                 onSuccess: (_) {},
                 showSuccessSnackBar: false,
-                redirectUrl: (kIsWeb) ? Uri.base.origin : null,
+                redirectUrl: (kIsWeb) ? initUrl.toString() : null,
               ),
               const SizedBox(height: 16),
               Padding(
