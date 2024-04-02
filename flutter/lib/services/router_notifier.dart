@@ -33,11 +33,12 @@ GoRouter router(RouterRef ref) {
             path += "?$queryString";
           }
           // If user is not authenticated, direct to login screen
-          if (user == null && path != '/login') {
+          if (user == null && initUrl?.path != '/login') {
             return '/login';
           }
           // If user is authenticated and trying to access login or loading, direct to home
-          if (user != null && (path == '/login' || path == '/loading')) {
+          if (user != null &&
+              (initUrl?.path == '/login' || initUrl?.path == '/loading')) {
             return "/";
           }
           // After handling initial redirection, clear initUrl to prevent repeated redirections
