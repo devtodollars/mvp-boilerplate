@@ -14,7 +14,7 @@ Either spend *13+ hours* piecing together documentation from separate websites o
 |                                                       | ✓ Discord – Text Support                                                      | ✓ Completed MVP                                                        |
 |                                                                                       | ✓ Discord – Weekly Office Hours                                               | ✓ Landing Page                                                         |
 |                                                                                       | ✓ 30 min Consulting ($50 value)                                                         | ✓ Code Documentation                                                   |
-| [Buy Now](https://app.devtodollars.com/payments?price=price_1Oq6bXFttF99a1NCdZqHlQ8J) | [Buy Now](https://app.devtodollars.com/payments?price=price_1OqIefFttF99a1NCezXvAtcM) | [Book a Call](https://usemotion.com/meet/ithinkwong/mvp-consulting?d=30) |
+| [Buy Now](https://flutter.devtodollars.com/payments?price=price_1Oq6bXFttF99a1NCdZqHlQ8J) | [Buy Now](https://flutter.devtodollars.com/payments?price=price_1OqIefFttF99a1NCezXvAtcM) | [Book a Call](https://usemotion.com/meet/ithinkwong/mvp-consulting?d=30) |
 
 **Note**: Click "Buy Now" to see how the payment redirection works in the demo
 
