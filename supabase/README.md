@@ -16,6 +16,10 @@ Either spend *13+ hours* piecing together documentation from separate websites o
 |                                                                                       | ✓ 30 min Consulting ($50 value)                                                         | ✓ Code Documentation                                                   |
 | [Buy Now](https://flutter.devtodollars.com/payments?price=price_1Oq6bXFttF99a1NCdZqHlQ8J) | [Buy Now](https://flutter.devtodollars.com/payments?price=price_1OqIefFttF99a1NCezXvAtcM) | [Book a Call](https://usemotion.com/meet/ithinkwong/mvp-consulting?d=30) |
 
-**Note**: Click "Buy Now" to see how the payment redirection works in the demo
+![Export-1712323268776](https://github.com/devtodollars/startup-boilerplate/assets/20890995/3f285eea-e0ee-43ca-8d1e-f6ac845e6319)
 
+## Documentation Preview
 ![Documentation Preview](https://framerusercontent.com/images/t2DoTrygMH9T2zmkLSLL4HbRwX4.png)
+
+
+
