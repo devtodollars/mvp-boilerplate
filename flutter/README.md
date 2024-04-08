@@ -22,7 +22,6 @@ cd YOUR_APP_NAME
 cd flutter
 flutter run -d chrome --dart-define-from-file=env.json
 ```
-4. [Setup your own Supabase instance](../supabase)
 
 ## Stack
 
