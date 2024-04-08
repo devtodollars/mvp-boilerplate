@@ -109,10 +109,6 @@ async function sendPurchaseEmail(products: string[], to: string) {
   let template = "";
   if (product === "prod_PfRVCVqv8fBrxN") {
     template = "paid-docs-support";
-  } else if (product === "prod_PfRUhnTnwtHLvw") {
-    template = "paid-docs";
-  } else if (product === "prod_PfRXymhiBMCUZo") {
-    template = "paid-consulting";
   }
   if (template) {
     await sendEmail({ to, template });
