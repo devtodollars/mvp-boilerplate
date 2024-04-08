@@ -47,6 +47,7 @@ const prices = [
       '✓ 30 Min Setup Call',
       '✓ Premium Discord Support',
       '✓ Weekly Office Hours',
+      '✓ Support Matt',
     ],
     cost: '$49',
     emphasize: true,
