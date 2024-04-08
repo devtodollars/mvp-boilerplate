@@ -78,7 +78,8 @@ Additionally, it's also possible to start with one-platform and move onto the ne
 ### 🚧 [Error Monitoring](https://github.com/devtodollars/flutter-supabase-production-template/issues/18) ([Sentry](https://sentry.io/welcome/)) 🚧
 
 ## Additional Support
-Support me by allowing me to support you :)
+Support me by purchasing premium support from yours truly :)
+
 
 | Code + Docs (**$0**)                                             | Premium Support (**$49**)                                                                 | I'll Build Your MVP (**$5000~**)                                         |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |

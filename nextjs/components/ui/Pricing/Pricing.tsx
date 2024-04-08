@@ -144,7 +144,7 @@ export default function Pricing({ user }: Props) {
               Pricing Plans
             </h1>
             <p className="max-w-2xl m-auto mt-5 text-xl text-zinc-200 sm:text-center sm:text-2xl">
-              So the documentation, code, and community isn't enough for you? Get some premium support from yours truly ;)
+              Support me by purchasing premium support from yours truly :)
             </p>
             <div className="relative self-center mt-6 bg-zinc-900 rounded-lg p-0.5 flex sm:mt-8 border border-zinc-800">
               {intervals.includes('month') && (
