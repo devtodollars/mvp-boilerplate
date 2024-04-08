@@ -76,3 +76,14 @@ Additionally, it's also possible to start with one-platform and move onto the ne
 ### 🚧 [Blog / Docs](https://github.com/devtodollars/startup-boilerplate/issues/56) ([Nextra](https://nextra.site/)) 🚧
 
 ### 🚧 [Error Monitoring](https://github.com/devtodollars/flutter-supabase-production-template/issues/18) ([Sentry](https://sentry.io/welcome/)) 🚧
+
+## Additional Support
+So the documentation, code, and community isn't enough for you? Get some premium support from yours truly ;)
+
+| Code + Docs (**$0**)                                             | Premium Support (**$49**)                                                                 | I'll Build Your MVP (**$5000~**)                                         |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| ✓ Code                                                           | ✓ 30 Min Setup Call                                                                       | ✓ Completed MVP                                                          |
+| ✓ Documentation                                                  | ✓ Premium Discord Support                                                                 | ✓ Technical Co-founder                                                   |
+| ✓ Discord Community                                              | ✓ Weekly Office Hours                                                                     |                                                                          |
+| ✓ Life-time Updates                                              |                                                                                           |                                                                          |
+| [View Code](https://github.com/devtodollars/startup-boilerplate) | [Buy Now](https://flutter.devtodollars.com/payments?price=price_1P3MEnFttF99a1NCjNcCLLvA) | [Book a Call](https://usemotion.com/meet/ithinkwong/mvp-consulting?d=30) |
