@@ -1,7 +1,7 @@
+import Stripe from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { processWebhookRequest } from "../_shared/stripe.ts";
 import { supabase } from "../_shared/supabase.ts";
 import { stripe } from "../_shared/stripe.ts";
-import Stripe from "stripe";
 import { posthog } from "../_shared/posthog.ts";
 import { sendEmail } from "../_shared/postmark.ts";
 
