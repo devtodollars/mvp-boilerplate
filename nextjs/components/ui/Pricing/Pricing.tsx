@@ -16,6 +16,7 @@ type Props = {
 
 type Price = {
   id: string;
+  ctaText: string;
   redirectURL?: string;
   emphasize?: boolean;
   description?: string;
@@ -27,32 +28,37 @@ type Price = {
 
 const prices = [
   {
-    id: process.env.NEXT_PUBLIC_STRIPE_DOCS_PRICE_ID!,
-    name: 'Docs',
-    features: ['✓ Private Documentation'],
-    cost: '$99'
+    name: 'Docs + Code',
+    features: [
+      '✓ Code',
+      '✓ Documentation',
+      '✓ Life-time Updates',
+      '✓ Discord Community'
+    ],
+    cost: '$0',
+    redirectURL: 'https://github.com/devtodollars/startup-boilerplate',
+    ctaText: "View Code",
   },
   {
-    id: process.env.NEXT_PUBLIC_STRIPE_DOCS_AND_SUPPORT_PRICE_ID!,
-    name: 'Docs + Support',
+    id: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_SUPPORT_PRICE_ID!,
+    ctaText: "Buy Now",
+    name: 'Premium Support',
     features: [
-      '✓ Private Documentation',
-      '✓ Discord – Text Support',
-      '✓ Discord – Weekly Office Hours',
-      '✓ 30 min Consulting ($50 value)'
+      '✓ 30 Min Setup Call',
+      '✓ Premium Discord Support',
+      '✓ Weekly Office Hours',
     ],
-    cost: '$129',
-    emphasize: true
+    cost: '$49',
+    emphasize: true,
   },
   {
     name: "I'll Build Your MVP",
+    ctaText: "Book a Call",
     features: [
-      '✓ Technical Co-founder',
       '✓ Completed MVP',
-      '✓ Landing Page',
-      '✓ Code Documentation'
+      '✓ Technical Co-founder',
     ],
-    cost: '$5000',
+    cost: '$5000~',
     redirectURL: 'https://usemotion.com/meet/ithinkwong/mvp-consulting?d=30'
   }
 ] as Price[];
@@ -80,6 +86,7 @@ export default function Pricing({ user }: Props) {
     }
 
     const supabase = createClient();
+    console.log(price.id);
     const { data, error } = await supabase.functions.invoke('get_stripe_url', {
       body: {
         return_url: getURL(),
@@ -137,19 +144,17 @@ export default function Pricing({ user }: Props) {
               Pricing Plans
             </h1>
             <p className="max-w-2xl m-auto mt-5 text-xl text-zinc-200 sm:text-center sm:text-2xl">
-              <b>Free, open-source code</b>,<br />
-              but paid documentation and support
+              So the documentation, code, and community isn't enough for you? Get some premium support from yours truly ;)
             </p>
             <div className="relative self-center mt-6 bg-zinc-900 rounded-lg p-0.5 flex sm:mt-8 border border-zinc-800">
               {intervals.includes('month') && (
                 <button
                   onClick={() => setBillingInterval('month')}
                   type="button"
-                  className={`${
-                    billingInterval === 'month'
-                      ? 'relative w-1/2 bg-zinc-700 border-zinc-800 shadow-sm text-white'
-                      : 'ml-0.5 relative w-1/2 border border-transparent text-zinc-400'
-                  } rounded-md m-1 py-2 text-sm font-medium whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 focus:z-10 sm:w-auto sm:px-8`}
+                  className={`${billingInterval === 'month'
+                    ? 'relative w-1/2 bg-zinc-700 border-zinc-800 shadow-sm text-white'
+                    : 'ml-0.5 relative w-1/2 border border-transparent text-zinc-400'
+                    } rounded-md m-1 py-2 text-sm font-medium whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 focus:z-10 sm:w-auto sm:px-8`}
                 >
                   Monthly billing
                 </button>
@@ -158,11 +163,10 @@ export default function Pricing({ user }: Props) {
                 <button
                   onClick={() => setBillingInterval('year')}
                   type="button"
-                  className={`${
-                    billingInterval === 'year'
-                      ? 'relative w-1/2 bg-zinc-700 border-zinc-800 shadow-sm text-white'
-                      : 'ml-0.5 relative w-1/2 border border-transparent text-zinc-400'
-                  } rounded-md m-1 py-2 text-sm font-medium whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 focus:z-10 sm:w-auto sm:px-8`}
+                  className={`${billingInterval === 'year'
+                    ? 'relative w-1/2 bg-zinc-700 border-zinc-800 shadow-sm text-white'
+                    : 'ml-0.5 relative w-1/2 border border-transparent text-zinc-400'
+                    } rounded-md m-1 py-2 text-sm font-medium whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 focus:z-10 sm:w-auto sm:px-8`}
                 >
                   Yearly billing
                 </button>
@@ -216,7 +220,7 @@ export default function Pricing({ user }: Props) {
                       onClick={() => handleClick(price)}
                       className="block w-full py-2 mt-8 text-sm font-semibold text-center text-white rounded-md hover:bg-zinc-900"
                     >
-                      {subscription ? 'Manage' : 'Subscribe'}
+                      {price.ctaText}
                     </Button>
                   </div>
                 </div>
