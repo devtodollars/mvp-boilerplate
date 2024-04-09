@@ -2,7 +2,7 @@
 
 [Join Discord Community](https://discord.gg/8cUHbgAHXH)
 
-[See Documentation](https://startup-template.gitbook.io/docs/)
+[See Documentation](https://docs.devtodollars.com)
 
 ## Getting Started
 
