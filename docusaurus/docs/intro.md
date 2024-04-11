@@ -1,6 +1,8 @@
 ---
 sidebar_position: 1
+slug: /
 ---
+TODO: follow instructions in reverse to add back landing page: https://ricard.dev/how-to-set-docs-as-homepage-for-docusaurus/
 
 # Tutorial Intro
 
