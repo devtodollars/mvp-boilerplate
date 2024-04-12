@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
+    "prestart": "node add-remote-resources.js",
     "start": "docusaurus start",
+    "prebuild": "node add-remote-resources.js",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
@@ -27,6 +29,8 @@
     "@docusaurus/module-type-aliases": "3.2.1",
     "@docusaurus/tsconfig": "3.2.1",
     "@docusaurus/types": "3.2.1",
+    "shelljs": "^0.8.5",
+    "tmp": "^0.2.3",
     "typescript": "~5.2.2"
   },
   "browserslist": {
