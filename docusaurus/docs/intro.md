@@ -2,48 +2,31 @@
 sidebar_position: 1
 slug: /
 ---
-TODO: follow instructions in reverse to add back landing page: https://ricard.dev/how-to-set-docs-as-homepage-for-docusaurus/
+# ▶️  Getting Started
 
-# Tutorial Intro
+### Welcome to DevToDollars
 
-Let's discover **Docusaurus in less than 5 minutes**.
+Here's a quick overview of the boilerplate. Follow along to get your app up and running.
 
-## Getting Started
+Once you're done, start with [this tutorial](getting-started.md) to launch your project in 5 minutes. Let's get started in **under 2 minutes**. ⚡️
 
-Get started by **creating a new site**.
+### Run flutter local web server
 
-Or **try Docusaurus immediately** with **[docusaurus.new](https://docusaurus.new)**.
-
-### What you'll need
-
-- [Node.js](https://nodejs.org/en/download/) version 18.0 or above:
-  - When installing Node.js, you are recommended to check all checkboxes related to dependencies.
-
-## Generate a new site
-
-Generate a new Docusaurus site using the **classic template**.
-
-The classic template will automatically be added to your project after you run the command:
+1. [Install flutter](https://docs.flutter.dev/get-started/install)
+2. In your terminal, run the following commands:
 
 ```bash
-npm init docusaurus@latest my-website classic
+git clone https://github.com/devtodollars/flutter-supabase-production-template.git YOUR_APP_NAME
+cd YOUR_APP_NAME
 ```
 
-You can type this command into Command Prompt, Powershell, Terminal, or any other integrated terminal of your code editor.
-
-The command also installs all necessary dependencies you need to run Docusaurus.
-
-## Start your site
-
-Run the development server:
+3. Run the local web server.
 
 ```bash
-cd my-website
-npm run start
+cd flutter
+flutter run -d chrome --dart-define-from-file=env.json
 ```
 
-The `cd` command changes the directory you're working with. In order to work with your newly created Docusaurus site, you'll need to navigate the terminal there.
-
-The `npm run start` command builds your website locally and serves it through a development server, ready for you to view at http://localhost:3000/.
-
-Open `docs/intro.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes.
+:::info
+The Supabase backend used is the same one as [https://app.devtodollars.com](https://app.devtodollars.com) . See how to [setup your own backend](services/backend/).
+:::
