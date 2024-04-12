@@ -13,7 +13,7 @@ sidebar_position: 5
 6. Update the `sendEmail` functions [on user creation](https://github.com/devtodollars/flutter-supabase-production-template/blob/main/supabase/functions/on\_user\_modify/index.ts#L19) and when a [user subscribes](https://github.com/devtodollars/flutter-supabase-production-template/blob/main/supabase/functions/stripe\_webhook/index.ts#L111)
 
 :::info
-Make sure to update your `supabase/.env` file and [deploy your secrets](backend/common-commands.md#set-supabase-secrets-from-.env-file)
+Make sure to update your `supabase/.env` file and [deploy your secrets](backend/common-commands.md)
 :::
 
 7. (OPTIONAL) [Update Supabase SMTP](https://supabase.com/docs/guides/auth/auth-smtp) to point to Postmark.

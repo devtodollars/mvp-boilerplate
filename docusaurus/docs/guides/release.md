@@ -10,7 +10,7 @@ Below are the steps to configure the [pipelines](https://github.com/devtodollars
 1. Create a Netlify site: Add New Site > Manual Deploy
 2. Upload below .zip file to create the website
 
-[Download web.zip](./assets/web.zip)
+[Download web.zip](../assets/web.zip)
 
 3. (OPTIONAL) [Configure a custom domain](https://docs.netlify.com/domains-https/custom-domains/configure-external-dns/#configure-a-subdomain) in Netlify
 
