@@ -34,7 +34,6 @@ const config: Config = {
       'classic',
       {
         docs: {
-          routeBasePath: '/', // TODO: Remove when adding blog or landing page
           sidebarPath: './sidebars.ts',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
@@ -75,8 +74,7 @@ const config: Config = {
           position: 'left',
           label: 'Docs',
         },
-        // TODO: add back when blog done
-        // { to: '/blog', label: 'Blog', position: 'left' },
+        { to: '/blog', label: 'Blog', position: 'left' },
         {
           href: 'https://github.com/devtodollars/startup-boilerplate',
           label: 'GitHub',
@@ -92,7 +90,11 @@ const config: Config = {
           items: [
             {
               label: 'Docs',
-              to: '/',
+              to: '/docs',
+            },
+            {
+              label: 'Blog',
+              to: '/blog',
             },
           ],
         },
@@ -106,20 +108,6 @@ const config: Config = {
             {
               label: 'Twitter',
               href: 'https://twitter.com/ithinkwong',
-            },
-          ],
-        },
-        {
-          title: 'More',
-          items: [
-            // TODO: add back when blog done
-            // {
-            //   label: 'Blog',
-            //   to: '/blog',
-            // },
-            {
-              label: 'GitHub',
-              href: 'https://github.com/devtodollars/startup-boilerplate',
             },
           ],
         },
