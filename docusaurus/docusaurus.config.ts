@@ -131,6 +131,14 @@ const config: Config = {
       darkTheme: prismThemes.dracula,
     },
   } satisfies Preset.ThemeConfig,
+  plugins: [
+    [
+      "posthog-docusaurus",
+      {
+        apiKey: "phc_brFjanMrA2KXPYyvFjLdwJC9VJvl4VG7mG9yKqvgCCY",
+      },
+    ],
+  ],
 };
 
 export default config;
