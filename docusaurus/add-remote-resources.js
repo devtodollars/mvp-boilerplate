@@ -1,8 +1,14 @@
 const shell = require('shelljs');
 const tmp = require('tmp');
 
-// Define the repository URL and the target directory
-const REPO_URL = "https://github.com/devtodollars/resources.git";
+// Check for the environment variable and use it if available, otherwise exit
+const REPO_URL = process.env.REMOTE_REPO_URL;
+if (!REPO_URL) {
+  console.log("Environment variable RESOURCE_REPO_URL is not set. Exiting.");
+  process.exit();
+}
+
+// Define target repo
 const TARGET_DIR = shell.pwd().stdout;
 
 // Create a temporary directory for cloning
