@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:devtodollars/services/auth_notifier.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PaymentsScreen extends ConsumerStatefulWidget {
@@ -16,25 +17,26 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   @override
   void initState() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      Uri? url;
       final authNotif = ref.read(authProvider.notifier);
-      final url = await authNotif.getUserStripeLink(price: widget.price);
-      if (url == null) {
-        if (mounted) {
-          await showDialog(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: const Text("Failed to open checkout portal"),
-              content: Text(
-                  "Error getting stripe checkout portal for price: ${widget.price}"),
-              actions: [
-                TextButton(onPressed: context.pop, child: const Text("Ok"))
-              ],
-            ),
-          );
-        }
-        return;
+      try {
+        url = await authNotif.getUserStripeLink(price: widget.price);
+      } on FunctionException catch (e) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Failed to open Stripe"),
+            content: Text(e.details),
+            actions: [
+              TextButton(onPressed: context.pop, child: const Text("Ok"))
+            ],
+          ),
+        );
       }
-      launchUrl(url, webOnlyWindowName: "_self");
+      if (url != null) {
+        launchUrl(url, webOnlyWindowName: "_self");
+      }
     });
     super.initState();
   }
