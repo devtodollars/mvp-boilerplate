@@ -18,7 +18,23 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final authNotif = ref.read(authProvider.notifier);
       final url = await authNotif.getUserStripeLink(price: widget.price);
-      if (url != null && mounted) launchUrl(url, webOnlyWindowName: "_self");
+      if (url == null) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text("Failed to open checkout portal"),
+              content: Text(
+                  "Error getting stripe checkout portal for price: ${widget.price}"),
+              actions: [
+                TextButton(onPressed: context.pop, child: const Text("Ok"))
+              ],
+            ),
+          );
+        }
+        return;
+      }
+      launchUrl(url, webOnlyWindowName: "_self");
     });
     super.initState();
   }
