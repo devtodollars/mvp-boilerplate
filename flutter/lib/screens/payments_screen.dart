@@ -20,7 +20,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       final url = await authNotif.getUserStripeLink(price: widget.price);
       if (url == null) {
         if (mounted) {
-          showDialog(
+          await showDialog(
             context: context,
             builder: (_) => AlertDialog(
               title: const Text("Failed to open checkout portal"),
