@@ -23,11 +23,13 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
         url = await authNotif.getUserStripeLink(price: widget.price);
       } on FunctionException catch (e) {
         if (!mounted) return;
+        var msg =
+            e.details?["message"] ?? "Error retrieving stripe redirect url";
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
             title: const Text("Failed to open Stripe"),
-            content: Text(e.details),
+            content: Text(msg),
             actions: [
               TextButton(onPressed: context.pop, child: const Text("Ok"))
             ],
