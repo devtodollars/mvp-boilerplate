@@ -69,7 +69,7 @@ const config: Config = {
         { to: '/blog', label: 'Blog', position: 'left' },
         {
           href: 'https://discord.gg/s9DRKbwS',
-          label: 'Discord',
+          className: 'header-discord-link',
           position: 'right',
         },
         {
