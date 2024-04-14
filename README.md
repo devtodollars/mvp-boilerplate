@@ -1,17 +1,18 @@
 # Production Boilerplate for Startups
 
-[Join Discord Community](https://discord.gg/8cUHbgAHXH)
+[See documentation to get started](https://resources.devtodollars.com/docs)
 
-[See Documentation](https://docs.devtodollars.com)
+## Additional Support
+Support me by purchasing premium support from yours truly :)
 
-## Getting Started
 
-To get started, choose which frontend you need and go from there:
-
-- [Choose Flutter](./flutter/README.md) if you plan to build or expand into cross-platform apps (e.g. Duolingo, Fitbit, Spotify, Tinder, etc.)
-- [Choose NextJS](./nextjs/README.md) if SEO, page load speeds, and web-specific libraries are integral to your app (e.g. Shopify, Medium, Wix, etc.)
-
-Additionally, it's also possible to start with one-platform and move onto the next one depending on your needs. For example, start with Next.JS and then move to Flutter when a mobile app is needed. Both are configured to work straight out of the box.
+| Code + Docs (**$0**)                                             | Premium Support (**$49**)                                                                 | I'll Build Your MVP (**$5000~**)                                         |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| ✓ Code                                                           | ✓ 30 Min Setup Call                                                                       | ✓ Completed MVP                                                          |
+| ✓ Documentation                                                  | ✓ Premium Discord Support                                                                 | ✓ Technical Co-founder                                                   |
+| ✓ Discord Community                                              | ✓ Weekly Office Hours                                                                     |                                                                          |
+| ✓ Life-time Updates                                              | ✓ Support Matt                                                                            |                                                                          |
+| [View Code](https://github.com/devtodollars/startup-boilerplate) | [Buy Now](https://flutter.devtodollars.com/payments?price=price_1P3MEnFttF99a1NCjNcCLLvA) | [Book a Call](https://usemotion.com/meet/ithinkwong/mvp-consulting?d=30) |
 
 ## What's Included:
 
@@ -77,14 +78,3 @@ Additionally, it's also possible to start with one-platform and move onto the ne
 
 ### 🚧 [Error Monitoring](https://github.com/devtodollars/flutter-supabase-production-template/issues/18) ([Sentry](https://sentry.io/welcome/)) 🚧
 
-## Additional Support
-Support me by purchasing premium support from yours truly :)
-
-
-| Code + Docs (**$0**)                                             | Premium Support (**$49**)                                                                 | I'll Build Your MVP (**$5000~**)                                         |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| ✓ Code                                                           | ✓ 30 Min Setup Call                                                                       | ✓ Completed MVP                                                          |
-| ✓ Documentation                                                  | ✓ Premium Discord Support                                                                 | ✓ Technical Co-founder                                                   |
-| ✓ Discord Community                                              | ✓ Weekly Office Hours                                                                     |                                                                          |
-| ✓ Life-time Updates                                              | ✓ Support Matt                                                                            |                                                                          |
-| [View Code](https://github.com/devtodollars/startup-boilerplate) | [Buy Now](https://flutter.devtodollars.com/payments?price=price_1P3MEnFttF99a1NCjNcCLLvA) | [Book a Call](https://usemotion.com/meet/ithinkwong/mvp-consulting?d=30) |
