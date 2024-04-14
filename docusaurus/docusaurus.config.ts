@@ -1,6 +1,7 @@
 import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import tailwindPlugin from "./plugins/tailwind-config.cjs";
 
 const config: Config = {
   title: 'DevToDollars',
@@ -124,6 +125,7 @@ const config: Config = {
         apiKey: "phc_brFjanMrA2KXPYyvFjLdwJC9VJvl4VG7mG9yKqvgCCY",
       },
     ],
+    tailwindPlugin,
   ],
 };
 
