@@ -45,6 +45,7 @@
   background-color: var(--ifm-navbar-link-hover-color);
 }
 
+/* Discord link */
 .header-discord-link::before {
   content: '';
   width: 24px;
