@@ -69,7 +69,7 @@ const config: Config = {
         },
         { to: '/blog', label: 'Blog', position: 'left' },
         {
-          href: 'https://discord.gg/s9DRKbwS',
+          href: 'https://discord.gg/6q63Xa6SEB',
           className: 'header-discord-link',
           position: 'right',
         },
@@ -102,7 +102,7 @@ const config: Config = {
           items: [
             {
               label: 'Discord',
-              href: 'https://discord.gg/s9DRKbwS',
+              href: 'https://discord.gg/6q63Xa6SEB',
             },
             {
               label: 'Twitter',
