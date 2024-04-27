@@ -11,9 +11,9 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"WoodHeinzNo2"', ...fontFamily.sans],
-        jakarta: ['"Plus Jakarta Sans"', ...fontFamily.sans],
-        mono: ['"Fira Code"', ...fontFamily.mono],
+        sans: ['var(--font-sans)', ...fontFamily.sans],
+        wood: ['WoodHeinzNo2'],
+        mont: ['Montserrat'],
       },
       borderRadius: {
         sm: "4px",
