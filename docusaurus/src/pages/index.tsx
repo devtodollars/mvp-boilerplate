@@ -5,6 +5,7 @@ import Layout from '@theme/Layout';
 import Heading from '@theme/Heading';
 
 import styles from './index.module.css';
+import HeroHome from '../components/hero-home';
 
 function HomepageHeader() {
   const { siteConfig } = useDocusaurusContext();
@@ -28,11 +29,11 @@ function HomepageHeader() {
 }
 
 export default function Home(): JSX.Element {
-  const { siteConfig } = useDocusaurusContext();
   return (
     <Layout
-      title={`Hello from ${siteConfig.title}`}
-      description="Description will go into a meta tag in <head />">
+      title="Home"
+      description="Helping developers become founders">
+      <HeroHome />
       <HomepageHeader />
     </Layout>
   );

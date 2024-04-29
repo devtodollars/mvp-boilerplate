@@ -22,7 +22,9 @@ module.exports = {
         sm: "0px",
         lg: "997px",
       },
-      colors: {},
+      colors: {
+        primary: "#ffca28"
+      },
     },
   },
   plugins: [],

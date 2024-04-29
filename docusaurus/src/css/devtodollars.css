@@ -7,6 +7,13 @@
     font-display: swap;
     src: url('../../static/fonts/WoodHeinzNo2-New.ttf') format('opentype');
   }
+  @font-face {
+    font-family: "Montserrat";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../../static/fonts/Montserrat-VariableFont_wght.ttf') format('opentype');
+  }
 }
 .navbar__title {
   font-family: "WoodHeinzNo2";
