@@ -6,7 +6,7 @@ export default function HeroHome() {
         <svg width="1360" height="578" viewBox="0 0 1360 578" xmlns="http://www.w3.org/2000/svg">
           <g >
             <image x="1100" y="0" href="img/devtodollars.png" width={256} height={256} />
-            <image x="40" y="403" href="img/devtodollars.png" width={128} height={128} />
+            <image x="100" y="403" href="img/devtodollars.png" width={128} height={128} />
           </g>
         </svg>
       </div>
