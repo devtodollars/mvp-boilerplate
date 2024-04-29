@@ -31,7 +31,7 @@ export default function FeaturesHome() {
             <div className="max-w-xl md:max-w-none md:w-full mx-auto md:col-span-7 lg:col-span-6 md:mt-6" data-aos="fade-right">
               <div className="md:pr-4 lg:pr-12 xl:pr-16 mb-8">
                 <h2 className="text-4xl mb-3 font-wood">How I help you</h2>
-                <p className="text-l font-mont">Everything you need to build a startup from the <span className="text-primary">CTO of a YC backed company</span> to build a startup</p>
+                <p className="text-l font-mont">Below are things I wish I had when I first started my journey</p>
               </div>
               {/* Tabs buttons */}
               <div className="mb-8 md:mb-0">

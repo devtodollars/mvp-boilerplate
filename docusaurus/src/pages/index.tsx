@@ -7,27 +7,8 @@ import Heading from '@theme/Heading';
 import styles from './index.module.css';
 import HeroHome from '../components/hero-home';
 import FeaturesHome from '../components/features-home';
-
-function HomepageHeader() {
-  const { siteConfig } = useDocusaurusContext();
-  return (
-    <header className={clsx('hero hero--primary', styles.heroBanner)}>
-      <div className="container">
-        <Heading as="h1" className="hero__title">
-          {siteConfig.title}
-        </Heading>
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
-        <div className={styles.buttons}>
-          <Link
-            className="button button--secondary button--lg"
-            to="/docs">
-            View Documentation
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
+import AboutMe from '../components/about-me';
+import Cta from '../components/cta';
 
 export default function Home(): JSX.Element {
   return (
@@ -36,7 +17,8 @@ export default function Home(): JSX.Element {
       description="Helping developers become founders">
       <HeroHome />
       <FeaturesHome />
-      <HomepageHeader />
+      <AboutMe />
+      <Cta />
     </Layout>
   );
 }
