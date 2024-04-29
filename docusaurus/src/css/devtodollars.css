@@ -50,3 +50,17 @@
 .header-discord-link:hover::before {
   background-color: var(--ifm-navbar-link-hover-color);
 }
+
+/* Tailwind Classes */
+.btn,
+.btn-sm {
+    @apply font-medium inline-flex items-center justify-center border border-transparent rounded-xl leading-snug transition duration-150 ease-in-out;
+}
+
+.btn {
+    @apply px-8 py-3 shadow-lg;
+}
+
+.btn-sm {
+    @apply px-4 py-2 shadow;
+}

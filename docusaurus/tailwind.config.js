@@ -23,7 +23,8 @@ module.exports = {
         lg: "997px",
       },
       colors: {
-        primary: "#ffca28"
+        primary: "#ffca28",
+        primarybg: "#343434",
       },
     },
   },
