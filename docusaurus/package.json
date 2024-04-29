@@ -19,6 +19,7 @@
   "dependencies": {
     "@docusaurus/core": "3.2.1",
     "@docusaurus/preset-classic": "3.2.1",
+    "@headlessui/react": "^1.7.19",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.0.0",
     "posthog-docusaurus": "^2.0.0",

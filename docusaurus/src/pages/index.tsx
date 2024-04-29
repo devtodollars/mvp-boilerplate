@@ -6,6 +6,7 @@ import Heading from '@theme/Heading';
 
 import styles from './index.module.css';
 import HeroHome from '../components/hero-home';
+import FeaturesHome from '../components/features-home';
 
 function HomepageHeader() {
   const { siteConfig } = useDocusaurusContext();
@@ -34,6 +35,7 @@ export default function Home(): JSX.Element {
       title="Home"
       description="Helping developers become founders">
       <HeroHome />
+      <FeaturesHome />
       <HomepageHeader />
     </Layout>
   );
