@@ -21,7 +21,7 @@ export default function FeaturesHome() {
       {/* Section background (needs .relative class on parent and next sibling elements) */}
       <div className="absolute left-0 right-0 m-auto w-px p-px h-20 bg-gray-200 transform -translate-y-1/2"></div>
 
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 mb-20">
         <div className="pt-12 md:pt-20">
 
           {/* Section content */}
@@ -41,7 +41,7 @@ export default function FeaturesHome() {
                 >
                   <div>
                     <div className="font-bold leading-snug tracking-tight mb-1">Boilerplate Code</div>
-                    <div className="text-gray-400">Fully configured code to get up and running with your startup in 30 minutes</div>
+                    <div className="text-gray-400">Fully configured code to get up and running with your startup in under 30 minutes</div>
                   </div>
                   <div className="flex justify-center items-center w-8 h-8 bg-white rounded-full shadow shrink-0 ml-3">
                     💻
@@ -94,11 +94,9 @@ export default function FeaturesHome() {
                     beforeEnter={() => heightFix()}
                     unmount={false}
                   >
-                    <div className="relative inline-flex flex-col">
+                    <div className="relative inline-flex flex-col gap-8">
                       <img className="md:max-w-none mx-auto rounded" src="img/devtodollars.png" width={500} height={375} alt="Features bg" />
-                      {/* <img className="md:max-w-none absolute w-full left-0 transform animate-float" src="img/devtodollars.png" width={500} height={147} alt="Element 01" style={{ top: '22%' }} /> */}
-                      {/* <img className="md:max-w-none absolute w-full left-0 transform animate-float animation-delay-500" src="img/devtodollars.png" width={500} height={158} alt="Element 02" style={{ top: '39%' }} /> */}
-                      {/* <img className="md:max-w-none absolute w-full left-0 bottom-0 transform animate-float animation-delay-1000" src="img/devtodollars.png" width={500} height={167} alt="Element 03" style={{ top: '77%' }} /> */}
+                      <a className="btn text-white bg-gray-800 hover:bg-gray-900 hover:text-white mb-4 sm:w-auto sm:mb-0 hover:no-underline" target="_blank" href="https://github.com/devtodollars/startup-boilerplate">⭐️ Star on Github</a>
                     </div>
                   </Transition>
                   {/* Item 2 */}
@@ -114,11 +112,9 @@ export default function FeaturesHome() {
                     beforeEnter={() => heightFix()}
                     unmount={false}
                   >
-                    <div className="relative inline-flex flex-col">
+                    <div className="relative inline-flex flex-col gap-8">
                       <img className="md:max-w-none mx-auto rounded" src="img/devtodollars.png" width={500} height={375} alt="Features bg" />
-                      {/* <img className="md:max-w-none absolute w-full left-0 transform animate-float" src="img/devtodollars.png" width={500} height={147} alt="Element 01" style={{ top: '22%' }} /> */}
-                      {/* <img className="md:max-w-none absolute w-full left-0 transform animate-float animation-delay-500" src="img/devtodollars.png" width={500} height={158} alt="Element 02" style={{ top: '39%' }} /> */}
-                      {/* <img className="md:max-w-none absolute w-full left-0 bottom-0 transform animate-float animation-delay-1000" src="img/devtodollars.png" width={500} height={167} alt="Element 03" style={{ top: '77%' }} /> */}
+                      <a className="btn text-white bg-gray-800 hover:bg-gray-900 hover:text-white mb-4 sm:w-auto sm:mb-0 hover:no-underline" target="_blank" href="https://devtodollars.com/blog/resources-for-founders-at-every-stage">📚 View Resources</a>
                     </div>
                   </Transition>
                   {/* Item 3 */}
@@ -134,11 +130,9 @@ export default function FeaturesHome() {
                     beforeEnter={() => heightFix()}
                     unmount={false}
                   >
-                    <div className="relative inline-flex flex-col">
+                    <div className="relative inline-flex flex-col gap-8">
                       <img className="md:max-w-none mx-auto rounded" src="img/devtodollars.png" width={500} height={375} alt="Features bg" />
-                      {/* <img className="md:max-w-none absolute w-full left-0 transform animate-float" src="img/devtodollars.png" width={500} height={147} alt="Element 01" style={{ top: '22%' }} /> */}
-                      {/* <img className="md:max-w-none absolute w-full left-0 transform animate-float animation-delay-500" src="img/devtodollars.png" width={500} height={158} alt="Element 02" style={{ top: '39%' }} /> */}
-                      {/* <img className="md:max-w-none absolute w-full left-0 bottom-0 transform animate-float animation-delay-1000" src="img/devtodollars.png" width={500} height={167} alt="Element 03" style={{ top: '77%' }} /> */}
+                      <a className="btn text-white bg-gray-800 hover:bg-gray-900 hover:text-white mb-4 sm:w-auto sm:mb-0 hover:no-underline" target="_blank" href="https://discord.gg/6q63Xa6SEB">🏠 Join Discord</a>
                     </div>
                   </Transition>
                 </div>
