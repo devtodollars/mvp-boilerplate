@@ -78,9 +78,9 @@ export default function FeaturesHome() {
             </div>
 
             {/* Tabs items */}
-            <div className="max-w-xl md:max-w-none md:w-full mx-auto md:col-span-5 lg:col-span-6 mb-8 md:mb-0 md:order-1">
+            <div className="max-w-xl md:max-w-none md:w-full mx-auto md:col-span-5 lg:col-span-6 mb-8 md:mb-0 md:order-1 flex items-center justify-center">
               <div className="transition-all">
-                <div className="relative flex flex-col text-center lg:text-right" data-aos="zoom-y-out" ref={tabs}>
+                <div className="relative flex flex-col text-center lg:text-right items-center" data-aos="zoom-y-out" ref={tabs}>
                   {/* Item 1 */}
                   <Transition
                     show={tab === 1}
@@ -94,8 +94,8 @@ export default function FeaturesHome() {
                     beforeEnter={() => heightFix()}
                     unmount={false}
                   >
-                    <div className="relative inline-flex flex-col gap-8">
-                      <img className="md:max-w-none mx-auto rounded" src="img/boilerplate.png" width={500} alt="Features bg" />
+                    <div className="relative inline-flex flex-col gap-8 items-center">
+                      <img className="lg:max-w-lg md:max-w-xs mx-auto rounded" src="img/boilerplate.png" alt="Features bg" />
                       <a className="btn text-white bg-gray-800 hover:bg-gray-900 hover:text-white mb-4 sm:w-auto sm:mb-0 hover:no-underline" target="_blank" href="https://github.com/devtodollars/startup-boilerplate">⭐️ Star on Github</a>
                     </div>
                   </Transition>
@@ -112,8 +112,8 @@ export default function FeaturesHome() {
                     beforeEnter={() => heightFix()}
                     unmount={false}
                   >
-                    <div className="relative inline-flex flex-col gap-8">
-                      <img className="md:max-w-none mx-auto rounded" src="img/resources.png" width={500} alt="Features bg" />
+                    <div className="relative inline-flex flex-col gap-8 items-center">
+                      <img className="lg:max-w-lg md:max-w-xs mx-auto rounded" src="img/resources.png" alt="Features bg" />
                       <a className="btn text-white bg-gray-800 hover:bg-gray-900 hover:text-white mb-4 sm:w-auto sm:mb-0 hover:no-underline" target="_blank" href="/blog/resources-for-founders-at-every-stage">📚 View Resources</a>
                     </div>
                   </Transition>
@@ -130,8 +130,8 @@ export default function FeaturesHome() {
                     beforeEnter={() => heightFix()}
                     unmount={false}
                   >
-                    <div className="relative inline-flex flex-col gap-8">
-                      <img className="md:max-w-none mx-auto rounded" src="img/community-paid.png" width={500} alt="Features bg" />
+                    <div className="relative inline-flex flex-col gap-8 items-center">
+                      <img className="lg:max-w-lg md:max-w-xs mx-auto rounded" src="img/community-paid.png" alt="Features bg" />
                       <a className="btn text-white bg-gray-800 hover:bg-gray-900 hover:text-white mb-4 sm:w-auto sm:mb-0 hover:no-underline" target="_blank" href="https://discord.gg/6q63Xa6SEB">🏠 Join Discord</a>
                     </div>
                   </Transition>
