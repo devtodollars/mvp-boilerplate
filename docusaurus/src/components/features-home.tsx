@@ -95,7 +95,7 @@ export default function FeaturesHome() {
                     unmount={false}
                   >
                     <div className="relative inline-flex flex-col gap-8 items-center">
-                      <img className="lg:max-w-lg md:max-w-xs mx-auto rounded" src="img/boilerplate.png" alt="Features bg" />
+                      <img className="lg:max-w-lg sm:max-w-xs mx-auto rounded" src="img/boilerplate.png" alt="Features bg" />
                       <a className="btn text-white bg-gray-800 hover:bg-gray-900 hover:text-white mb-4 sm:w-auto sm:mb-0 hover:no-underline" target="_blank" href="https://github.com/devtodollars/startup-boilerplate">⭐️ Star on Github</a>
                     </div>
                   </Transition>
@@ -113,7 +113,7 @@ export default function FeaturesHome() {
                     unmount={false}
                   >
                     <div className="relative inline-flex flex-col gap-8 items-center">
-                      <img className="lg:max-w-lg md:max-w-xs mx-auto rounded" src="img/resources.png" alt="Features bg" />
+                      <img className="lg:max-w-lg sm:max-w-xs mx-auto rounded" src="img/resources.png" alt="Features bg" />
                       <a className="btn text-white bg-gray-800 hover:bg-gray-900 hover:text-white mb-4 sm:w-auto sm:mb-0 hover:no-underline" target="_blank" href="/blog/resources-for-founders-at-every-stage">📚 View Resources</a>
                     </div>
                   </Transition>
@@ -131,7 +131,7 @@ export default function FeaturesHome() {
                     unmount={false}
                   >
                     <div className="relative inline-flex flex-col gap-8 items-center">
-                      <img className="lg:max-w-lg md:max-w-xs mx-auto rounded" src="img/community-paid.png" alt="Features bg" />
+                      <img className="lg:max-w-lg sm:max-w-xs mx-auto rounded" src="img/community-paid.png" alt="Features bg" />
                       <a className="btn text-white bg-gray-800 hover:bg-gray-900 hover:text-white mb-4 sm:w-auto sm:mb-0 hover:no-underline" target="_blank" href="https://discord.gg/6q63Xa6SEB">🏠 Join Discord</a>
                     </div>
                   </Transition>
