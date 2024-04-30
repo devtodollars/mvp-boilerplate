@@ -75,7 +75,7 @@ export default function FeaturesHome() {
             </div>
 
             {/* Tabs items */}
-            <div className="max-w-xl md:max-w-none md:w-full mx-auto md:col-span-5 lg:col-span-6 mb-8 md:mb-0 md:order-1 flex items-center justify-center">
+            <div className="max-w-xl md:max-w-none md:w-full mx-auto md:col-span-5 lg:col-span-6 mb-8 md:mb-0 md:order-1 flex justify-center">
               <div className="transition-all">
                 <div className="relative flex flex-col text-center lg:text-right items-center" data-aos="zoom-y-out" ref={tabs}>
                   {/* Item 1 */}
