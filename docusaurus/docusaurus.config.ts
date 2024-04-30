@@ -1,6 +1,7 @@
 import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import tailwindPlugin from "./plugins/tailwind-config.cjs";
 
 const config: Config = {
   title: 'DevToDollars',
@@ -68,7 +69,7 @@ const config: Config = {
         },
         { to: '/blog', label: 'Blog', position: 'left' },
         {
-          href: 'https://discord.gg/s9DRKbwS',
+          href: 'https://discord.gg/6q63Xa6SEB',
           className: 'header-discord-link',
           position: 'right',
         },
@@ -101,7 +102,7 @@ const config: Config = {
           items: [
             {
               label: 'Discord',
-              href: 'https://discord.gg/s9DRKbwS',
+              href: 'https://discord.gg/6q63Xa6SEB',
             },
             {
               label: 'Twitter',
@@ -124,6 +125,7 @@ const config: Config = {
         apiKey: "phc_brFjanMrA2KXPYyvFjLdwJC9VJvl4VG7mG9yKqvgCCY",
       },
     ],
+    tailwindPlugin,
   ],
 };
 

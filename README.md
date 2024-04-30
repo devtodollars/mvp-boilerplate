@@ -3,7 +3,7 @@
 ## 👉 [See documentation to get started](https://resources.devtodollars.com/docs) 👈
 - [Flutter Demo](https://flutter.devtodollars.com)
 - [NextJS Demo](https://nextjs.devtodollars.com)
-- Building a startup? [Join the tech founder community](https://discord.gg/SWXuhN9H)
+- Building a startup? [Join the tech founder community](https://discord.gg/6q63Xa6SEB)
 ## Additional Support
 Support me by purchasing premium support from yours truly :)
 

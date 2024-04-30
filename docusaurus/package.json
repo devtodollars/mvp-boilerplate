@@ -19,6 +19,7 @@
   "dependencies": {
     "@docusaurus/core": "3.2.1",
     "@docusaurus/preset-classic": "3.2.1",
+    "@headlessui/react": "^1.7.19",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.0.0",
     "posthog-docusaurus": "^2.0.0",
@@ -30,7 +31,10 @@
     "@docusaurus/module-type-aliases": "3.2.1",
     "@docusaurus/tsconfig": "3.2.1",
     "@docusaurus/types": "3.2.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
     "shelljs": "^0.8.5",
+    "tailwindcss": "^3.4.3",
     "tmp": "^0.2.3",
     "typescript": "~5.2.2"
   },
