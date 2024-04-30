@@ -40,7 +40,7 @@ export default function FeaturesHome() {
                   onClick={(e) => { e.preventDefault(); setTab(1); }}
                 >
                   <div>
-                    <div className="font-bold leading-snug tracking-tight mb-1">Boilerplate Code</div>
+                    <div className="text-white font-bold leading-snug tracking-tight mb-1">Boilerplate Code</div>
                     <div className="text-gray-400">Fully configured code to get up and running with your startup in under 30 minutes</div>
                   </div>
                   <div className="flex justify-center items-center w-8 h-8 bg-white rounded-full shadow shrink-0 ml-3">
@@ -52,7 +52,7 @@ export default function FeaturesHome() {
                   onClick={(e) => { e.preventDefault(); setTab(2); }}
                 >
                   <div>
-                    <div className="font-bold leading-snug tracking-tight mb-1">Startup Resources</div>
+                    <div className="text-white font-bold leading-snug tracking-tight mb-1">Startup Resources</div>
                     <div className="text-gray-400">All the books, youtube videos, and blogs I read to get to where I am today</div>
                   </div>
                   <div className="flex justify-center items-center w-8 h-8 bg-white rounded-full shadow shrink-0 ml-3">
@@ -64,7 +64,7 @@ export default function FeaturesHome() {
                   onClick={(e) => { e.preventDefault(); setTab(3); }}
                 >
                   <div>
-                    <div className="font-bold leading-snug tracking-tight mb-1">Community + Paid opportunities</div>
+                    <div className="text-white font-bold leading-snug tracking-tight mb-1">Community + Paid opportunities</div>
                     <div className="text-gray-400">Meet people in the same stage as you and find co-founders through paid projects</div>
                   </div>
                   <div className="flex justify-center items-center w-8 h-8 bg-white rounded-full shadow shrink-0 ml-3">

@@ -1,10 +1,10 @@
 export default function HeroHome() {
   return (
-    <section className="relative">
+    <section className="relative overflow-hidden">
       {/* Illustration behind hero content */}
       <div className="absolute left-1/2 transform -translate-x-1/2 bottom-0 pointer-events-none -z-1" aria-hidden="true">
-        <svg width="1360" height="578" viewBox="0 0 1360 578" xmlns="http://www.w3.org/2000/svg">
-          <g >
+        <svg width="1360" height="578" viewBox="0 0 1360 578" xmlns="http://www.w3.org/2000/svg" className="overflow-hidden">
+          <g>
             <image x="1100" y="0" href="img/devtodollars.png" width={256} height={256} />
             <image x="100" y="403" href="img/devtodollars.png" width={128} height={128} />
           </g>
