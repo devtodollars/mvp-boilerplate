@@ -12,8 +12,8 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['var(--font-sans)', ...fontFamily.sans],
-        wood: ['WoodHeinzNo2'],
-        mont: ['Montserrat'],
+        wood: ['WoodHeinzNo2', ...fontFamily.sans],
+        mont: ['Montserrat', ...fontFamily.sans],
       },
       borderRadius: {
         sm: "4px",
