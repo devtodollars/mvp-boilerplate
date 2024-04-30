@@ -36,7 +36,7 @@ export default function FeaturesHome() {
               {/* Tabs buttons */}
               <div className="mb-8 md:mb-0">
                 <button
-                  className={`text-left flex items-center text-lg p-5 rounded-2xl border-transparent transition duration-300 ease-in-out mb-3 ${tab !== 1 ? 'bg-gray-800 shadow-lg hover:shadow-2xl' : 'bg-gray-900'}`}
+                  className={`text-left flex items-center text-lg p-5 rounded-2xl border-transparent transition duration-300 ease-in-out mb-3 ${tab !== 1 ? 'bg-gray-700 shadow-lg hover:shadow-2xl border-gray-900' : 'bg-black'}`}
                   onClick={(e) => { e.preventDefault(); setTab(1); }}
                 >
                   <div>
@@ -48,7 +48,7 @@ export default function FeaturesHome() {
                   </div>
                 </button>
                 <button
-                  className={`text-left flex items-center text-lg p-5 rounded-2xl border-transparent transition duration-300 ease-in-out mb-3 ${tab !== 2 ? 'bg-gray-800 shadow-lg hover:shadow-2xl' : 'bg-gray-900'}`}
+                  className={`text-left flex items-center text-lg p-5 rounded-2xl border-transparent transition duration-300 ease-in-out mb-3 ${tab !== 2 ? 'bg-gray-700 shadow-lg hover:shadow-2xl border-gray-900' : 'bg-black'}`}
                   onClick={(e) => { e.preventDefault(); setTab(2); }}
                 >
                   <div>
@@ -60,7 +60,7 @@ export default function FeaturesHome() {
                   </div>
                 </button>
                 <button
-                  className={`text-left flex items-center text-lg p-5 rounded-2xl border-transparent transition duration-300 ease-in-out mb-3 ${tab !== 3 ? 'bg-gray-800 shadow-lg hover:shadow-2xl' : 'bg-gray-900'}`}
+                  className={`text-left flex items-center text-lg p-5 rounded-2xl border-transparent transition duration-300 ease-in-out mb-3 ${tab !== 3 ? 'bg-gray-700 shadow-lg hover:shadow-2xl border-gray-900' : 'bg-black'}`}
                   onClick={(e) => { e.preventDefault(); setTab(3); }}
                 >
                   <div>

@@ -22,10 +22,7 @@ export default function HeroHome() {
               <p className="font-mont text-xl text-white mb-8" data-aos="zoom-y-out" data-aos-delay="150">Earn your first dollars with the support of community, resources, and paid opportunities</p>
               <div className="max-w-xs mx-auto sm:max-w-none sm:flex sm:justify-center font-body gap-4" data-aos="zoom-y-out" data-aos-delay="300">
                 <div>
-                  <a className="btn text-white bg-gray-700 hover:bg-primary hover:text-white w-full mb-4 sm:w-auto sm:mb-0 hover:no-underline" href="#0">Join Discord</a>
-                </div>
-                <div className="flex items-center">
-                  <a className="text-white" href="#how-we-help">Learn More</a>
+                  <a className="btn text-white bg-[#7289da] hover:bg-black hover:text-white w-full mb-4 sm:w-auto sm:mb-0 hover:no-underline" href="#0">Join Discord Community</a>
                 </div>
               </div>
             </div>
