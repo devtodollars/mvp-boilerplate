@@ -17,17 +17,19 @@ export const corsHeaders = {
 };
 
 function corsResponse(res: Response): Response {
-  const newRes = new Response(
-    res.body,
-    {
-      status: res.status,
-      statusText: res.statusText,
-      headers: new Headers({
-        ...corsHeaders,
-        ...res.headers,
-      }),
-    },
-  );
+  const newHeaders = new Headers(res.headers);
+
+  // Apply CORS headers, ensuring they take precedence
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    newHeaders.set(key, value);
+  });
+
+  const newRes = new Response(res.body, {
+    status: res.status,
+    statusText: res.statusText,
+    headers: newHeaders,
+  });
+
   return newRes;
 }
 
