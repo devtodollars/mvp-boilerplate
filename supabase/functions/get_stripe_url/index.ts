@@ -1,9 +1,9 @@
-import { clientRequestHandler, corsHeaders } from "../_shared/request.ts";
+import { clientRequestHandlerWithUser } from "../_shared/request.ts";
 import { supabase } from "../_shared/supabase.ts";
 import { stripe } from "../_shared/stripe.ts";
 import { posthog } from "../_shared/posthog.ts";
 
-clientRequestHandler(async (req, user) => {
+clientRequestHandlerWithUser(async (req, user) => {
   const { price, return_url } = await req.json();
   // get stripe information from stripe table!
   const { data } = await supabase.from("stripe").select().eq(
@@ -76,7 +76,6 @@ clientRequestHandler(async (req, user) => {
     JSON.stringify({ redirect_url }),
     {
       headers: {
-        ...corsHeaders,
         "Content-Type": "application/json",
       },
     },
