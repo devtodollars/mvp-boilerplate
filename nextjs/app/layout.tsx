@@ -55,13 +55,15 @@ export default async function RootLayout({ children }: PropsWithChildren) {
     <html lang="en">
       <ThemeProvider>
         <PHProvider>
-          <PostHogPageView />
-          <main
-            id="skip"
-            className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"
-          >
-            {children}
-          </main>
+          <body>
+            <PostHogPageView />
+            <main
+              id="skip"
+              className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"
+            >
+              {children}
+            </main>
+          </body>
         </PHProvider>
       </ThemeProvider>
     </html>
