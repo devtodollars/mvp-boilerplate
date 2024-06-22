@@ -183,7 +183,7 @@ export function AuthForm({ state }: { state: AuthState }) {
                 {authState === 'signin' && (
                   <Link
                     href="#"
-                    onClick={() => setAuthState('forgot_password')}
+                    onClick={() => setAuthState(AuthState.ForgotPassword)}
                     className="ml-auto inline-block text-sm underline"
                   >
                     Forgot your password?
@@ -214,7 +214,7 @@ export function AuthForm({ state }: { state: AuthState }) {
               <Link
                 href="#"
                 className="underline"
-                onClick={() => setAuthState('signup')}
+                onClick={() => setAuthState(AuthState.Signup)}
               >
                 Sign up
               </Link>
@@ -226,7 +226,7 @@ export function AuthForm({ state }: { state: AuthState }) {
               <Link
                 href="#"
                 className="underline"
-                onClick={() => setAuthState('signin')}
+                onClick={() => setAuthState(AuthState.Signin)}
               >
                 Sign in
               </Link>
@@ -238,7 +238,7 @@ export function AuthForm({ state }: { state: AuthState }) {
               <Link
                 href="#"
                 className="underline"
-                onClick={() => setAuthState('signin')}
+                onClick={() => setAuthState(AuthState.Signin)}
               >
                 Sign in
               </Link>

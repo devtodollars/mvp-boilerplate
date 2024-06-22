@@ -5,8 +5,7 @@ import { AuthForm } from '@/components/misc/AuthForm';
 import { AuthState } from '@/utils/types';
 
 export default async function SignIn({
-  params,
-  searchParams
+  params
 }: {
   params: { id: string };
   searchParams: { disable_button: boolean };
