@@ -12,9 +12,10 @@ import {
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 import { Check } from 'lucide-react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { getErrorRedirect, getURL } from '@/utils/helpers';
+import { getURL } from '@/utils/helpers';
+import { useToast } from '@/components/ui/use-toast';
 
 enum PopularPlanType {
   NO = 0,
@@ -81,9 +82,9 @@ const pricingList: PricingProps[] = [
 ];
 
 export const Pricing = ({ user }: { user: User | null }) => {
+  const { toast } = useToast();
   const router = useRouter();
   const supabase = createClient();
-  const currentPath = usePathname();
   const [loading, setLoading] = useState<boolean>(false);
   const handleClick = async (price: PricingProps) => {
     if (price.redirectURL) {
@@ -104,20 +105,21 @@ export const Pricing = ({ user }: { user: User | null }) => {
     });
     if (error) {
       setLoading(false);
-      return router.push(
-        getErrorRedirect(currentPath, 'Error Occured', error.message)
-      );
+      return toast({
+        title: 'Error Occured',
+        description: error.message,
+        variant: 'destructive'
+      });
     }
     const redirectUrl = data?.redirect_url;
     if (!redirectUrl) {
       setLoading(false);
-      return router.push(
-        getErrorRedirect(
-          currentPath,
-          'An unknown error occurred.',
-          'Please try again later or contact a system administrator.'
-        )
-      );
+      return toast({
+        title: 'An unknown error occurred.',
+        description:
+          'Please try again later or contact a system administrator.',
+        variant: 'destructive'
+      });
     }
     router.push(redirectUrl);
     setLoading(false);
