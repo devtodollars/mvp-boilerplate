@@ -9,7 +9,12 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
+import { User } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/client';
 import { Check } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { useState } from 'react';
+import { getErrorRedirect, getURL } from '@/utils/helpers';
 
 enum PopularPlanType {
   NO = 0,
@@ -17,12 +22,14 @@ enum PopularPlanType {
 }
 
 interface PricingProps {
+  id?: string;
   title: string;
   popular: PopularPlanType;
   price: number;
   description: string;
   buttonText: string;
   benefitList: string[];
+  redirectURL?: string;
 }
 
 const pricingList: PricingProps[] = [
@@ -73,7 +80,48 @@ const pricingList: PricingProps[] = [
   }
 ];
 
-export const Pricing = () => {
+export const Pricing = ({ user }: { user: User | null }) => {
+  const router = useRouter();
+  const supabase = createClient();
+  const currentPath = usePathname();
+  const [loading, setLoading] = useState<boolean>(false);
+  const handleClick = async (price: PricingProps) => {
+    if (price.redirectURL) {
+      return router.push(price.redirectURL);
+    }
+    setLoading(true);
+
+    if (!user) {
+      setLoading(false);
+      return router.push('/signin/signup');
+    }
+
+    const { data, error } = await supabase.functions.invoke('get_stripe_url', {
+      body: {
+        return_url: getURL(),
+        price: price.id
+      }
+    });
+    if (error) {
+      setLoading(false);
+      return router.push(
+        getErrorRedirect(currentPath, 'Error Occured', error.message)
+      );
+    }
+    const redirectUrl = data?.redirect_url;
+    if (!redirectUrl) {
+      setLoading(false);
+      return router.push(
+        getErrorRedirect(
+          currentPath,
+          'An unknown error occurred.',
+          'Please try again later or contact a system administrator.'
+        )
+      );
+    }
+    router.push(redirectUrl);
+    setLoading(false);
+  };
   return (
     <section id="pricing" className="container py-24 sm:py-32">
       <h2 className="text-3xl md:text-4xl font-bold text-center">
@@ -116,7 +164,13 @@ export const Pricing = () => {
             </CardHeader>
 
             <CardContent>
-              <Button className="w-full">{pricing.buttonText}</Button>
+              <Button
+                className="w-full"
+                onClick={() => handleClick(pricing)}
+                disabled={loading}
+              >
+                {pricing.buttonText}
+              </Button>
             </CardContent>
 
             <hr className="w-4/5 m-auto mb-4" />

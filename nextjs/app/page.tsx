@@ -34,7 +34,7 @@ export default async function PricingPage() {
       <Cta />
       <Testimonials />
       <Team />
-      <Pricing />
+      <Pricing user={user} />
       <Newsletter />
       <FAQ />
       <Footer />
