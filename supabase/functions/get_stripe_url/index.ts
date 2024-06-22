@@ -6,10 +6,11 @@ import { posthog } from "../_shared/posthog.ts";
 clientRequestHandlerWithUser(async (req, user) => {
   const { price, return_url } = await req.json();
   // get stripe information from stripe table!
-  const { data } = await supabase.from("stripe").select().eq(
-    "user_id",
-    user.id,
-  ).maybeSingle();
+  const { data } = await supabase
+    .from("stripe")
+    .select()
+    .eq("user_id", user.id)
+    .maybeSingle();
   let stripeCustomerId = data?.stripe_customer_id;
   if (!stripeCustomerId) {
     // create stripe customer if doesn't exist
@@ -21,8 +22,7 @@ clientRequestHandlerWithUser(async (req, user) => {
       },
     });
     stripeCustomerId = customer.id;
-    console.log(`created stripe customer: ${customer.id}`);
-    await supabase.from("stripe").upsert({
+    supabase.from("stripe").upsert({
       user_id: user.id,
       stripe_customer_id: customer.id,
     });
@@ -48,11 +48,13 @@ clientRequestHandlerWithUser(async (req, user) => {
     event = "user starts checkout";
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
-      mode: (priceObj.type == "recurring") ? "subscription" : "payment",
-      line_items: [{
-        price,
-        quantity: 1,
-      }],
+      mode: priceObj.type == "recurring" ? "subscription" : "payment",
+      line_items: [
+        {
+          price,
+          quantity: 1,
+        },
+      ],
       allow_promotion_codes: true,
       success_url: return_url || undefined,
       cancel_url: return_url || undefined,
@@ -67,17 +69,14 @@ clientRequestHandlerWithUser(async (req, user) => {
       price,
       product: priceObj?.product,
       $set: {
-        "stripe_customer_id": stripeCustomerId,
+        stripe_customer_id: stripeCustomerId,
       },
     },
   });
 
-  return new Response(
-    JSON.stringify({ redirect_url }),
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
+  return new Response(JSON.stringify({ redirect_url }), {
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+  });
 });
