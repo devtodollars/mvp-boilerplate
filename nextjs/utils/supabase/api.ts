@@ -1,12 +1,11 @@
 import { Database } from '@/types_db';
 import {
   Provider,
-  SignInWithOAuthCredentials,
   SignInWithPasswordCredentials,
   SignUpWithPasswordCredentials,
   SupabaseClient
 } from '@supabase/supabase-js';
-import { getURL } from '../helpers';
+import { getURL } from '@/utils/helpers';
 
 export const createApiClient = (supabase: SupabaseClient<Database>) => {
   const passwordSignup = async (creds: SignUpWithPasswordCredentials) => {

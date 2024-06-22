@@ -50,6 +50,7 @@ const pricingList: PricingProps[] = [
     ]
   },
   {
+    id: process.env.NEXT_PUBLIC_TEST_SUBSCRIPTION_PRICE,
     title: 'Premium',
     popular: 1,
     price: 5,
@@ -99,7 +100,7 @@ export const Pricing = ({ user }: { user: User | null }) => {
 
     const { data, error } = await supabase.functions.invoke('get_stripe_url', {
       body: {
-        return_url: getURL(),
+        return_url: getURL('/#pricing'),
         price: price.id
       }
     });
