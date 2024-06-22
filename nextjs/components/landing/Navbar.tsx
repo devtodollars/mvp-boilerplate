@@ -55,13 +55,9 @@ export const Navbar = ({ user }: { user: User | null }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const handleAuth = async () => {
     if (user) {
-      await api.signOut();
-      toast({
-        title: 'Signed out successfully!'
-      });
-      return router.refresh();
+      return router.push('/account');
     }
-    router.push('/auth');
+    return router.push('/auth');
   };
   return (
     <header className="sticky border-b-[1px] top-0 z-40 w-full bg-white dark:border-b-slate-700 dark:bg-background">
@@ -112,7 +108,7 @@ export const Navbar = ({ user }: { user: User | null }) => {
                     onClick={handleAuth}
                     className={`w-[110px] border`}
                   >
-                    {user ? 'Sign Out' : 'Sign In'}
+                    {user ? 'Account' : 'Sign In'}
                   </Button>
                 </nav>
               </SheetContent>
@@ -141,7 +137,7 @@ export const Navbar = ({ user }: { user: User | null }) => {
               className={`border`}
               variant="secondary"
             >
-              {user ? 'Sign Out' : 'Sign In'}
+              {user ? 'Account' : 'Sign In'}
             </Button>
             <ModeToggle />
           </div>

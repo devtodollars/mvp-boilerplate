@@ -1,11 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
-import {
-  getViewTypes,
-  getDefaultSignInView
-} from '@/utils/auth-helpers/settings';
 import { Navbar } from '@/components/landing/Navbar';
-import { AuthForm } from '@/components/auth/AuthForm';
+import { AuthForm } from '@/components/misc/AuthForm';
 import { AuthState } from '@/utils/types';
 
 export default async function SignIn({
