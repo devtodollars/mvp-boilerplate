@@ -11,7 +11,7 @@ export default async function Account() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return redirect('/signin');
+    return redirect('/auth/signin');
   }
 
   // TODO: Look into adding back the NameForm

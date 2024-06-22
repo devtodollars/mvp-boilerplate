@@ -24,7 +24,7 @@ export default async function PricingPage() {
 
   return (
     <>
-      <Navbar />
+      <Navbar user={user} />
       <Hero />
       <Sponsors />
       <About />

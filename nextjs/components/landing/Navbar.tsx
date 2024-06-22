@@ -14,11 +14,15 @@ import {
   SheetTrigger
 } from '@/components/ui/sheet';
 
-import { GitHubLogoIcon } from '@radix-ui/react-icons';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
 import { ModeToggle } from './mode-toggle';
 import { LogoIcon } from './Icons';
+import { User } from '@supabase/supabase-js';
+import { createApiClient } from '@/utils/supabase/api';
+import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/use-toast';
 
 interface RouteProps {
   href: string;
@@ -44,8 +48,21 @@ const routeList: RouteProps[] = [
   }
 ];
 
-export const Navbar = () => {
+export const Navbar = ({ user }: { user: User | null }) => {
+  const router = useRouter();
+  const { toast } = useToast();
+  const api = createApiClient(createClient());
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const handleAuth = async () => {
+    if (user) {
+      await api.signOut();
+      toast({
+        title: 'Signed out successfully!'
+      });
+      return router.refresh();
+    }
+    router.push('/auth');
+  };
   return (
     <header className="sticky border-b-[1px] top-0 z-40 w-full bg-white dark:border-b-slate-700 dark:bg-background">
       <NavigationMenu className="mx-auto">
@@ -90,17 +107,13 @@ export const Navbar = () => {
                       {label}
                     </a>
                   ))}
-                  <a
-                    rel="noreferrer noopener"
-                    href="https://github.com/leoMirandaa/shadcn-landing-page.git"
-                    target="_blank"
-                    className={`w-[110px] border ${buttonVariants({
-                      variant: 'secondary'
-                    })}`}
+                  <Button
+                    variant="secondary"
+                    onClick={handleAuth}
+                    className={`w-[110px] border`}
                   >
-                    <GitHubLogoIcon className="mr-2 w-5 h-5" />
-                    Github
-                  </a>
+                    {user ? 'Sign Out' : 'Sign In'}
+                  </Button>
                 </nav>
               </SheetContent>
             </Sheet>
@@ -123,16 +136,13 @@ export const Navbar = () => {
           </nav>
 
           <div className="hidden md:flex gap-2">
-            <a
-              rel="noreferrer noopener"
-              href="https://github.com/leoMirandaa/shadcn-landing-page.git"
-              target="_blank"
-              className={`border ${buttonVariants({ variant: 'secondary' })}`}
+            <Button
+              onClick={handleAuth}
+              className={`border`}
+              variant="secondary"
             >
-              <GitHubLogoIcon className="mr-2 w-5 h-5" />
-              Github
-            </a>
-
+              {user ? 'Sign Out' : 'Sign In'}
+            </Button>
             <ModeToggle />
           </div>
         </NavigationMenuList>

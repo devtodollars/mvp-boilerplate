@@ -1,10 +1,10 @@
 'use client';
 
-import Button from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
-import Card from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { createClient } from '@/utils/supabase/client';
 import { getURL } from '@/utils/helpers';
 
@@ -28,20 +28,20 @@ export default function CustomerPortalForm() {
   return (
     <Card
       title="Billing Portal"
-      footer={
-        <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
-          <p className="pb-4 sm:pb-0">
-            Manage invoices, payments, and subscriptions on Stripe.
-          </p>
-          <Button
-            variant="slim"
-            onClick={handleStripePortalRequest}
-            loading={isSubmitting}
-          >
-            Open billing portal
-          </Button>
-        </div>
-      }
+    // footer={
+    //   <div className="flex flex-col items-start justify-between sm:flex-row sm:items-center">
+    //     <p className="pb-4 sm:pb-0">
+    //       Manage invoices, payments, and subscriptions on Stripe.
+    //     </p>
+    //     <Button
+    //       variant="slim"
+    //       onClick={handleStripePortalRequest}
+    //       loading={isSubmitting}
+    //     >
+    //       Open billing portal
+    //     </Button>
+    //   </div>
+    // }
     >
       <div className="mt-8 mb-4 text-xl font-semibold">
         <Link href="/">View Pricing</Link>

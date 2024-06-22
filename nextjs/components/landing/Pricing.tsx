@@ -94,7 +94,7 @@ export const Pricing = ({ user }: { user: User | null }) => {
 
     if (!user) {
       setLoading(false);
-      return router.push('/signin/signup');
+      return router.push('/auth/signup');
     }
 
     const { data, error } = await supabase.functions.invoke('get_stripe_url', {

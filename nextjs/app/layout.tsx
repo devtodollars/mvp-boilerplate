@@ -5,6 +5,7 @@ import '@/styles/main.css';
 import { PHProvider } from './providers';
 import { ThemeProvider } from '@/components/landing/theme-provider';
 import dynamic from 'next/dynamic';
+import { Toaster } from '@/components/ui/toaster';
 
 const PostHogPageView = dynamic(() => import('./PostHogPageView'), {
   ssr: false
@@ -63,6 +64,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
             >
               {children}
             </main>
+            <Toaster />
           </body>
         </PHProvider>
       </ThemeProvider>

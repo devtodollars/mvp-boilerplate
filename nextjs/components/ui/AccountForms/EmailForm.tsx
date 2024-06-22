@@ -1,7 +1,7 @@
 'use client';
 
-import Button from '@/components/ui/Button';
-import Card from '@/components/ui/Card';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { updateEmail } from '@/utils/auth-helpers/server';
 import { handleRequest } from '@/utils/auth-helpers/client';
 import { useRouter } from 'next/navigation';
