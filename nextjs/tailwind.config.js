@@ -17,6 +17,9 @@ module.exports = {
       }
     },
     extend: {
+      backgroundImage: {
+        'fluid-background': "url('/background-fluid.jpg')",
+      },
       screens: {
         xs: { max: '640px'}, // Small screens 
         sm: { min: '640px' } // Medium screens and above
@@ -77,5 +80,7 @@ module.exports = {
       }
     }
   },
-  plugins: [require('tailwindcss-animate')]
+  plugins: [
+    require('tailwindcss-animate')
+  ]
 };

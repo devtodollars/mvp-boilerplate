@@ -68,31 +68,31 @@ export default async function SignIn({
         </Link>
 
         <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
-          <div className="absolute inset-0 bg-zinc-500" />
-          <div className="relative z-20 flex items-center text-lg font-medium">
+          <div className="absolute inset-0 bg-violet-800  bg-fluid-background bg-cover " />
+          {/* <div className="relative z-20 flex items-center text-lg font-medium">
             <FluidEvents        
               width={200}
               height={40}
             />
-          </div>
-          <div className="relative z-20 mt-auto">
+          </div> */}
+          {/* <div className="relative z-20 mt-auto">
             <blockquote className="space-y-2">
               <p className="text-lg">
                 &ldquo;Make your own events and invite the public to join your events.&rdquo;
               </p>
               <footer className="text-sm">Fluid Events</footer>
             </blockquote>
-          </div>
+          </div> */}
         </div>
         
         <div className="p-8">
           <div className="mx-auto flex w-full flex-col justify-center space-y-6 xs:w-full sm:w-[350px]">
             <div className="flex flex-col space-y-2 text-center">
               <h1 className="text-2xl font-semibold tracking-tight">
-                Create an account
+                Welcome to Event Mate
               </h1>
               <p className="text-sm text-muted-foreground">
-                Enter your email below to create your account
+                Sign in with your account to create events and invite the public to join your events.
               </p>
             </div>
             <AuthForm state={currState} />
