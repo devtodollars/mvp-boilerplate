@@ -1,20 +1,9 @@
-# Production Boilerplate for Startups
+# Production MVP Boilerplate
 
 ## 👉 [See documentation to get started](https://resources.devtodollars.com/docs) 👈
 - [Flutter Demo](https://flutter.devtodollars.com)
 - [NextJS Demo](https://nextjs.devtodollars.com)
 - Building a startup? [Join the tech founder community](https://discord.gg/6q63Xa6SEB)
-## Additional Support
-Support me by purchasing premium support from yours truly :)
-
-
-| Code + Docs (**$0**)                                             | Premium Support (**$49**)                                                                 | I'll Build Your MVP (**$5000~**)                                         |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| ✓ Code                                                           | ✓ 30 Min Setup Call                                                                       | ✓ Completed MVP                                                          |
-| ✓ Documentation                                                  | ✓ Premium Discord Support                                                                 | ✓ Technical Co-founder                                                   |
-| ✓ Discord Community                                              | ✓ Weekly Office Hours                                                                     |                                                                          |
-| ✓ Life-time Updates                                              | ✓ Support Matt                                                                            |                                                                          |
-| [View Code](https://github.com/devtodollars/startup-boilerplate) | [Buy Now](https://flutter.devtodollars.com/payments?price=price_1P3MEnFttF99a1NCjNcCLLvA) | [Book a Call](https://usemotion.com/meet/ithinkwong/mvp-consulting?d=30) |
 
 ## What's Included:
 
