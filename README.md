@@ -65,7 +65,5 @@
 - DNS setup to avoid spam folder (DKIM, DMARC, SPF in subdomain)
 - Simplify email updates by using postmark templates
 
-### 🚧 [Blog / Docs](https://github.com/devtodollars/startup-boilerplate/issues/56) ([Nextra](https://nextra.site/)) 🚧
-
 ### 🚧 [Error Monitoring](https://github.com/devtodollars/flutter-supabase-production-template/issues/18) ([Sentry](https://sentry.io/welcome/)) 🚧
 
