@@ -1,4 +1,4 @@
-import Stripe from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import Stripe from "stripe";
 import { processWebhookRequest } from "../_shared/stripe.ts";
 import { supabase } from "../_shared/supabase.ts";
 import { stripe } from "../_shared/stripe.ts";
@@ -51,9 +51,12 @@ async function onSubscriptionUpdated(
     }
   }
   // updates purchased_products
-  await supabase.from("stripe").update({
-    active_products: prods,
-  }).eq("stripe_customer_id", subscription.customer);
+  await supabase
+    .from("stripe")
+    .update({
+      active_products: prods,
+    })
+    .eq("stripe_customer_id", subscription.customer);
 }
 
 async function onCheckoutComplete(session: Stripe.Session) {
@@ -68,13 +71,18 @@ async function onCheckoutComplete(session: Stripe.Session) {
     if (item.mode === "subscription" || prods.includes(prod)) continue;
     prods.push(prod);
   }
-  const { data: row } = await supabase.from("stripe").update({
-    active_products: prods,
-  }).eq("stripe_customer_id", session.customer).select().maybeSingle();
+  const { data: row } = await supabase
+    .from("stripe")
+    .update({
+      active_products: prods,
+    })
+    .eq("stripe_customer_id", session.customer)
+    .select()
+    .maybeSingle();
 
   // Sends email based on purchase
-  const checkoutProducts = lineItems.map((i: Stripe.LineItem) =>
-    i.price.product
+  const checkoutProducts = lineItems.map(
+    (i: Stripe.LineItem) => i.price.product,
   );
   await sendPurchaseEmail(checkoutProducts, session.customer_details.email);
 
@@ -86,19 +94,18 @@ async function onCheckoutComplete(session: Stripe.Session) {
     properties: {
       prods,
       $set: {
-        "stripe_customer_id": row.stripe_customer_id,
+        stripe_customer_id: row.stripe_customer_id,
       },
     },
   });
 }
 
 async function getActiveProducts(customer: string): Promise<string[]> {
-  const { data } = await supabase.from("stripe").select(
-    "active_products",
-  ).eq(
-    "stripe_customer_id",
-    customer,
-  ).single();
+  const { data } = await supabase
+    .from("stripe")
+    .select("active_products")
+    .eq("stripe_customer_id", customer)
+    .single();
   const purchasedProds: string[] = data?.active_products || [];
   return purchasedProds;
 }

@@ -1,6 +1,7 @@
 {
   "imports": {
     "supabase": "https://esm.sh/@supabase/supabase-js@2.39.7",
-    "stripe": "https://esm.sh/stripe@10.12.0?target=deno"
+    "stripe": "https://esm.sh/stripe@10.12.0?target=deno",
+    "posthog": "npm:posthog-node@3.2.0"
   }
 }
