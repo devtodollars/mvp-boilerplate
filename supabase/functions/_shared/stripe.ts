@@ -1,7 +1,9 @@
 import Stripe from "stripe";
 export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   httpClient: Stripe.createFetchHttpClient(),
-  apiVersion: "2022-08-01",
+  // https://github.com/stripe/stripe-node#configuration
+  // https://stripe.com/docs/api/versioning
+  apiVersion: "2024-06-20",
 });
 
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
