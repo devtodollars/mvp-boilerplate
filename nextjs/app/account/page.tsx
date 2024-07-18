@@ -1,17 +1,18 @@
 import AccountPage from '@/components/misc/AccountPage';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { getSubscription, getUser } from '@/utils/supabase/queries';
 
 export default async function Account() {
   const supabase = createClient();
-
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const [user, subscription] = await Promise.all([
+    getUser(supabase),
+    getSubscription(supabase)
+  ]);
 
   if (!user) {
     return redirect('/auth/signin');
   }
 
-  return <AccountPage user={user} />;
+  return <AccountPage user={user} subscription={subscription} />;
 }

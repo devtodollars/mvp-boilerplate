@@ -18,8 +18,15 @@ import { getURL } from '@/utils/helpers';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { createApiClient } from '@/utils/supabase/api';
+import { SubscriptionWithPriceAndProduct } from '@/utils/types';
 
-export default function AccountPage({ user }: { user: User }) {
+export default function AccountPage({
+  user,
+  subscription
+}: {
+  user: User;
+  subscription: SubscriptionWithPriceAndProduct;
+}) {
   const supabase = createClient();
   const { toast } = useToast();
   const router = useRouter();
@@ -64,6 +71,7 @@ export default function AccountPage({ user }: { user: User }) {
     router.push('/');
     router.refresh();
   };
+  console.log(subscription);
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -98,12 +106,16 @@ export default function AccountPage({ user }: { user: User }) {
             </Card>
             <Card x-chunk="dashboard-04-chunk-2">
               <CardHeader>
-                <CardTitle>Billing Portal</CardTitle>
-                <CardDescription>Manage your billing on Stripe</CardDescription>
+                <CardTitle>Your Plan</CardTitle>
+                <CardDescription>
+                  {subscription
+                    ? `You are currently on the ${subscription?.prices?.products?.name} plan.`
+                    : 'You are not currently subscribed to any plan.'}
+                </CardDescription>
               </CardHeader>
-              <CardFooter className="border-t px-6 py-4">
+              <CardFooter className="border-t px-6 py-4 flex space-between">
                 <Button onClick={handleBillingPortal} disabled={loading}>
-                  Open customer portal
+                  Manage subscription
                 </Button>
               </CardFooter>
             </Card>
