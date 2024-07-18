@@ -3,6 +3,7 @@ import { Tables } from "../types_db.ts";
 import { createOrRetrieveCustomer } from "./supabase.ts";
 import { calculateTrialEndUnixTimestamp } from "./utils.ts";
 import { User } from "supabase";
+
 export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   httpClient: Stripe.createFetchHttpClient(),
   // https://github.com/stripe/stripe-node#configuration
@@ -11,6 +12,20 @@ export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
 });
 
 type Price = Tables<"prices">;
+
+const cryptoProvider = Stripe.createSubtleCryptoProvider();
+
+export const processWebhookRequest = async (req: Request) => {
+  const signature = req.headers.get("Stripe-Signature");
+  const body = await req.text();
+  return await stripe.webhooks.constructEventAsync(
+    body,
+    signature!,
+    Deno.env.get("STRIPE_WEBHOOK_SIGNING_SECRET")!,
+    undefined,
+    cryptoProvider,
+  );
+};
 
 export async function checkoutWithStripe(
   price: Price,

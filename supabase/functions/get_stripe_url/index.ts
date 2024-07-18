@@ -5,7 +5,6 @@ import { posthog } from "../_shared/posthog.ts";
 
 clientRequestHandlerWithUser(async (req, user) => {
   const { price: priceId, return_url } = await req.json();
-  // get stripe information from stripe table!
   const stripeCustomerId = createOrRetrieveCustomer({
     uuid: user.id,
     email: user.email || "",

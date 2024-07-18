@@ -1,4 +1,4 @@
-import { stripe } from "../_shared/stripe.ts";
+import { processWebhookRequest, stripe } from "../_shared/stripe.ts";
 import Stripe from "stripe";
 import {
   deletePriceRecord,
@@ -21,16 +21,9 @@ const relevantEvents = new Set([
   "customer.subscription.deleted",
 ]);
 Deno.serve(async (req) => {
-  const body = await req.text();
-  const sig = req.headers.get("stripe-signature") as string;
-  const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SIGNING_SECRET");
   let event: Stripe.Event;
-
   try {
-    if (!sig || !webhookSecret) {
-      return new Response("Webhook secret not found.", { status: 400 });
-    }
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    event = await processWebhookRequest(req);
     console.log(`🔔  Webhook received: ${event.type}`);
   } catch (err) {
     console.log(`❌ Error message: ${err.message}`);

@@ -189,6 +189,7 @@
     "https://deno.land/std@0.177.1/path/win32.ts": "d186344e5583bcbf8b18af416d13d82b35a317116e6460a5a3953508c3de5bba",
     "https://deno.land/std@0.177.1/streams/write_all.ts": "3b2e1ce44913f966348ce353d02fa5369e94115181037cd8b602510853ec3033",
     "https://esm.sh/stripe@16.2.0?target=deno": "f7a45ad6684da7f21ac167fe81fe42acd569a23d58238e750b0e9d67ef7ee9a5",
+    "https://esm.sh/stripe@16.2.0?target=deno&no-check": "f7a45ad6684da7f21ac167fe81fe42acd569a23d58238e750b0e9d67ef7ee9a5",
     "https://esm.sh/v135/call-bind@1.0.7/deno/callBound.js": "2dbb8c2563fa744d767648811f3f355fc1fddf1e9e0126243d2b98db0b6932c9",
     "https://esm.sh/v135/define-data-property@1.1.4/deno/define-data-property.mjs": "f91322ad18ff12e8a2a86393d2b790d4fd0bc32b359d5253cfb9127cb95f7eec",
     "https://esm.sh/v135/es-define-property@1.0.0/deno/es-define-property.mjs": "5806a7114f3cba6ddaa2366d5fb04f26f152651ae10ba4bdb459f84e8ab95377",

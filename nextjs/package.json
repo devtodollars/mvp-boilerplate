@@ -9,7 +9,7 @@
     "lint": "next lint",
     "prettier-fix": "prettier --write .",
     "stripe:login": "stripe login",
-    "stripe:listen": "stripe listen --forward-to=localhost:3000/api/webhooks",
+    "stripe:listen": "stripe listen --forward-to=http://127.0.0.1:54321/functions/v1/stripe_webhook",
     "stripe:fixtures": "stripe fixtures fixtures/stripe-fixtures.json",
     "supabase:start": "npx supabase start",
     "supabase:stop": "npx supabase stop",
