@@ -18,7 +18,6 @@ import { getURL } from '@/utils/helpers';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { createApiClient } from '@/utils/supabase/api';
-import { revalidatePath } from 'next/cache';
 
 export default function AccountPage({ user }: { user: User }) {
   const supabase = createClient();
