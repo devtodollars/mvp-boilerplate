@@ -1,3 +1,4 @@
+import 'package:devtodollars/services/metadata_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,17 +14,10 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final authNotif = ref.watch(authProvider.notifier);
+    final metaAsync = ref.watch(metadataProvider);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -40,20 +34,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+            metaAsync.when(
+                data: (metadata) {
+                  final subscription = metadata?.subscription;
+                  return (Text(subscription != null
+                      ? "You are currently on the ${subscription.prices?.products?.name} plan."
+                      : "You are not currently subscribed to any plan."));
+                },
+                loading: () => const CircularProgressIndicator(),
+                error: (_, __) =>
+                    const Text("Failed to load subscription plan")),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }
