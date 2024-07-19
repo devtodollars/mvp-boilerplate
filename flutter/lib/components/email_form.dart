@@ -78,7 +78,7 @@ class _EmailFormState extends ConsumerState<EmailForm> {
               builder: (_) => AlertDialog(
                 title: const Text("Check your Email!"),
                 content: const Text(
-                    "We sent an email from pleasereply@devtodollars.com to verify your email"),
+                    "We sent an email from hi@devtodollars.com to verify your email"),
                 actions: [
                   TextButton(
                       onPressed: context.pop, child: const Text("Ok Matt."))

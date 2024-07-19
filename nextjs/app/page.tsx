@@ -15,7 +15,7 @@ import { Team } from '@/components/landing/Team';
 import { Testimonials } from '@/components/landing/Testimonials';
 import { createClient } from '@/utils/supabase/server';
 
-export default async function PricingPage() {
+export default async function LandingPage() {
   const supabase = createClient();
 
   const {

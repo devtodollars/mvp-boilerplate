@@ -1,4 +1,4 @@
-import { User } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { User } from "supabase";
 import { supabase } from "./supabase.ts";
 
 async function getUserFromRequest(req: Request) {
@@ -34,13 +34,10 @@ function corsResponse(res: Response): Response {
 }
 
 export function resFromError(e: { message?: string }): Response {
-  return new Response(
-    JSON.stringify({ message: e?.message }),
-    {
-      status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    },
-  );
+  return new Response(JSON.stringify({ message: e?.message }), {
+    status: 400,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
 }
 
 export function clientRequestHandlerWithUser(

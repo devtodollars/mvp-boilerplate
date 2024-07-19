@@ -1,4 +1,4 @@
-import { PostHog } from "npm:posthog-node@3.2.0";
+import { PostHog } from "posthog";
 
 export const posthog = new PostHog(Deno.env.get("POSTHOG_CLIENT_KEY") || "", {
   flushAt: 1,

@@ -1,116 +1,91 @@
-import Stripe from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { processWebhookRequest } from "../_shared/stripe.ts";
-import { supabase } from "../_shared/supabase.ts";
-import { stripe } from "../_shared/stripe.ts";
-import { posthog } from "../_shared/posthog.ts";
-import { sendEmail } from "../_shared/postmark.ts";
+import { processWebhookRequest, stripe } from "../_shared/stripe.ts";
+import Stripe from "stripe";
+import {
+  deletePriceRecord,
+  deleteProductRecord,
+  manageSubscriptionStatusChange,
+  upsertPriceRecord,
+  upsertProductRecord,
+} from "../_shared/supabase.ts";
 
+const relevantEvents = new Set([
+  "product.created",
+  "product.updated",
+  "product.deleted",
+  "price.created",
+  "price.updated",
+  "price.deleted",
+  "checkout.session.completed",
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+]);
 Deno.serve(async (req) => {
-  let receivedEvent;
+  let event: Stripe.Event;
   try {
-    receivedEvent = await processWebhookRequest(req);
-  } catch (e) {
-    return new Response(e.message, { status: 400 });
+    event = await processWebhookRequest(req);
+    console.log(`🔔  Webhook received: ${event.type}`);
+  } catch (err) {
+    console.log(`❌ Error message: ${err.message}`);
+    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
-  console.log(`🔔 Received event: ${receivedEvent.type}`);
-  const object = receivedEvent.data.object;
-  switch (receivedEvent.type) {
-    case "customer.subscription.deleted":
-      await onSubscriptionUpdated(object, true);
-      break;
-    case "customer.subscription.updated":
-      await onSubscriptionUpdated(object);
-      break;
-    case "customer.subscription.created":
-      await onSubscriptionUpdated(object);
-      break;
-    case "checkout.session.completed":
-      await onCheckoutComplete(object);
-      break;
-  }
-  return new Response(JSON.stringify({ ok: true }), { status: 200 });
-});
-
-async function onSubscriptionUpdated(
-  subscription: Stripe.Subscription,
-  deleted = false,
-) {
-  const prods = await getActiveProducts(subscription.customer);
-  const subscriptionItems = subscription.items.data;
-  const validStatuses = ["incomplete", "trialing", "active"];
-  for (const item of subscriptionItems) {
-    const prod = item.plan.product;
-
-    if (deleted || !validStatuses.includes(subscription.status)) {
-      // removes product from purchased products
-      const i = prods.indexOf(prod);
-      if (i !== -1) prods.splice(i, 1);
-    } else if (!prods.includes(prod)) {
-      prods.push(prod);
+  if (relevantEvents.has(event.type)) {
+    try {
+      switch (event.type) {
+        case "product.created":
+        case "product.updated":
+          await upsertProductRecord(event.data.object as Stripe.Product);
+          break;
+        case "price.created":
+        case "price.updated":
+          await upsertPriceRecord(event.data.object as Stripe.Price);
+          break;
+        case "price.deleted":
+          await deletePriceRecord(event.data.object as Stripe.Price);
+          break;
+        case "product.deleted":
+          await deleteProductRecord(event.data.object as Stripe.Product);
+          break;
+        case "customer.subscription.created":
+        case "customer.subscription.updated":
+        case "customer.subscription.deleted": {
+          const subscription = event.data.object as Stripe.Subscription;
+          await manageSubscriptionStatusChange(
+            subscription.id,
+            subscription.customer as string,
+            event.type === "customer.subscription.created",
+          );
+          break;
+        }
+        case "checkout.session.completed": {
+          const checkoutSession = event.data.object as Stripe.Checkout.Session;
+          if (checkoutSession.mode === "subscription") {
+            const subscriptionId = checkoutSession.subscription;
+            await manageSubscriptionStatusChange(
+              subscriptionId as string,
+              checkoutSession.customer as string,
+              true,
+            );
+          }
+          break;
+        }
+        default:
+          throw new Error("Unhandled relevant event!");
+      }
+    } catch (error) {
+      console.log(error);
+      return new Response(
+        "Webhook handler failed. View your Next.js function logs.",
+        {
+          status: 400,
+        },
+      );
     }
+  } else {
+    return new Response(`Unsupported event type: ${event.type}`, {
+      status: 400,
+    });
   }
-  // updates purchased_products
-  await supabase.from("stripe").update({
-    active_products: prods,
-  }).eq("stripe_customer_id", subscription.customer);
-}
-
-async function onCheckoutComplete(session: Stripe.Session) {
-  const prods = await getActiveProducts(session.customer);
-  const { data: lineItems } = await stripe.checkout.sessions.listLineItems(
-    session.id,
-  );
-
-  for (const item of lineItems) {
-    const prod = item.price.product;
-    // skip if product is subscription or already purchased
-    if (item.mode === "subscription" || prods.includes(prod)) continue;
-    prods.push(prod);
-  }
-  const { data: row } = await supabase.from("stripe").update({
-    active_products: prods,
-  }).eq("stripe_customer_id", session.customer).select().maybeSingle();
-
-  // Sends email based on purchase
-  const checkoutProducts = lineItems.map((i: Stripe.LineItem) =>
-    i.price.product
-  );
-  await sendPurchaseEmail(checkoutProducts, session.customer_details.email);
-
-  // posthog capture
-  if (!row) return;
-  posthog.capture({
-    distinctId: row.user_id,
-    event: "user completes checkout",
-    properties: {
-      prods,
-      $set: {
-        "stripe_customer_id": row.stripe_customer_id,
-      },
-    },
-  });
-}
-
-async function getActiveProducts(customer: string): Promise<string[]> {
-  const { data } = await supabase.from("stripe").select(
-    "active_products",
-  ).eq(
-    "stripe_customer_id",
-    customer,
-  ).single();
-  const purchasedProds: string[] = data?.active_products || [];
-  return purchasedProds;
-}
-
-async function sendPurchaseEmail(products: string[], to: string) {
-  // TODO: update this function based on your emailing needs
-  const product = products[0];
-  let template = "";
-  if (product === "prod_PfRVCVqv8fBrxN") {
-    template = "paid-docs-support";
-  }
-  if (template) {
-    await sendEmail({ to, template });
-  }
-}
+  return new Response(JSON.stringify({ received: true }));
+});

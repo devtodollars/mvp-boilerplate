@@ -44,19 +44,20 @@ const pricingList: PricingProps[] = [
     benefitList: [
       '1 Team member',
       '2 GB Storage',
-      'Upto 4 pages',
+      'Up to 4 pages',
       'Community support',
       'lorem ipsum dolor'
-    ]
+    ],
+    redirectURL: '/account'
   },
   {
-    id: process.env.NEXT_PUBLIC_TEST_SUBSCRIPTION_PRICE,
-    title: 'Premium',
+    id: 'price_1Pdy8yFttF99a1NCLpDa83xf',
+    title: 'Hobby',
     popular: 1,
-    price: 5,
+    price: 10,
     description:
       'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
-    buttonText: 'Start Free Trial',
+    buttonText: 'Subscribe Now',
     benefitList: [
       '4 Team member',
       '4 GB Storage',
@@ -66,12 +67,13 @@ const pricingList: PricingProps[] = [
     ]
   },
   {
-    title: 'Enterprise',
+    id: 'price_1Pdy8zFttF99a1NCGQJc5ZTZ',
+    title: 'Freelancer',
     popular: 0,
-    price: 40,
+    price: 20,
     description:
       'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
-    buttonText: 'Contact US',
+    buttonText: 'Subscribe Now',
     benefitList: [
       '10 Team member',
       '8 GB Storage',
