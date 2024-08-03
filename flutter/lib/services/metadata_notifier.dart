@@ -30,7 +30,10 @@ class Metadata extends _$Metadata {
     final res = await client
         .from('subscriptions')
         .select('*, prices(*, products(*))')
-        .inFilter('status', ['trialing', 'active']).maybeSingle();
+        .inFilter('status', ['trialing', 'active'])
+        .order('created', ascending: false)
+        .limit(1)
+        .maybeSingle();
     return (res == null) ? null : SubscriptionWithPrice.fromJson(res);
   }
 }
