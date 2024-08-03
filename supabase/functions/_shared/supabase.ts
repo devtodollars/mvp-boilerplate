@@ -299,18 +299,25 @@ const manageSubscriptionStatusChange = async (
 };
 
 const insertCheckoutSession = async (
-  checkoutSession: Stripe.Checkout.Session,
+  webhookSession: Stripe.Checkout.Session,
 ) => {
   // Get customer's UUID from mapping table.
   const { data: customerData, error: noCustomerError } = await supabase
     .from("customers")
     .select("id")
-    .eq("stripe_customer_id", checkoutSession.customer)
+    .eq("stripe_customer_id", webhookSession.customer)
     .single();
 
   if (noCustomerError) {
     throw new Error(`Customer lookup failed: ${noCustomerError.message}`);
   }
+
+  const checkoutSession = await stripe.checkout.sessions.retrieve(
+    webhookSession.id,
+    {
+      expand: ["line_items"],
+    },
+  );
 
   const { id: uuid } = customerData!;
 
@@ -322,10 +329,10 @@ const insertCheckoutSession = async (
     mode: checkoutSession.mode,
     status: checkoutSession.status,
     payment_status: checkoutSession.payment_status,
-    price_id: checkoutSession.items.data[0].price.id,
+    price_id: checkoutSession.line_items.data[0].price.id,
     //TODO check quantity on subscription
     // @ts-ignore: ignore quantity doesnt exist
-    quantity: checkoutSession.items.data[0].quantity,
+    quantity: checkoutSession.line_items.data[0].quantity,
     created: toDateTime(checkoutSession.created).toISOString(),
   };
 

@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     } catch (error) {
       console.log(error);
       return new Response(
-        "Webhook handler failed. View your Next.js function logs.",
+        "Webhook handler failed. View your supabase function logs.",
         {
           status: 400,
         },
