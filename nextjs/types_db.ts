@@ -9,6 +9,63 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      checkout_sessions: {
+        Row: {
+          created: string
+          id: string
+          metadata: Json | null
+          mode: Database["public"]["Enums"]["checkout_mode"] | null
+          payment_status:
+            | Database["public"]["Enums"]["checkout_payment_status"]
+            | null
+          price_id: string | null
+          quantity: number | null
+          status: Database["public"]["Enums"]["checkout_status"] | null
+          user_id: string
+        }
+        Insert: {
+          created?: string
+          id: string
+          metadata?: Json | null
+          mode?: Database["public"]["Enums"]["checkout_mode"] | null
+          payment_status?:
+            | Database["public"]["Enums"]["checkout_payment_status"]
+            | null
+          price_id?: string | null
+          quantity?: number | null
+          status?: Database["public"]["Enums"]["checkout_status"] | null
+          user_id: string
+        }
+        Update: {
+          created?: string
+          id?: string
+          metadata?: Json | null
+          mode?: Database["public"]["Enums"]["checkout_mode"] | null
+          payment_status?:
+            | Database["public"]["Enums"]["checkout_payment_status"]
+            | null
+          price_id?: string | null
+          quantity?: number | null
+          status?: Database["public"]["Enums"]["checkout_status"] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkout_sessions_price_id_fkey"
+            columns: ["price_id"]
+            isOneToOne: false
+            referencedRelation: "prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkout_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           id: string
@@ -218,6 +275,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      checkout_mode: "payment" | "setup" | "subscription"
+      checkout_payment_status: "paid" | "unpaid" | "no_payment_required"
+      checkout_status: "complete" | "expired" | "open"
       pricing_plan_interval: "day" | "week" | "month" | "year"
       pricing_type: "one_time" | "recurring"
       subscription_status:

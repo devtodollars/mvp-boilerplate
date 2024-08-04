@@ -138,6 +138,35 @@ alter table subscriptions enable row level security;
 create policy "Can only view own subs data." on subscriptions for select using (auth.uid() = user_id);
 
 /**
+* CHECKOUT SESSIONS
+* Note: Completed checkouts are created and managed in Stripe and synced to our DB via Stripe webhooks.
+*/
+create type checkout_mode as enum ('payment', 'setup', 'subscription');
+create type checkout_status as enum ('complete', 'expired', 'open');
+create type checkout_payment_status as enum ('paid', 'unpaid', 'no_payment_required');
+create table checkout_sessions (
+  -- Checkout Session ID from Stripe, e.g. cs_1234.
+  id text primary key,
+  user_id uuid references auth.users not null,
+  -- The mode of the Checkout Session.
+  mode checkout_mode,
+  -- The payment status of the Checkout Session
+  payment_status checkout_payment_status,
+  -- The status of the Checkout Session
+  status checkout_status,
+  -- Set of key-value pairs, used to store additional information about the object in a structured format.
+  metadata jsonb,
+  -- ID of the price that created this checkout.
+  price_id text references prices,
+  -- Quantity multiplied by the unit amount of the price creates the amount of the item.
+  quantity integer,
+  -- Time at which the checkout session was created.
+  created timestamp with time zone default timezone('utc'::text, now()) not null
+);
+alter table checkout_sessions enable row level security;
+create policy "Can only view own checkout session data" on checkout_sessions for select using (auth.uid() = user_id);
+
+/**
  * REALTIME SUBSCRIPTIONS
  * Only allow realtime listening on public tables.
  */

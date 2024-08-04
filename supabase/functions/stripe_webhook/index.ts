@@ -1,8 +1,9 @@
-import { processWebhookRequest, stripe } from "../_shared/stripe.ts";
+import { processWebhookRequest } from "../_shared/stripe.ts";
 import Stripe from "stripe";
 import {
   deletePriceRecord,
   deleteProductRecord,
+  insertCheckoutSession,
   manageSubscriptionStatusChange,
   upsertPriceRecord,
   upsertProductRecord,
@@ -60,6 +61,7 @@ Deno.serve(async (req) => {
         }
         case "checkout.session.completed": {
           const checkoutSession = event.data.object as Stripe.Checkout.Session;
+          await insertCheckoutSession(checkoutSession);
           if (checkoutSession.mode === "subscription") {
             const subscriptionId = checkoutSession.subscription;
             await manageSubscriptionStatusChange(
@@ -76,7 +78,7 @@ Deno.serve(async (req) => {
     } catch (error) {
       console.log(error);
       return new Response(
-        "Webhook handler failed. View your Next.js function logs.",
+        "Webhook handler failed. View your supabase function logs.",
         {
           status: 400,
         },

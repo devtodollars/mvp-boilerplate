@@ -148,9 +148,8 @@ const createOrRetrieveCustomer = async ({
   } else {
     // If Stripe ID is missing from Supabase, try to retrieve Stripe customer ID by email
     const stripeCustomers = await stripe.customers.list({ email: email });
-    stripeCustomerId = stripeCustomers.data.length > 0
-      ? stripeCustomers.data[0].id
-      : undefined;
+    stripeCustomerId =
+      stripeCustomers.data.length > 0 ? stripeCustomers.data[0].id : undefined;
   }
 
   // If still no stripeCustomerId, create a new customer in Stripe
@@ -299,10 +298,60 @@ const manageSubscriptionStatusChange = async (
   }
 };
 
+const insertCheckoutSession = async (
+  webhookSession: Stripe.Checkout.Session,
+) => {
+  // Get customer's UUID from mapping table.
+  const { data: customerData, error: noCustomerError } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("stripe_customer_id", webhookSession.customer)
+    .single();
+
+  if (noCustomerError) {
+    throw new Error(`Customer lookup failed: ${noCustomerError.message}`);
+  }
+
+  const checkoutSession = await stripe.checkout.sessions.retrieve(
+    webhookSession.id,
+    {
+      expand: ["line_items"],
+    },
+  );
+
+  const { id: uuid } = customerData!;
+
+  // Upsert the latest status of the subscription object.
+  const sessionData: TablesInsert<"checkout_sessions"> = {
+    id: checkoutSession.id,
+    user_id: uuid,
+    metadata: checkoutSession.metadata,
+    mode: checkoutSession.mode,
+    status: checkoutSession.status,
+    payment_status: checkoutSession.payment_status,
+    price_id: checkoutSession.line_items.data[0].price.id,
+    //TODO check quantity on subscription
+    // @ts-ignore: ignore quantity doesnt exist
+    quantity: checkoutSession.line_items.data[0].quantity,
+    created: toDateTime(checkoutSession.created).toISOString(),
+  };
+
+  const { error: insertError } = await supabase
+    .from("checkout_sessions")
+    .insert(sessionData);
+  if (insertError) {
+    throw new Error(`Checkout session insert failed: ${insertError.message}`);
+  }
+  console.log(
+    `Inserted checkout session [${checkoutSession.id}] for user [${uuid}]`,
+  );
+};
+
 export {
   createOrRetrieveCustomer,
   deletePriceRecord,
   deleteProductRecord,
+  insertCheckoutSession,
   manageSubscriptionStatusChange,
   upsertPriceRecord,
   upsertProductRecord,

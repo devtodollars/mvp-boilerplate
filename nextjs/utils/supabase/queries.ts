@@ -13,6 +13,8 @@ export const getSubscription = cache(async (supabase: SupabaseClient) => {
     .from('subscriptions')
     .select('*, prices(*, products(*))')
     .in('status', ['trialing', 'active'])
+    .order('created', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   return subscription;
