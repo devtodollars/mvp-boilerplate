@@ -1,6 +1,11 @@
 import Stripe from "stripe";
 import { Tables } from "../types_db.ts";
-import { createOrRetrieveCustomer } from "./supabase.ts";
+import {
+  createOrRetrieveCustomer,
+  supabase,
+  upsertPriceRecords,
+  upsertProductRecords,
+} from "./supabase.ts";
 import { calculateTrialEndUnixTimestamp } from "./utils.ts";
 import { User } from "supabase";
 
@@ -129,5 +134,34 @@ export async function createStripePortal(
   } catch (err) {
     console.error(err);
     throw new Error("Could not create billing portal");
+  }
+}
+
+export async function initPricesAndProducts() {
+  const { count } = await supabase.from("products").select("*", {
+    count: "exact",
+    head: true,
+  });
+  // check if products has been initialized already
+  if (count && count > 0) return;
+
+  console.log("Initializing products and prices");
+  try {
+    const [prodRes, priceRes] = await Promise.all([
+      stripe.products.list({ active: true }),
+      stripe.prices.list({ active: true }),
+    ]);
+
+    // Only use prices from active products
+    const products = prodRes.data;
+    const prodIds = products.map((p: Stripe.Product) => p.id);
+    const prices = priceRes.data.filter((p: Stripe.Price) =>
+      prodIds.includes(p.product),
+    );
+
+    await upsertProductRecords(products);
+    await upsertPriceRecords(prices);
+  } catch (e) {
+    console.error(e);
   }
 }
