@@ -20,6 +20,12 @@ supabase functions serve --env-file supabase/.env.local --import-map supabase/fu
 supabase secrets set --env-file supabase/.env
 ```
 
+# Sync Stripe products and prices with Supabase
+
+```
+deno run  -A supabase/functions/_scripts/sync-stripe.ts
+```
+
 # Deploy Functions
 
 ```
