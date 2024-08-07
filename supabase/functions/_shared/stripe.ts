@@ -2,7 +2,6 @@ import Stripe from "stripe";
 import { Tables } from "../types_db.ts";
 import {
   createOrRetrieveCustomer,
-  supabase,
   upsertPriceRecords,
   upsertProductRecords,
 } from "./supabase.ts";
@@ -138,13 +137,6 @@ export async function createStripePortal(
 }
 
 export async function initPricesAndProducts() {
-  const { count } = await supabase.from("products").select("*", {
-    count: "exact",
-    head: true,
-  });
-  // check if products has been initialized already
-  if (count && count > 0) return;
-
   console.log("Initializing products and prices");
   try {
     const [prodRes, priceRes] = await Promise.all([
