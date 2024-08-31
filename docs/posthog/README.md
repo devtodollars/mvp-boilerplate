@@ -1,0 +1,2 @@
+# Analytics (Posthog)
+Analytics is one of the most important aspects of building a successful business. The data you collect drives the decisions you make. We use Posthog thanks to its generous free plan and the all-in-one analytics it provides.
