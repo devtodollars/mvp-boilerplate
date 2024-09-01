@@ -26,6 +26,7 @@ jobs:
           flutter-version: "3.22.2"
           cache: true
           channel: "stable"
+
       - run: flutter doctor -v
       - run: flutter analyze
       - run: flutter pub get
@@ -35,6 +36,7 @@ jobs:
           flutter build web --dart-define-from-file=env.json
           cd ./build/web
           zip -r ../web.zip .
+
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
@@ -43,6 +45,7 @@ jobs:
             flutter/build/web.zip
           draft: true
           fail_on_unmatched_files: true
+
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v2.0
         if: github.event_name == 'pull_request'
