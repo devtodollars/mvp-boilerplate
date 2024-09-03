@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 ---
-# Release (Github Actions)
+# Release (Netlify)
 
 ## Setup
 

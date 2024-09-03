@@ -11,7 +11,7 @@ Welcome to my Flutter docs! Below is the project structure I use for the app.
   * `/flutter/lib/models` -> Class or interface definitions that are passed around
 * `/flutter/env.json` -> Environment variables for production
 * `/flutter/env.local.json` -> Environment variables for [local development](../supabase/local-development/pull-changes.md)
-* `/flutter/bumpversion.sh` -> Script used for [upgrading the app version](release.md)
+* `/flutter/bumpversion.sh` -> Script used for [upgrading the app version](./release.md)
 
 :::warning
 Do NOT put sensitive keys into `env.json` or `env.local.json`
