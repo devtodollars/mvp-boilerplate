@@ -1,6 +1,7 @@
 ---
 sidebar_position: 1
 ---
+
 # Setup
 
 1. Create a project in [Supabase](https://supabase.com/)
@@ -24,8 +25,7 @@ Make sure you are in your project directory before you run `supabase link`
 
 ```bash
 supabase db push
-supabase functions deploy
+supabase functions deploy --import-map supabase/functions/deno.json
 ```
-
 
 4. (OPTIONAL) [Setup Supabase local development](local-development/pull-changes.md)
