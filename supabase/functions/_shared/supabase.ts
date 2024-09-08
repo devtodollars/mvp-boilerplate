@@ -18,31 +18,35 @@ export const supabase = createClient<Database>(
 // Change to control trial period length
 const TRIAL_PERIOD_DAYS = 0;
 
-const upsertProductRecord = async (product: Stripe.Product) => {
-  const productData: Tables<"products"> = {
+const upsertProductRecord = async (product: Stripe.Product) =>
+  await upsertProductRecords([product]);
+const upsertProductRecords = async (products: Stripe.Product[]) => {
+  const productData: Tables<"products">[] = products.map((product) => ({
     id: product.id,
     active: product.active,
     name: product.name,
     description: product.description ?? null,
     image: product.images?.[0] ?? null,
     metadata: product.metadata,
-  };
+  }));
 
   const { error: upsertError } = await supabase
     .from("products")
-    .upsert([productData]);
+    .upsert(productData);
   if (upsertError) {
     throw new Error(`Product insert/update failed: ${upsertError.message}`);
   }
-  console.log(`Product inserted/updated: ${product.id}`);
+  console.log(`Product inserted/updated: ${products.map((p) => p.id)}`);
 };
 
-const upsertPriceRecord = async (
-  price: Stripe.Price,
+const upsertPriceRecord = async (price: Stripe.Price) =>
+  await upsertPriceRecords([price]);
+const upsertPriceRecords = async (
+  prices: Stripe.Price[],
   retryCount = 0,
   maxRetries = 3,
 ) => {
-  const priceData: TablesInsert<"prices"> = {
+  const priceData: TablesInsert<"prices">[] = prices.map((price) => ({
     id: price.id,
     product_id: typeof price.product === "string" ? price.product : "",
     active: price.active,
@@ -53,17 +57,21 @@ const upsertPriceRecord = async (
     interval_count: price.recurring?.interval_count ?? null,
     trial_period_days: price.recurring?.trial_period_days ?? TRIAL_PERIOD_DAYS,
     metadata: price.metadata,
-  };
+  }));
 
   const { error: upsertError } = await supabase
     .from("prices")
-    .upsert([priceData]);
+    .upsert(priceData);
 
   if (upsertError?.message.includes("foreign key constraint")) {
     if (retryCount < maxRetries) {
-      console.log(`Retry attempt ${retryCount + 1} for price ID: ${price.id}`);
+      console.log(
+        `Retry attempt ${retryCount + 1} for price ID: ${prices.map(
+          (p) => p.id,
+        )}`,
+      );
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      await upsertPriceRecord(price, retryCount + 1, maxRetries);
+      await upsertPriceRecords(prices, retryCount + 1, maxRetries);
     } else {
       throw new Error(
         `Price insert/update failed after ${maxRetries} retries: ${upsertError.message}`,
@@ -72,7 +80,7 @@ const upsertPriceRecord = async (
   } else if (upsertError) {
     throw new Error(`Price insert/update failed: ${upsertError.message}`);
   } else {
-    console.log(`Price inserted/updated: ${price.id}`);
+    console.log(`Price inserted/updated: ${prices.map((p) => p.id)}`);
   }
 };
 
@@ -354,5 +362,7 @@ export {
   insertCheckoutSession,
   manageSubscriptionStatusChange,
   upsertPriceRecord,
+  upsertPriceRecords,
   upsertProductRecord,
+  upsertProductRecords,
 };
