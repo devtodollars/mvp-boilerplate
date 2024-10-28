@@ -31,7 +31,7 @@
   - SSO (Google, Github, etc.)
 - Fully configured for local development from day one
 - 🚧 [backend tests](https://github.com/devtodollars/flutter-supabase-production-template/issues/16) 🚧
-
+- Test
 ### Analytics ([Posthog](https://posthog.com/))
 
 - Unified analytics across frontend and backend based on `user_id`
