@@ -159,8 +159,19 @@ s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
 
-[functions]
-import_map = "../functions/deno.json"
-
 [functions.stripe_webhook]
 verify_jwt = false
+import_map = './functions/deno.json'
+
+[functions.get_stripe_url]
+import_map = './functions/deno.json'
+
+[functions.on_user_modify]
+import_map = './functions/deno.json'
+
+[functions._scripts]
+import_map = './functions/deno.json'
+
+[functions._shared]
+import_map = './functions/deno.json'
+
