@@ -33,6 +33,6 @@ You can follow steps 1-7 in the [Stripe test environment](https://docs.stripe.co
 :::note
 After setting up the webhooks, you can run the command below to do an initial sync between your supabase and stripe database
 ```
-deno run  -A supabase/functions/_scripts/sync-stripe.ts
+deno run  --env -A supabase/functions/_scripts/sync-stripe.ts
 ```
 :::
