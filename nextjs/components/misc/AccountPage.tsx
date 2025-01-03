@@ -71,7 +71,6 @@ export default function AccountPage({
     router.push('/');
     router.refresh();
   };
-  console.log(subscription);
 
   return (
     <div className="flex min-h-screen w-full flex-col">

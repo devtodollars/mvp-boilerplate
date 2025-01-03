@@ -7,6 +7,8 @@ import {
   GiftIcon
 } from '@/components/landing/Icons';
 
+import type { JSX } from "react";
+
 interface FeatureProps {
   icon: JSX.Element;
   title: string;

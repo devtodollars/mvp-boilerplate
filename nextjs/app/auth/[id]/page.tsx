@@ -4,19 +4,20 @@ import { Navbar } from '@/components/landing/Navbar';
 import { AuthForm } from '@/components/misc/AuthForm';
 import { AuthState } from '@/utils/types';
 
-export default async function SignIn({
-  params
-}: {
-  params: { id: string };
-  searchParams: { disable_button: boolean };
-}) {
+export default async function SignIn(
+  props: {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ disable_button: boolean }>;
+  }
+) {
+  const params = await props.params;
   if (!Object.values(AuthState).includes(params.id as AuthState)) {
     redirect('/auth');
   }
   const currState = params.id as AuthState;
 
   // Check if the user is already logged in and redirect to the account page if so
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
