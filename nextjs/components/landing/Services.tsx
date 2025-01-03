@@ -7,6 +7,8 @@ import {
 } from '@/components/ui/card';
 import { MagnifierIcon, WalletIcon, ChartIcon } from './Icons';
 
+import type { JSX } from "react";
+
 interface ServiceProps {
   title: string;
   description: string;

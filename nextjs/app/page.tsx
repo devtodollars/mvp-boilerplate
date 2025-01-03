@@ -16,7 +16,7 @@ import { Testimonials } from '@/components/landing/Testimonials';
 import { createClient } from '@/utils/supabase/server';
 
 export default async function LandingPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const {
     data: { user }

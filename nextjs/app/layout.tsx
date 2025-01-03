@@ -6,10 +6,8 @@ import { PHProvider } from './providers';
 import { ThemeProvider } from '@/components/landing/theme-provider';
 import dynamic from 'next/dynamic';
 import { Toaster } from '@/components/ui/toaster';
+import PostHogPageViewWrapper from '@/components/misc/PostHogPageViewWrapper';
 
-const PostHogPageView = dynamic(() => import('./PostHogPageView'), {
-  ssr: false
-});
 
 const meta = {
   title: 'Next.js Subscription Starter',
@@ -57,7 +55,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
       <ThemeProvider>
         <PHProvider>
           <body>
-            <PostHogPageView />
+            <PostHogPageViewWrapper />
             <main
               id="skip"
               className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"
