@@ -26,16 +26,16 @@ export default async function LandingPage() {
     <>
       <Navbar user={user} />
       <Hero />
-      <Sponsors />
-      <About />
-      <HowItWorks />
+      {/* <Sponsors />  //no need for now */}
+      {/* <HowItWorks /> // no need for now */}
       <Features />
-      <Services />
-      <Cta />
-      <Testimonials />
-      <Team />
       <Pricing user={user} />
-      <Newsletter />
+      {/* <Services /> */}
+      <Cta />
+      {/* <Testimonials /> */}
+      {/* <Team /> // no need for now */}
+      <About />
+      {/* <Newsletter /> */}
       <FAQ />
       <Footer />
       <ScrollToTop />

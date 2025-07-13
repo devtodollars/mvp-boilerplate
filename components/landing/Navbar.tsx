@@ -34,10 +34,10 @@ const routeList: RouteProps[] = [
     href: '/#features',
     label: 'Features'
   },
-  {
-    href: '/#testimonials',
-    label: 'Testimonials'
-  },
+  // {
+  //   href: '/#testimonials',
+  //   label: 'Testimonials'
+  // },
   {
     href: '/#pricing',
     label: 'Pricing'
@@ -104,9 +104,8 @@ export const Navbar = ({ user }: { user: User | null }) => {
                     </a>
                   ))}
                   <Button
-                    variant="secondary"
+                    variant="ghost"
                     onClick={handleAuth}
-                    className={`w-[110px] border`}
                   >
                     {user ? 'Account' : 'Sign In'}
                   </Button>
@@ -134,8 +133,7 @@ export const Navbar = ({ user }: { user: User | null }) => {
           <div className="hidden md:flex gap-2">
             <Button
               onClick={handleAuth}
-              className={`border`}
-              variant="secondary"
+              variant="ghost"
             >
               {user ? 'Account' : 'Sign In'}
             </Button>

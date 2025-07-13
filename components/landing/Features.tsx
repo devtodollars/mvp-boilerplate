@@ -16,35 +16,36 @@ interface FeatureProps {
 
 const features: FeatureProps[] = [
   {
-    title: 'Responsive Design',
+    title: 'Trust & Safety',
     description:
-      'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nisi nesciunt est nostrum omnis ab sapiente.',
-    image: '/landing/looking-ahead.png'
+      "Our trust system is simple: we verify every user's ID, we hold your deposit securely, and we only release it after the keys are in the tenant's hands. You're protected from start to finish",
+    image: '/feat3.png'
   },
   {
-    title: 'Intuitive user interface',
+    title: 'The Application Queue',
     description:
-      'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nisi nesciunt est nostrum omnis ab sapiente.',
-    image: '/landing/reflecting.png'
+      "Say goodbye to the application black hole. Our transparent queuing system gives renters peace of mind by showing them exactly where they stand, while giving landlords the tools to manage applications without the chaotic inbox spam. It's order, clarity, and fairness for both sides.",
+    image: '/feat2.png'
   },
   {
-    title: 'AI-Powered insights',
+    title: 'Profiles & In-App Communication',
     description:
-      'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nisi nesciunt est nostrum omnis ab sapiente.',
-    image: '/landing/growth.png'
+    "Stop sending your life story and personal documents into the void. Build one secure, reusable profile and apply for places with a click. Chat safely with our in-app messaging, keeping your personal number private until you're ready to share it.",
+    image: '/feat1.png'
   }
 ];
 
 const featureList: string[] = [
-  'Dark/Light theme',
-  'Reviews',
-  'Features',
-  'Pricing',
-  'Contact form',
-  'Our team',
-  'Responsive design',
-  'Newsletter',
-  'Minimalist'
+  "ID-Verified users",
+  "Scam and Deposit protection",
+  "In-app messaging",
+  "Tenant profiles",
+  "Transparent queueing system",
+  "Secure Escrow Deposits",
+  "No More Email Spam",
+  "ApplicationTracking",
+  "One-Click Apply",
+  "Secure In App Chat"
 ];
 
 export const Features = () => {
@@ -53,7 +54,7 @@ export const Features = () => {
       <h2 className="text-3xl lg:text-4xl font-bold md:text-center">
         Many{' '}
         <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
-          Great Features
+          Unique Features
         </span>
       </h2>
 

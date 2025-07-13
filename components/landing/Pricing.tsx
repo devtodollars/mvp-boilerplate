@@ -31,57 +31,61 @@ interface PricingProps {
   buttonText: string;
   benefitList: string[];
   redirectURL?: string;
+  comingSoon?: boolean;
 }
 
 const pricingList: PricingProps[] = [
   {
-    title: 'Free',
-    popular: 0,
-    price: 0,
+    title: 'Post a Room',
+    popular: 1,
+    price: 5,
+    comingSoon: false,
     description:
-      'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
+      'Find your next roomate, this price will NEVER change',
     buttonText: 'Get Started',
     benefitList: [
-      '1 Team member',
-      '2 GB Storage',
-      'Up to 4 pages',
-      'Community support',
-      'lorem ipsum dolor'
+      "In App Messaging",
+      "Tenant Profiles",
+      "Transparent Queueing System",
+      "Application Tracking",
+      "Secure ID Verification"
     ],
     redirectURL: '/account'
   },
   {
     id: 'price_1Pdy8yFttF99a1NCLpDa83xf',
-    title: 'Hobby',
-    popular: 1,
-    price: 10,
-    description:
-      'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
-    buttonText: 'Subscribe Now',
-    benefitList: [
-      '4 Team member',
-      '4 GB Storage',
-      'Upto 6 pages',
-      'Priority support',
-      'lorem ipsum dolor'
-    ]
-  },
-  {
-    id: 'price_1Pdy8zFttF99a1NCGQJc5ZTZ',
-    title: 'Freelancer',
+    title: 'Post a Property',
     popular: 0,
-    price: 20,
+    comingSoon: true,
+    price: 75,
     description:
-      'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
-    buttonText: 'Subscribe Now',
+      'Posting properties with more features coming soon',
+    buttonText: 'Coming Soon',
     benefitList: [
-      '10 Team member',
-      '8 GB Storage',
-      'Upto 10 pages',
-      'Priority support',
-      'lorem ipsum dolor'
+      "In App Messaging",
+      "Tenant Profiles",
+      "Scam and Deposit Protection",
+      "Transparent Queueing System",
+      "Deposit Protection",
+      "Payment management"
     ]
   }
+  // {
+  //   id: 'price_1Pdy8zFttF99a1NCGQJc5ZTZ',
+  //   title: 'Freelancer',
+  //   popular: 0,
+  //   price: 20,
+  //   description:
+  //     'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
+  //   buttonText: 'Subscribe Now',
+  //   benefitList: [
+  //     '10 Team member',
+  //     '8 GB Storage',
+  //     'Upto 10 pages',
+  //     'Priority support',
+  //     'lorem ipsum dolor'
+  //   ]
+  // }
 ];
 
 export const Pricing = ({ user }: { user: User | null }) => {
@@ -141,7 +145,7 @@ export const Pricing = ({ user }: { user: User | null }) => {
         Lorem ipsum dolor sit amet consectetur adipisicing elit. Alias
         reiciendis.
       </h3>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8">
         {pricingList.map((pricing: PricingProps) => (
           <Card
             key={pricing.title}
@@ -154,15 +158,20 @@ export const Pricing = ({ user }: { user: User | null }) => {
             <CardHeader>
               <CardTitle className="flex item-center justify-between">
                 {pricing.title}
-                {pricing.popular === PopularPlanType.YES ? (
+                {/* {pricing.popular === PopularPlanType.YES ? (
                   <Badge variant="secondary" className="text-sm text-primary">
                     Most popular
+                  </Badge>
+                ) : null} */}
+                {pricing.comingSoon ? (
+                  <Badge variant="secondary" className="text-sm text-primary">
+                    Coming Soon
                   </Badge>
                 ) : null}
               </CardTitle>
               <div>
-                <span className="text-3xl font-bold">${pricing.price}</span>
-                <span className="text-muted-foreground"> /month</span>
+                <span className="text-3xl font-bold">€{pricing.price}</span>
+                <span className="text-muted-foreground"> / 90 days</span>
               </div>
 
               <CardDescription>{pricing.description}</CardDescription>

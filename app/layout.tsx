@@ -10,11 +10,11 @@ import PostHogPageViewWrapper from '@/components/misc/PostHogPageViewWrapper';
 
 
 const meta = {
-  title: 'Next.js Subscription Starter',
-  description: 'Brought to you by Vercel, Stripe, and Supabase.',
-  cardImage: '/og.png',
+  title: "GoLet.ie | Ireland's First Scam-Free Rental Platform",
+  description: "Ireland's first rental platform with Scam and Deposit protection, in-app messaging, tenant profiles, ID verification, and a fair queueing system.",
+  cardImage: '/og_cozy_studio.png',
   robots: 'follow, index',
-  favicon: '/favicon.ico',
+  favicon: '/golet-app.png',
   url: getURL()
 };
 
