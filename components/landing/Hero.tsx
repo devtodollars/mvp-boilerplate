@@ -1,12 +1,20 @@
 'use client';
 import { Button } from '@/components/ui/button';
-import { buttonVariants } from '@/components/ui/button';
-import { HeroCards } from './HeroCards';
-import { GitHubLogoIcon } from '@radix-ui/react-icons';
 import { Input } from "@/components/ui/input"
+import { User } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
 
+export const Hero = ({ user }: { user: User | null }) => {
+  const router = useRouter();
 
-export const Hero = () => {
+  const handlePostRoom = () => {
+    if (user) {
+      router.push('/listroom');
+    } else {
+      router.push('/auth');
+    }
+  };
+
   return (
     <section
       className="
@@ -37,11 +45,8 @@ export const Hero = () => {
             <Button type="submit" variant="outline">
               Search
             </Button>
-            <Button variant="default">Post a Room</Button>
+            <Button variant="default" onClick={handlePostRoom}>Post a Room</Button>
           </div>
-
-     
-  
 
         </div>
       </div>
