@@ -12,12 +12,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useEffect, useState } from 'react';
-import { SiGithub, SiGoogle } from '@icons-pack/react-simple-icons';
 import { createApiClient } from '@/utils/supabase/api';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '../ui/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthState, StateInfo } from '@/utils/types';
+import SiGoogle from '@icons-pack/react-simple-icons/icons/SiGoogle';
 
 export function AuthForm({ state }: { state: AuthState }) {
   const { toast } = useToast();
@@ -262,13 +262,6 @@ export function AuthForm({ state }: { state: AuthState }) {
                 onClick={() => api.oauthSignin('google')}
               >
                 <SiGoogle className="h-4 w-4 mr-2" /> Google
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => api.oauthSignin('github')}
-              >
-                <SiGithub className="h-4 w-4 mr-2" /> Github
               </Button>
             </>
           )}
