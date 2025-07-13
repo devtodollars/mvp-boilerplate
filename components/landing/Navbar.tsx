@@ -23,6 +23,8 @@ import { createApiClient } from '@/utils/supabase/api';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
+import { usePathname } from 'next/navigation';
+import { Input } from '@/components/ui/input';
 
 interface RouteProps {
   href: string;
@@ -53,6 +55,7 @@ export const Navbar = ({ user }: { user: User | null }) => {
   const { toast } = useToast();
   const api = createApiClient(createClient());
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const pathname = usePathname();
   const handleAuth = async () => {
     if (user) {
       return router.push('/account');
@@ -75,7 +78,8 @@ export const Navbar = ({ user }: { user: User | null }) => {
           </NavigationMenuItem>
 
           {/* mobile */}
-          <span className="flex md:hidden">
+          {pathname === '/' && (
+          <span className="flex md:hidden"> 
             <ModeToggle />
 
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -113,8 +117,10 @@ export const Navbar = ({ user }: { user: User | null }) => {
               </SheetContent>
             </Sheet>
           </span>
+           )}
 
           {/* desktop */}
+          {pathname === '/' && (
           <nav className="hidden md:flex gap-2">
             {routeList.map((route: RouteProps, i) => (
               <a
@@ -129,6 +135,21 @@ export const Navbar = ({ user }: { user: User | null }) => {
               </a>
             ))}
           </nav>
+          )}
+
+
+          {/* {pathname === '/search' && (
+            <div className="flex w-full max-w-lg items-center gap-2 justify-center lg:justify-start">
+            <Input type="text" placeholder="room, address, etc." />
+            <Button type="button" variant="ghost" >
+              Search
+            </Button>
+
+            <Button type="button" variant="ghost">Filter</Button>
+
+          </div>
+          )} */}
+
 
           <div className="hidden md:flex gap-2">
             <Button

@@ -42,7 +42,7 @@ export const Hero = ({ user }: { user: User | null }) => {
       
           <div className="flex w-full max-w-lg items-center gap-2 justify-center lg:justify-start">
             <Input type="text" placeholder="room, address, etc." />
-            <Button type="submit" variant="outline">
+            <Button type="button" variant="outline" onClick={() => router.push('/search')}>
               Search
             </Button>
             <Button variant="default" onClick={handlePostRoom}>Post a Room</Button>
