@@ -24,6 +24,7 @@
     "supabase:pull": "npx supabase pull"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.1.1",
     "@icons-pack/react-simple-icons": "^13.3.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-avatar": "^1.1.0",
@@ -33,6 +34,7 @@
     "@radix-ui/react-icons": "^1.3.0",
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-navigation-menu": "^1.2.0",
+    "@radix-ui/react-popover": "^1.1.14",
     "@radix-ui/react-radio-group": "^1.3.7",
     "@radix-ui/react-scroll-area": "^1.1.0",
     "@radix-ui/react-select": "^2.2.5",
@@ -47,17 +49,19 @@
     "class-variance-authority": "^0.7.0",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "lucide-react": "^0.525.0",
     "next": "15.1.3",
     "posthog-js": "^1.139.6",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "react-hook-form": "^7.60.0",
     "react-merge-refs": "^2.1.1",
     "stripe": "^15.12.0",
     "tailwind-merge": "^2.3.0",
     "tailwindcss": "^3.4.4",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.25.74"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20.14.6",

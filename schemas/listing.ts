@@ -1,109 +1,37 @@
+import type { Database } from '@/types_db';
 import { z } from 'zod';
 
-// Enum schemas matching database enums
-export const amenityTypeSchema = z.enum([
-  "Wi-Fi",
-  "Parking",
-  "Garden Access",
-  "Balcony/Terrace",
-  "Washing Machine",
-  "Dryer",
-  "Dishwasher",
-  "Microwave",
-  "TV",
-  "Central Heating",
-  "Fireplace",
-  "Air Conditioning",
-  "Gym Access",
-  "Swimming Pool",
-  "Storage Space",
-  "Bike Storage",
-  "Furnished",
-  "Unfurnished",
-  "Pet Friendly",
-  "Smoking Allowed",
-]);
+// Enum value arrays from types_db
+export const PROPERTY_TYPE_ENUM_VALUES = [
+  'house', 'apartment', 'flat', 'studio', 'other',
+] as const;
+export const ROOM_TYPE_ENUM_VALUES = [
+  'single', 'double', 'twin', 'shared', 'digs',
+] as const;
+export const AMENITY_TYPE_ENUM_VALUES = [
+  'Wi-Fi', 'Parking', 'Garden Access', 'Balcony/Terrace', 'Washing Machine', 'Dryer', 'Dishwasher', 'Microwave', 'TV', 'Central Heating', 'Fireplace', 'Air Conditioning', 'Gym Access', 'Swimming Pool', 'Storage Space', 'Bike Storage', 'Furnished', 'Unfurnished', 'Pet Friendly', 'Smoking Allowed',
+] as const;
+export const BER_RATING_ENUM_VALUES = [
+  'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3', 'D1', 'D2', 'E1', 'E2', 'F', 'G',
+] as const;
+export const LEASE_DURATION_ENUM_VALUES = [
+  '1-month', '2-months', '3-months', '6-months', '12-months', 'flexible',
+] as const;
+export const RENT_FREQUENCY_ENUM_VALUES = [
+  'weekly', 'monthly',
+] as const;
+export const NEARBY_FACILITY_ENUM_VALUES = [
+  'Bus Stop', 'Train Station', 'DART Station', 'Luas Stop', 'Airport', 'Ferry Terminal', 'Bike Share Station', 'Taxi Rank', 'Shopping Centre', 'Supermarket', 'Convenience Store', 'Pharmacy', 'Post Office', 'Bank', 'ATM', 'Laundromat', 'Dry Cleaners', 'Hardware Store', 'Hospital', 'GP Clinic', 'Dental Clinic', 'Walk-in Clinic', 'Veterinary Clinic', 'Primary School', 'Secondary School', 'University/College', 'Library', 'Creche/Childcare', 'Language School', 'Restaurant/Café', 'Pub', 'Takeaway', 'Coffee Shop', 'Bakery', 'Grocery Market', 'Gym/Fitness Centre', 'Park', 'Beach', 'Swimming Pool', 'Sports Complex', 'Cinema', 'Theatre', 'Museum', 'Art Gallery', 'Golf Course', 'Tennis Courts', 'Playground', 'Church', 'Mosque', 'Temple', 'Community Centre', 'Garda Station', 'Fire Station', 'Petrol Station', 'Car Park', 'Electric Car Charging',
+] as const;
 
-export const berRatingSchema = z.enum([
-  "A1", "A2", "A3",
-  "B1", "B2", "B3",
-  "C1", "C2", "C3",
-  "D1", "D2",
-  "E1", "E2",
-  "F", "G"
-]);
-
-export const leaseDurationSchema = z.enum([
-  "1-month",
-  "2-months",
-  "3-months",
-  "6-months",
-  "12-months",
-  "flexible"
-]);
-
-export const nearbyFacilitySchema = z.enum([
-  "Bus Stop",
-  "Train Station",
-  "DART Station",
-  "Luas Stop",
-  "Airport",
-  "Ferry Terminal",
-  "Bike Share Station",
-  "Taxi Rank",
-  "Shopping Centre",
-  "Supermarket",
-  "Convenience Store",
-  "Pharmacy",
-  "Post Office",
-  "Bank",
-  "ATM",
-  "Laundromat",
-  "Dry Cleaners",
-  "Hardware Store",
-  "Hospital",
-  "GP Clinic",
-  "Dental Clinic",
-  "Walk-in Clinic",
-  "Veterinary Clinic",
-  "Primary School",
-  "Secondary School",
-  "University/College",
-  "Library",
-  "Creche/Childcare",
-  "Language School",
-  "Restaurant/Café",
-  "Pub",
-  "Takeaway",
-  "Coffee Shop",
-  "Bakery",
-  "Grocery Market",
-  "Gym/Fitness Centre",
-  "Park",
-  "Beach",
-  "Swimming Pool",
-  "Sports Complex",
-  "Cinema",
-  "Theatre",
-  "Museum",
-  "Art Gallery",
-  "Golf Course",
-  "Tennis Courts",
-  "Playground",
-  "Church",
-  "Mosque",
-  "Temple",
-  "Community Centre",
-  "Garda Station",
-  "Fire Station",
-  "Petrol Station",
-  "Car Park",
-  "Electric Car Charging"
-]);
-
-export const propertyTypeSchema = z.enum(["house", "apartment", "flat", "studio", "other"]);
-export const rentFrequencySchema = z.enum(["weekly", "monthly"]);
-export const roomTypeSchema = z.enum(["single", "double", "twin", "shared", "digs"]);
+// Enum schemas using value arrays
+export const propertyTypeSchema = z.enum(PROPERTY_TYPE_ENUM_VALUES);
+export const roomTypeSchema = z.enum(ROOM_TYPE_ENUM_VALUES);
+export const amenityTypeSchema = z.enum(AMENITY_TYPE_ENUM_VALUES);
+export const berRatingSchema = z.enum(BER_RATING_ENUM_VALUES);
+export const leaseDurationSchema = z.enum(LEASE_DURATION_ENUM_VALUES);
+export const rentFrequencySchema = z.enum(RENT_FREQUENCY_ENUM_VALUES);
+export const nearbyFacilitySchema = z.enum(NEARBY_FACILITY_ENUM_VALUES);
 
 /**
  * Zod schema for a complete property listing
@@ -118,23 +46,23 @@ export const listingSchema = z.object({
   
   // Location
   address: z.string().min(1, 'Street address is required'), // Street address
-  apartment_number: z.string().optional().nullable(),
-  area: z.string().optional().default(''),
+  apartment_number: z.string().nullable().default(null),
+  area: z.string().default(''),
   city: z.string().min(1, 'City is required'),
   county: z.string().min(1, 'County is required'),
   eircode: z.string().min(1, 'Eircode is required'),
   
   // Pricing & Terms
   monthly_rent: z.number().positive('Monthly rent must be positive'),
-  rent_frequency: rentFrequencySchema.optional().nullable(),
+  rent_frequency: rentFrequencySchema.default(RENT_FREQUENCY_ENUM_VALUES[0]),
   security_deposit: z.number().nonnegative('Security deposit cannot be negative'),
-  lease_duration: leaseDurationSchema.optional().nullable(),
+  lease_duration: leaseDurationSchema.default(LEASE_DURATION_ENUM_VALUES[0]),
   available_from: z.string().or(z.date()).transform(val => 
     typeof val === 'string' ? val : val.toISOString().split('T')[0]
-  ),
+  ).default(''),
   
   // Property Details
-  size: z.number().positive('Size must be positive').optional().nullable(), // in m²
+  size: z.number().positive('Size must be positive').nullable().default(null), // in m²
   description: z.string().min(10, 'Description must be at least 10 characters'),
   
   // Current Occupants
@@ -144,15 +72,15 @@ export const listingSchema = z.object({
   pets: z.boolean().default(false),
   
   // BER Rating
-  ber_rating: berRatingSchema.optional().nullable(),
-  ber_cert_number: z.string().optional().nullable(),
+  ber_rating: berRatingSchema.default(BER_RATING_ENUM_VALUES[0]),
+  ber_cert_number: z.string().nullable().default(null),
   
   // Features
   amenities: z.array(amenityTypeSchema).default([]),
   nearby_facilities: z.array(nearbyFacilitySchema).default([]),
   
   // Rules & Additional Info
-  house_rules: z.string().optional().nullable(),
+  house_rules: z.string().default(''),
   
   // Media (will be URLs/paths after upload)
   images: z.array(z.string()).default([]),
@@ -161,7 +89,7 @@ export const listingSchema = z.object({
   // Status & Metadata
   active: z.boolean().default(false), // false = draft, true = published
   verified: z.boolean().default(false),
-  user_id: z.string().uuid().optional().nullable(),
+  user_id: z.string().uuid().nullable().default(null),
   
   // System fields (auto-managed)
   created_at: z.string().datetime().optional(),
@@ -169,8 +97,8 @@ export const listingSchema = z.object({
   
   // Application Management (typically not set on creation)
   applicants: z.array(z.any()).default([]),
-  available: z.string().optional().nullable(),
-  viewing_times: z.array(z.string()).optional().nullable(),
+  available: z.string().nullable().default(null),
+  viewing_times: z.array(z.string()).nullable().default(null),
 });
 
 // Schema for creating a new listing (some fields are optional or auto-generated)
@@ -181,8 +109,6 @@ export const createListingSchema = listingSchema.omit({
   updated_at: true,
   verified: true,
   applicants: true,
-  available: true,
-  viewing_times: true,
 });
 
 // Schema for updating a listing

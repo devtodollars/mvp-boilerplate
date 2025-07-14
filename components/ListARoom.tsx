@@ -10,8 +10,25 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { MapPin, Euro, Home, Upload, X } from "lucide-react"
+import { MapPin, Euro, Home, Upload, X, CalendarIcon, Clock, Plus, Trash2, AlertCircle } from "lucide-react"
 import { useState } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { createListingSchema, CreateListing,
+  PROPERTY_TYPE_ENUM_VALUES,
+  ROOM_TYPE_ENUM_VALUES,
+  AMENITY_TYPE_ENUM_VALUES,
+  BER_RATING_ENUM_VALUES,
+  LEASE_DURATION_ENUM_VALUES,
+  RENT_FREQUENCY_ENUM_VALUES,
+  NEARBY_FACILITY_ENUM_VALUES,
+} from "@/schemas/listing"
+import { createListing } from '@/utils/supabase/listings';
+import { useToast } from '@/components/ui/use-toast';
+import { createClient } from '@/utils/supabase/client';
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { format, isBefore, startOfDay } from "date-fns";
+import { cn } from "@/utils/cn";
 
 const IRISH_COUNTIES = [
     "Antrim",
@@ -48,69 +65,158 @@ const IRISH_COUNTIES = [
     "Wicklow",
 ]
 
-const BER_RATINGS = ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3", "D1", "D2", "E1", "E2", "F", "G"]
-
-const AMENITIES = [
-    "Wi-Fi",
-    "Parking",
-    "Garden Access",
-    "Balcony/Terrace",
-    "Washing Machine",
-    "Dryer",
-    "Dishwasher",
-    "Microwave",
-    "TV",
-    "Central Heating",
-    "Fireplace",
-    "Air Conditioning",
-    "Gym Access",
-    "Swimming Pool",
-    "Storage Space",
-    "Bike Storage",
-    "Furnished",
-    "Unfurnished",
-    "Pet Friendly",
-    "Smoking Allowed",
-]
-
-const NEARBY_FACILITIES = [
-    "Bus Stop",
-    "Train Station",
-    "DART Station",
-    "Luas Stop",
-    "Shopping Centre",
-    "Supermarket",
-    "Pharmacy",
-    "Hospital",
-    "GP Clinic",
-    "Primary School",
-    "Secondary School",
-    "University/College",
-    "Library",
-    "Post Office",
-    "Bank",
-    "Restaurant/Café",
-    "Pub",
-    "Gym/Fitness Centre",
-    "Park",
-    "Beach",
-]
+function CalendarComponent({ selected, onSelect, disabled }: { selected?: Date, onSelect: (date: Date) => void, disabled?: (date: Date) => boolean }) {
+  const [currentMonth, setCurrentMonth] = useState(() => selected ? new Date(selected) : new Date());
+  const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+  const startDay = startOfMonth.getDay();
+  const daysInMonth = endOfMonth.getDate();
+  const days: (Date | null)[] = [];
+  for (let i = 0; i < startDay; i++) days.push(null);
+  for (let i = 1; i <= daysInMonth; i++) days.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
+  function isSelected(date: Date) {
+    return selected && date.toDateString() === selected.toDateString();
+  }
+  function handleDayClick(date: Date) {
+    if (!disabled || !disabled(date)) {
+      onSelect(date);
+    }
+  }
+  return (
+    <div className="w-64 p-2 bg-white rounded shadow">
+      <div className="flex items-center justify-between mb-1">
+        <button type="button" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-1 rounded hover:bg-gray-100">
+          <CalendarIcon className="w-4 h-4" />
+        </button>
+        <span className="font-semibold">
+          {currentMonth.toLocaleString("default", { month: "long" })} {currentMonth.getFullYear()}
+        </span>
+        <button type="button" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-1 rounded hover:bg-gray-100">
+          <CalendarIcon className="w-4 h-4 rotate-180" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-0">
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => <div key={d}>{d}</div>)}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((date, i) => (
+          <button
+            key={i}
+            type="button"
+            disabled={!date || (disabled && date && disabled(date))}
+            onClick={() => date && handleDayClick(date)}
+            className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center",
+              date && isSelected(date) ? "bg-primary text-white" : "hover:bg-gray-100",
+              !date && "opacity-0 cursor-default",
+              disabled && date && disabled(date) && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            {date ? date.getDate() : ''}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function PostRoomPage() {
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
     const [selectedFacilities, setSelectedFacilities] = useState<string[]>([])
     const [uploadedImages, setUploadedImages] = useState<File[]>([])
     const [uploadedVideos, setUploadedVideos] = useState<File[]>([])
+    const { toast } = useToast();
 
+    const {
+        register,
+        handleSubmit,
+        control,
+        setValue,
+        formState: { errors, isSubmitting },
+        watch,
+        reset
+    } = useForm({
+        resolver: zodResolver(createListingSchema),
+        defaultValues: {
+            property_type: PROPERTY_TYPE_ENUM_VALUES[0],
+            room_type: ROOM_TYPE_ENUM_VALUES[0],
+            rent_frequency: RENT_FREQUENCY_ENUM_VALUES[0],
+            lease_duration: LEASE_DURATION_ENUM_VALUES[0],
+            ber_rating: BER_RATING_ENUM_VALUES[0],
+            ensuite: false,
+            address: '',
+            apartment_number: '',
+            area: '',
+            city: '',
+            county: '',
+            eircode: '',
+            monthly_rent: undefined,
+            security_deposit: undefined,
+            available_from: '',
+            size: undefined,
+            description: '',
+            current_males: 0,
+            current_females: 0,
+            owner_occupied: false,
+            pets: false,
+            ber_cert_number: '',
+            amenities: [],
+            nearby_facilities: [],
+            house_rules: '',
+            images: [],
+            videos: [],
+            active: false,
+            viewing_times: [],
+        },
+    });
+
+    // Local state for viewing times
+    interface ViewingTime { date: string; time: string; id: string; }
+    const [viewingDate, setViewingDate] = useState<Date | undefined>();
+    const [viewingTime, setViewingTime] = useState("");
+    const [viewingTimes, setViewingTimes] = useState<ViewingTime[]>([]);
+
+    // Time slots for viewing times
+    const TIME_SLOTS = [
+      "09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00","19:30","20:00"
+    ];
+
+    // Disable past dates for availability and viewing times
+    const disablePastDates = (date: Date) => isBefore(date, startOfDay(new Date()));
+
+    const addViewingTime = () => {
+      if (viewingDate && viewingTime) {
+        const newViewingTime: ViewingTime = {
+          date: format(viewingDate, "yyyy-MM-dd"),
+          time: viewingTime,
+          id: `${viewingDate.getTime()}-${viewingTime}`,
+        };
+        // Prevent duplicates
+        if (!viewingTimes.some(vt => vt.date === newViewingTime.date && vt.time === newViewingTime.time)) {
+          setViewingTimes(prev => [...prev, newViewingTime]);
+          setViewingTime("");
+        }
+      }
+    };
+    const removeViewingTime = (id: string) => {
+      setViewingTimes(prev => prev.filter(vt => vt.id !== id));
+    };
+
+    // Sync amenities/facilities state with form
     const handleAmenityToggle = (amenity: string) => {
-        setSelectedAmenities((prev) => (prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity]))
-    }
-
+        setSelectedAmenities((prev) => {
+            const updated = prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity];
+            setValue("amenities", updated as any);
+            return updated;
+        });
+    };
     const handleFacilityToggle = (facility: string) => {
-        setSelectedFacilities((prev) =>
-            prev.includes(facility) ? prev.filter((f) => f !== facility) : [...prev, facility],
-        )
-    }
+        setSelectedFacilities((prev) => {
+            const updated = prev.includes(facility) ? prev.filter((f) => f !== facility) : [...prev, facility];
+            setValue("nearby_facilities", updated as any);
+            return updated;
+        });
+    };
 
     const removeImage = (index: number) => {
         setUploadedImages((prev) => prev.filter((_, i) => i !== index))
@@ -120,6 +226,74 @@ export default function PostRoomPage() {
         setUploadedVideos((prev) => prev.filter((_, i) => i !== index))
     }
 
+    // Add onChange handlers for file inputs
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const files = Array.from(e.target.files);
+            setUploadedImages(files);
+            // For now, just store file names in form state (will upload later)
+            setValue("images", files.map(f => f.name));
+        }
+    };
+    const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const files = Array.from(e.target.files);
+            setUploadedVideos(files);
+            setValue("videos", files.map(f => f.name));
+        }
+    };
+
+    // Submission handler for publish (full validation)
+    const onSubmit = async (data: CreateListing) => {
+        try {
+            const supabase = createClient();
+            const { data: userData } = await supabase.auth.getUser();
+            const user = userData?.user;
+            if (!user) {
+                toast({ title: 'Error', description: 'You must be signed in to post a listing.', variant: 'destructive' });
+                return;
+            }
+            // property_name is required by DB, use address for now
+            const { data: listing, error } = await createListing(
+                {
+                  ...data,
+                  property_name: data.address,
+                  user_id: user.id,
+                  viewing_times: viewingTimes.map(vt => `${vt.date}T${vt.time}:00.000Z`),
+                },
+                uploadedImages,
+                uploadedVideos
+            );
+            if (error) {
+                toast({
+                    title: 'Error',
+                    description:
+                        typeof error === 'object' && error !== null && 'message' in error
+                            ? (error.message as string)
+                            : String(error) || 'Failed to create listing',
+                    variant: 'destructive',
+                });
+            } else {
+                toast({ title: 'Success', description: 'Listing published successfully!' });
+                // Optionally reset form or redirect
+                reset();
+                setUploadedImages([]);
+                setUploadedVideos([]);
+                setViewingTimes([]);
+            }
+        } catch (err) {
+            toast({ title: 'Error', description: err instanceof Error ? err.message : String(err) || 'Failed to create listing', variant: 'destructive' });
+        }
+    };
+    // Save as Draft handler (skip validation, just save current values)
+    const onSaveDraft = () => {
+        const data = watch();
+        // Mark as draft
+        data.active = false;
+        console.log("Save as Draft", data);
+        // TODO: Add Supabase CRUD and media upload logic for draft
+    };
+
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -127,8 +301,7 @@ export default function PostRoomPage() {
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Post a Room</h1>
                     <p className="text-gray-600">Create a detailed listing for your room rental</p>
                 </div>
-
-                <form className="space-y-8">
+                <form className="space-y-8" onSubmit={handleSubmit(onSubmit)}>
                     {/* Location Details */}
                     <Card>
                         <CardHeader>
@@ -141,37 +314,46 @@ export default function PostRoomPage() {
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="street">Street Address *</Label>
-                                    <Input id="street" placeholder="123 Main Street" required />
+                                    <Label htmlFor="address">Street Address *</Label>
+                                    <Input id="address" placeholder="123 Main Street" {...register("address")} />
+                                    {errors.address && <span className="text-red-500 text-xs">{errors.address.message}</span>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="area">Area</Label>
-                                    <Input id="area" placeholder="e.g., Dublin 1, City Centre" />
+                                    <Input id="area" placeholder="e.g., Dublin 1, City Centre" {...register("area")} />
+                                    {errors.area && <span className="text-red-500 text-xs">{errors.area.message}</span>}
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="city">City/Town *</Label>
-                                    <Input id="city" placeholder="Dublin" required />
+                                    <Input id="city" placeholder="Dublin" {...register("city")} />
+                                    {errors.city && <span className="text-red-500 text-xs">{errors.city.message}</span>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="county">County *</Label>
-                                    <Select required>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select county" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {IRISH_COUNTIES.map((county) => (
-                                                <SelectItem key={county} value={county.toLowerCase()}>
-                                                    {county}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Controller
+                                        name="county"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select county" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {IRISH_COUNTIES.map((county) => (
+                                                        <SelectItem key={county} value={county}>{county}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                    {errors.county && <span className="text-red-500 text-xs">{errors.county.message}</span>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="eircode">Eircode</Label>
-                                    <Input id="eircode" placeholder="D01 A1B2" />
+                                    <Input id="eircode" placeholder="D01 A1B2" {...register("eircode")} />
+                                    {errors.eircode && <span className="text-red-500 text-xs">{errors.eircode.message}</span>}
                                 </div>
                             </div>
                         </CardContent>
@@ -190,41 +372,55 @@ export default function PostRoomPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="rent">Monthly Rent (€) *</Label>
-                                    <Input id="rent" type="number" placeholder="800" required />
+                                    <Input id="rent" type="number" placeholder="800" {...register("monthly_rent", { valueAsNumber: true })} />
+                                    {errors.monthly_rent && <span className="text-red-500 text-xs">{errors.monthly_rent.message}</span>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="frequency">Rent Collection Frequency *</Label>
-                                    <Select required>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select frequency" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="weekly">Weekly</SelectItem>
-                                            <SelectItem value="monthly">Monthly</SelectItem>
-                                            <SelectItem value="quarterly">Quarterly</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Controller
+                                        name="rent_frequency"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select frequency" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {RENT_FREQUENCY_ENUM_VALUES.map((frequency) => (
+                                                        <SelectItem key={frequency} value={frequency}>{frequency}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                    {errors.rent_frequency && <span className="text-red-500 text-xs">{errors.rent_frequency.message}</span>}
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="deposit">Security Deposit (€) *</Label>
-                                    <Input id="deposit" type="number" placeholder="800" required />
+                                    <Input id="deposit" type="number" placeholder="800" {...register("security_deposit", { valueAsNumber: true })} />
+                                    {errors.security_deposit && <span className="text-red-500 text-xs">{errors.security_deposit.message}</span>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="lease">Lease Duration *</Label>
-                                    <Select required>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select duration" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="3-months">3 Months</SelectItem>
-                                            <SelectItem value="6-months">6 Months</SelectItem>
-                                            <SelectItem value="1-year">1 Year</SelectItem>
-                                            <SelectItem value="2-years">2 Years</SelectItem>
-                                            <SelectItem value="open-ended">Open-ended</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Controller
+                                        name="lease_duration"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select duration" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {LEASE_DURATION_ENUM_VALUES.map((duration) => (
+                                                        <SelectItem key={duration} value={duration}>{duration}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                    {errors.lease_duration && <span className="text-red-500 text-xs">{errors.lease_duration.message}</span>}
                                 </div>
                             </div>
                         </CardContent>
@@ -242,59 +438,101 @@ export default function PostRoomPage() {
                         <CardContent className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="room-type">Room Type *</Label>
-                                    <Select required>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select room type" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="single">Single Room</SelectItem>
-                                            <SelectItem value="double">Double Room</SelectItem>
-                                            <SelectItem value="ensuite">Ensuite Room</SelectItem>
-                                            <SelectItem value="studio">Studio</SelectItem>
-                                            <SelectItem value="bedsit">Bedsit</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Label htmlFor="room_type">Room Type *</Label>
+                                    <Controller
+                                        name="room_type"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select room type" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {ROOM_TYPE_ENUM_VALUES.map((type) => (
+                                                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                    {errors.room_type && <span className="text-red-500 text-xs">{errors.room_type.message}</span>}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="tenants">Number of Tenants Sharing *</Label>
-                                    <Input id="tenants" type="number" placeholder="2" min="0" required />
+                                    <Label htmlFor="ensuite">Ensuite</Label>
+                                    <div className="flex flex-col items-start gap-1">
+                                        <Controller
+                                            name="ensuite"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <Checkbox
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                    id="ensuite"
+                                                />
+                                            )}
+                                        />
+                                        <span className="text-sm text-gray-600">Ensuite bathroom</span>
+                                    </div>
+                                    {errors.ensuite && <span className="text-red-500 text-xs">{errors.ensuite.message}</span>}
                                 </div>
                             </div>
-
-                            <div className="space-y-3">
-                                <Label>Owner Occupancy *</Label>
-                                <RadioGroup defaultValue="" className="flex gap-6">
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="yes" id="owner-yes" />
-                                        <Label htmlFor="owner-yes">Yes, owner lives on property</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="no" id="owner-no" />
-                                        <Label htmlFor="owner-no">No, owner does not live on property</Label>
-                                    </div>
-                                </RadioGroup>
-                            </div>
-
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="ber-rating">BER Rating</Label>
-                                    <Select>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select BER rating" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {BER_RATINGS.map((rating) => (
-                                                <SelectItem key={rating} value={rating}>
-                                                    {rating}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Label htmlFor="current_males">Current Males</Label>
+                                    <Input id="current_males" type="number" min="0" {...register("current_males", { valueAsNumber: true })} />
+                                    {errors.current_males && <span className="text-red-500 text-xs">{errors.current_males.message}</span>}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="ber-number">BER Certificate Number</Label>
-                                    <Input id="ber-number" placeholder="123456789" />
+                                    <Label htmlFor="current_females">Current Females</Label>
+                                    <Input id="current_females" type="number" min="0" {...register("current_females", { valueAsNumber: true })} />
+                                    {errors.current_females && <span className="text-red-500 text-xs">{errors.current_females.message}</span>}
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <Label>Owner Occupied *</Label>
+                                <Controller
+                                    name="owner_occupied"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <RadioGroup value={field.value ? "yes" : "no"} onValueChange={val => field.onChange(val === "yes") } className="flex gap-6">
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="yes" id="owner-yes" />
+                                                <Label htmlFor="owner-yes">Yes, owner lives on property</Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="no" id="owner-no" />
+                                                <Label htmlFor="owner-no">No, owner does not live on property</Label>
+                                            </div>
+                                        </RadioGroup>
+                                    )}
+                                />
+                                {errors.owner_occupied && <span className="text-red-500 text-xs">{errors.owner_occupied.message}</span>}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="ber_rating">BER Rating</Label>
+                                    <Controller
+                                        name="ber_rating"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select BER rating" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {BER_RATING_ENUM_VALUES.map((rating) => (
+                                                        <SelectItem key={rating} value={rating}>{rating}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                    {errors.ber_rating && <span className="text-red-500 text-xs">{errors.ber_rating.message}</span>}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="ber_cert_number">BER Certificate Number</Label>
+                                    <Input id="ber_cert_number" placeholder="123456789" {...register("ber_cert_number")} />
+                                    {errors.ber_cert_number && <span className="text-red-500 text-xs">{errors.ber_cert_number.message}</span>}
                                 </div>
                             </div>
                         </CardContent>
@@ -310,7 +548,7 @@ export default function PostRoomPage() {
                             <div>
                                 <Label className="text-base font-medium mb-3 block">Available Amenities</Label>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                    {AMENITIES.map((amenity) => (
+                                    {AMENITY_TYPE_ENUM_VALUES.map((amenity) => (
                                         <div key={amenity} className="flex items-center space-x-2">
                                             <Checkbox
                                                 id={`amenity-${amenity}`}
@@ -339,7 +577,7 @@ export default function PostRoomPage() {
                             <div>
                                 <Label className="text-base font-medium mb-3 block">Nearby Facilities</Label>
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                    {NEARBY_FACILITIES.map((facility) => (
+                                    {NEARBY_FACILITY_ENUM_VALUES.map((facility) => (
                                         <div key={facility} className="flex items-center space-x-2">
                                             <Checkbox
                                                 id={`facility-${facility}`}
@@ -386,7 +624,7 @@ export default function PostRoomPage() {
                                             multiple
                                             accept="image/*"
                                             className="hidden"
-                                        // onChange={handleImageUpload}
+                                            onChange={handleImageUpload}
                                         />
                                         <p className="text-sm text-gray-500">PNG, JPG, GIF up to 10MB each</p>
                                     </div>
@@ -395,9 +633,7 @@ export default function PostRoomPage() {
                                     <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                                         {uploadedImages.map((file, index) => (
                                             <div key={index} className="relative">
-                                                <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-                                                    <span className="text-sm text-gray-600 text-center p-2">{file.name}</span>
-                                                </div>
+                                                <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-32 object-cover rounded" />
                                                 <Button
                                                     type="button"
                                                     variant="destructive"
@@ -427,7 +663,7 @@ export default function PostRoomPage() {
                                             multiple
                                             accept="video/*"
                                             className="hidden"
-                                        // onChange={handleVideoUpload}
+                                            onChange={handleVideoUpload}
                                         />
                                         <p className="text-sm text-gray-500">MP4, MOV up to 50MB each</p>
                                     </div>
@@ -448,6 +684,143 @@ export default function PostRoomPage() {
                         </CardContent>
                     </Card>
 
+                    {/* Availability */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Availability</CardTitle>
+                            <CardDescription>Set when the room is available and add viewing times</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium">Available From *</Label>
+                                <Controller
+                                  name="available_from"
+                                  control={control}
+                                  render={({ field }) => (
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !field.value && "text-muted-foreground",
+                                          )}
+                                        >
+                                          <CalendarIcon className="mr-2 h-4 w-4" />
+                                          {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <div className="p-2">
+                                          <CalendarComponent
+                                            selected={field.value ? new Date(field.value) : undefined}
+                                            onSelect={date => field.onChange(date ? date.toISOString().split('T')[0] : null)}
+                                            disabled={disablePastDates}
+                                          />
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  )}
+                                />
+                                {errors.available_from && (
+                                  <span className="text-red-500 text-xs flex items-center gap-1">
+                                    <AlertCircle className="h-3 w-3" />
+                                    {errors.available_from.message}
+                                  </span>
+                                )}
+                            </div>
+                            {/* Viewing Times */}
+                            <div className="space-y-4">
+                              <Label className="text-sm font-medium">Viewing Times</Label>
+                              <div className="p-4 border rounded-lg bg-slate-50/50">
+                                <div className="flex flex-col sm:flex-row gap-3 items-end">
+                                  <div className="flex-1">
+                                    <Label className="text-xs text-slate-600 mb-1 block">Select Date</Label>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !viewingDate && "text-muted-foreground",
+                                          )}
+                                        >
+                                          <CalendarIcon className="mr-2 h-4 w-4" />
+                                          {viewingDate ? format(viewingDate, "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <div className="p-2">
+                                          <CalendarComponent
+                                            selected={viewingDate}
+                                            onSelect={setViewingDate}
+                                            disabled={disablePastDates}
+                                          />
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
+                                  <div className="flex-1">
+                                    <Label className="text-xs text-slate-600 mb-1 block">Select Time</Label>
+                                    <Select value={viewingTime} onValueChange={setViewingTime}>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select time">
+                                          <div className="flex items-center gap-2">
+                                            <Clock className="h-4 w-4" />
+                                            {viewingTime || "Select time"}
+                                          </div>
+                                        </SelectValue>
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {TIME_SLOTS.map((time) => (
+                                          <SelectItem key={time} value={time}>
+                                            {time}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    onClick={addViewingTime}
+                                    disabled={!viewingDate || !viewingTime}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    Add
+                                  </Button>
+                                </div>
+                              </div>
+                              {viewingTimes.length > 0 && (
+                                <div className="space-y-2">
+                                  <Label className="text-xs text-slate-600">Scheduled Viewing Times</Label>
+                                  <div className="grid gap-2">
+                                    {viewingTimes.map((vt) => (
+                                      <div key={vt.id} className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                          <CalendarIcon className="h-4 w-4 text-slate-500" />
+                                          <span className="text-sm font-medium">{format(new Date(vt.date), "EEE, MMM d, yyyy")}</span>
+                                          <Clock className="h-4 w-4 text-slate-500" />
+                                          <span className="text-sm">{vt.time}</span>
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="destructive"
+                                          onClick={() => removeViewingTime(vt.id)}
+                                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {/* Additional Information */}
                     <Card>
                         <CardHeader>
@@ -461,7 +834,9 @@ export default function PostRoomPage() {
                                     id="description"
                                     placeholder="Describe your room and property in detail. Include any special features, nearby attractions, or other relevant information..."
                                     className="min-h-[120px]"
+                                    {...register("description")}
                                 />
+                                {errors.description && <span className="text-red-500 text-xs">{errors.description.message}</span>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="house-rules">House Rules & Preferences</Label>
@@ -469,17 +844,19 @@ export default function PostRoomPage() {
                                     id="house-rules"
                                     placeholder="Specify any house rules, pet policy, smoking policy, preferred tenant type, etc..."
                                     className="min-h-[100px]"
+                                    {...register("house_rules")}
                                 />
+                                {errors.house_rules && <span className="text-red-500 text-xs">{errors.house_rules.message}</span>}
                             </div>
                         </CardContent>
                     </Card>
 
                     {/* Submit Button */}
                     <div className="flex justify-end space-x-4">
-                        <Button type="button" variant="outline" size="lg">
+                        <Button type="button" variant="outline" size="lg" disabled={isSubmitting} onClick={onSaveDraft}>
                             Save as Draft
                         </Button>
-                        <Button type="submit" size="lg" className="px-8">
+                        <Button type="submit" size="lg" className="px-8" disabled={isSubmitting}>
                             Publish Listing
                         </Button>
                     </div>
