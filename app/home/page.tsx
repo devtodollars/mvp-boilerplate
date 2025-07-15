@@ -15,7 +15,6 @@ export default async function WelcomeCard() {
 
     return (
         <>
-            <Navbar user={user} />
             <div className="flex justify-center items-center min-h-screen">
                 <Card className="w-[340px]">
                     <CardContent className="p-4">

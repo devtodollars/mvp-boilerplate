@@ -30,7 +30,10 @@ export async function generateMetadata(): Promise<Metadata> {
     creator: 'Vercel',
     publisher: 'Vercel',
     robots: meta.robots,
-    icons: { icon: meta.favicon },
+    icons: [
+      { rel: 'icon', url: '/golet-app.png', type: 'image/png' },
+      { rel: 'apple-touch-icon', url: '/golet-app.png' },
+    ],
     metadataBase: new URL(meta.url),
     openGraph: {
       url: meta.url,

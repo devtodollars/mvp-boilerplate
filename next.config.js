@@ -1,4 +1,9 @@
 module.exports = {
+  images: {
+    domains: [
+      'pypzcnsltqjbnjjohplo.supabase.co',
+    ],
+  },
   rewrites: async () => {
     return [
       {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,126 +15,46 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Search, SlidersHorizontal, Star, Heart, MapPin, List, Map } from "lucide-react"
 import PropertyView from "./propertyView"
-
-const properties = [
-  {
-    id: 1,
-    propertyName: "Cozy Downtown Loft",
-    propertyType: "Apartment",
-    description:
-      "Beautiful modern loft in the heart of downtown with stunning city views and premium amenities. This spacious apartment features floor-to-ceiling windows, hardwood floors, and a modern kitchen with stainless steel appliances. Perfect for professionals looking for a convenient downtown location.",
-    availability: "Available Now",
-    size: "850 sq ft",
-    address: "123 Main Street, Manhattan",
-    eircode: "D02 XY45",
-    active: true,
-    amenities: ["WiFi", "Kitchen", "Parking", "Gym", "Balcony", "Air Conditioning", "Dishwasher"],
-    verified: true,
-    occupantsIfShared: null,
-    viewingDatesAndTimes: ["Dec 15, 2pm-4pm", "Dec 16, 10am-12pm", "Dec 17, 6pm-7pm"],
-    applicants: 3,
-    price: 1800,
-    rating: 4.9,
-    reviews: 127,
-    image: "/placeholder.svg?height=200&width=300",
-  },
-  {
-    id: 2,
-    propertyName: "Beachfront Villa",
-    propertyType: "House",
-    description:
-      "Luxury beachfront villa with private beach access and panoramic ocean views. This stunning property offers direct beach access, a private pool, and expansive outdoor living spaces perfect for entertaining.",
-    availability: "Available Jan 1st",
-    size: "2400 sq ft",
-    address: "456 Ocean Drive, Malibu",
-    eircode: "CA1 234",
-    active: true,
-    amenities: ["Pool", "Beach access", "WiFi", "Hot tub", "Garden", "BBQ Area", "Parking"],
-    verified: true,
-    occupantsIfShared: null,
-    viewingDatesAndTimes: ["Dec 18, 3pm-5pm", "Dec 20, 1pm-3pm"],
-    applicants: 7,
-    price: 4500,
-    rating: 4.8,
-    reviews: 89,
-    image: "/placeholder.svg?height=200&width=300",
-  },
-  {
-    id: 3,
-    propertyName: "Mountain Cabin Retreat",
-    propertyType: "Cabin",
-    description:
-      "Rustic mountain cabin perfect for weekend getaways with modern amenities. Nestled in the mountains with hiking trails nearby and cozy fireplace for winter evenings.",
-    availability: "Available Now",
-    size: "1200 sq ft",
-    address: "789 Pine Ridge, Aspen",
-    eircode: "CO5 678",
-    active: true,
-    amenities: ["Fireplace", "Hot tub", "Ski access", "WiFi", "Kitchen", "Mountain View"],
-    verified: true,
-    occupantsIfShared: null,
-    viewingDatesAndTimes: ["Dec 17, 11am-1pm"],
-    applicants: 2,
-    price: 3200,
-    rating: 4.7,
-    reviews: 156,
-    image: "/placeholder.svg?height=200&width=300",
-  },
-  {
-    id: 4,
-    propertyName: "Historic Brownstone Room",
-    propertyType: "Shared House",
-    description:
-      "Charming room in historic brownstone with shared common areas and garden access. Perfect for young professionals in a vibrant neighborhood with great transport links.",
-    availability: "Available Dec 20th",
-    size: "300 sq ft",
-    address: "321 Brooklyn Heights, Brooklyn",
-    eircode: "NY1 123",
-    active: true,
-    amenities: ["Garden", "WiFi", "Kitchen", "Laundry", "Study room", "Shared Living Room"],
-    verified: true,
-    occupantsIfShared: "2 current occupants (professionals)",
-    viewingDatesAndTimes: ["Dec 16, 6pm-7pm", "Dec 19, 5pm-6pm"],
-    applicants: 5,
-    price: 1200,
-    rating: 4.6,
-    reviews: 203,
-    image: "/placeholder.svg?height=200&width=300",
-  },
-  {
-    id: 5,
-    propertyName: "Modern Studio",
-    propertyType: "Studio",
-    description:
-      "Contemporary studio apartment with high-end finishes and city views. Features a murphy bed, modern kitchen, and access to building amenities including gym and rooftop terrace.",
-    availability: "Available Now",
-    size: "500 sq ft",
-    address: "654 Tech Boulevard, San Francisco",
-    eircode: "SF2 456",
-    active: true,
-    amenities: ["Gym", "WiFi", "Workspace", "Rooftop terrace", "Concierge", "Murphy Bed"],
-    verified: false,
-    occupantsIfShared: null,
-    viewingDatesAndTimes: ["Dec 21, 2pm-4pm"],
-    applicants: 1,
-    price: 2800,
-    rating: 4.5,
-    reviews: 94,
-    image: "/placeholder.svg?height=200&width=300",
-  },
-]
+import { createClient } from "@/utils/supabase/client"
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
+import { fetchListings } from '@/utils/supabase/listings';
+import { getListingImages } from '@/utils/supabase/storage';
 
 export default function Component() {
+  const [listings, setListings] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<"list" | "details">("list")
-  const [selectedProperty, setSelectedProperty] = useState(properties[0])
+  const [selectedProperty, setSelectedProperty] = useState<any | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
-  const handlePropertySelect = (property: (typeof properties)[0]) => {
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      const { data, error } = await fetchListings()
+      if (!error && data) {
+        setListings(data)
+        setSelectedProperty(data[0] || null)
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
+
+  const handlePropertySelect = (property: any) => {
     setSelectedProperty(property)
     if (window.innerWidth < 1024) {
       setViewMode("details")
     }
   }
+
+  // Helper to get image URLs (array of strings)
+  const getImageUrls = (listing: any) => getListingImages(listing.images);
 
   return (
     <div className="min-h-screen bg-background">
@@ -181,7 +101,7 @@ export default function Component() {
           {/* Listings Section - Always visible on desktop, toggleable on mobile */}
           <div className={`space-y-4 overflow-y-auto pr-2 pl-2 pb-2 ${viewMode === "details" ? "hidden lg:block" : ""}`}>
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-semibold">{properties.length} properties found</h1>
+              <h1 className="text-2xl font-semibold">{listings.length} properties found</h1>
               <div className="lg:hidden">
                 <Button
                   variant={viewMode === "list" ? "default" : "outline"}
@@ -205,110 +125,114 @@ export default function Component() {
             </div>
 
             <div className="space-y-4">
-              {properties.map((property) => (
-                <Card
-                  key={property.id}
-                  className={`overflow-hidden hover:shadow-lg transition-all cursor-pointer ${
-                    selectedProperty.id === property.id ? "ring-2 ring-primary shadow-lg" : ""
-                  }`}
-                  onClick={() => handlePropertySelect(property)}
-                >
-                  <CardContent className="p-0">
-                    <div className="flex gap-4 p-4">
-                      <div className="relative flex-shrink-0">
-                        <Image
-                          src={property.image || "/placeholder.svg"}
-                          alt={property.propertyName}
-                          width={200}
-                          height={150}
-                          className="rounded-lg object-cover w-48 h-36"
-                        />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="absolute top-2 right-2 bg-white/80 hover:bg-white"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                        </Button>
-                        {property.verified && <Badge className="absolute bottom-2 left-2 bg-green-500">Verified</Badge>}
-                      </div>
-
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <Badge variant="secondary" className="mb-2">
-                              {property.propertyType}
-                            </Badge>
-                            <h3 className="font-semibold text-lg leading-tight">{property.propertyName}</h3>
-                            <div className="flex items-center gap-1 text-muted-foreground mt-1">
-                              <MapPin className="h-4 w-4" />
-                              <span className="text-sm">{property.address}</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {property.eircode} • {property.size}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="flex items-center gap-1">
-                            <Heart className="h-4 w-4" />
-                             
-                            </div>
-                          </div>
+              {loading ? (
+                <div>Loading...</div>
+              ) : (
+                listings.map((property) => (
+                  <Card
+                    key={property.id}
+                    className={`overflow-hidden hover:shadow-lg transition-all cursor-pointer ${selectedProperty?.id === property.id ? "ring-2 ring-primary shadow-lg" : ""}`}
+                    onClick={() => handlePropertySelect(property)}
+                  >
+                    <CardContent className="p-0">
+                      <div className="flex gap-4 p-4">
+                        <div className="relative flex-shrink-0 w-48 h-36">
+                          <Carousel className="w-48 h-36">
+                            <CarouselContent>
+                              {getImageUrls(property).map((img: string, idx: number) => (
+                                <CarouselItem key={idx} className="w-48 h-36">
+                                  <Image
+                                    src={img}
+                                    alt={property.property_name}
+                                    width={200}
+                                    height={150}
+                                    className="rounded-lg object-cover w-48 h-36"
+                                  />
+                                </CarouselItem>
+                              ))}
+                            </CarouselContent>
+                            <CarouselPrevious />
+                            <CarouselNext />
+                          </Carousel>
+                          {property.verified && <Badge className="absolute bottom-2 left-2 bg-green-500">Verified</Badge>}
                         </div>
 
-                        <p className="text-sm text-muted-foreground line-clamp-2">{property.description}</p>
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <Badge variant="secondary" className="mb-2">
+                                {property.property_type}
+                              </Badge>
+                              <h3 className="font-semibold text-lg leading-tight">{property.property_name}</h3>
+                              <div className="flex items-center gap-1 text-muted-foreground mt-1">
+                                <MapPin className="h-4 w-4" />
+                                <span className="text-sm">{property.address}</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {property.eircode} • {property.size} m²
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <div className="flex items-center gap-1">
+                                <Heart className="h-4 w-4" />
+                              </div>
+                            </div>
+                          </div>
 
-                        <div className="flex flex-wrap gap-2">
-                          {property.amenities.slice(0, 4).map((amenity) => (
-                            <Badge key={amenity} variant="outline" className="text-xs">
-                              {amenity}
-                            </Badge>
-                          ))}
-                          {property.amenities.length > 4 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{property.amenities.length - 4} more
-                            </Badge>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{property.description}</p>
+
+                          <div className="flex flex-wrap gap-2">
+                            {property.amenities.slice(0, 4).map((amenity: string) => (
+                              <Badge key={amenity} variant="outline" className="text-xs">
+                                {amenity}
+                              </Badge>
+                            ))}
+                            {property.amenities.length > 4 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{property.amenities.length - 4} more
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="space-y-1">
+                              <div className="text-green-600 font-medium">{property.availability}</div>
+                              {property.occupants_if_shared && (
+                                <div className="text-muted-foreground">{property.occupants_if_shared}</div>
+                              )}
+                              <div className="text-muted-foreground">
+                                {property.applicants} applicant{property.applicants !== 1 ? "s" : ""}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-2xl font-bold">€{property.price}</span>
+                              <span className="text-muted-foreground"> / month</span>
+                            </div>
+                          </div>
+
+                          {Array.isArray(property.viewing_dates_and_times) && property.viewing_dates_and_times.length > 0 && (
+                            <div className="pt-2 border-t">
+                              <p className="text-xs text-muted-foreground mb-1">Next viewings:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {property.viewing_dates_and_times.slice(0, 2).map((viewing: string, index: number) => (
+                                  <Badge key={index} variant="outline" className="text-xs">
+                                    {viewing}
+                                  </Badge>
+                                ))}
+                                {property.viewing_dates_and_times.length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{property.viewing_dates_and_times.length - 2} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                           )}
                         </div>
-
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="space-y-1">
-                            <div className="text-green-600 font-medium">{property.availability}</div>
-                            {property.occupantsIfShared && (
-                              <div className="text-muted-foreground">{property.occupantsIfShared}</div>
-                            )}
-                            <div className="text-muted-foreground">
-                              {property.applicants} applicant{property.applicants !== 1 ? "s" : ""}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-2xl font-bold">€{property.price}</span>
-                            <span className="text-muted-foreground"> / month</span>
-                          </div>
-                        </div>
-
-                        {property.viewingDatesAndTimes.length > 0 && (
-                          <div className="pt-2 border-t">
-                            <p className="text-xs text-muted-foreground mb-1">Next viewings:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {property.viewingDatesAndTimes.slice(0, 2).map((viewing, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {viewing}
-                                </Badge>
-                              ))}
-                              {property.viewingDatesAndTimes.length > 2 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{property.viewingDatesAndTimes.length - 2} more
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </div>
 

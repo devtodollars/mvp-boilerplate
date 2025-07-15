@@ -29,6 +29,7 @@ import { createClient } from '@/utils/supabase/client';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { format, isBefore, startOfDay } from "date-fns";
 import { cn } from "@/utils/cn";
+import { AddressAutocomplete } from "@/components/mapbox/AdressAutocomplete";
 
 const IRISH_COUNTIES = [
     "Antrim",
@@ -315,7 +316,46 @@ export default function PostRoomPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="address">Street Address *</Label>
-                                    <Input id="address" placeholder="123 Main Street" {...register("address")} />
+                                    {/* Replace Input with AddressAutocomplete */}
+                                    <Controller
+                                      name="address"
+                                      control={control}
+                                      render={({ field }) => (
+                                        <AddressAutocomplete
+                                          value={field.value}
+                                          onChange={field.onChange}
+                                          onSelect={(val, data) => {
+                                            // Helper to extract context values
+                                            const getContext = (type: string) =>
+                                              data.context?.find((c: any) => c.id.startsWith(type))?.text || '';
+
+                                            // Street address (first part of place_name or text)
+                                            const street = data.text || val.split(',')[0] || '';
+                                            // Area (neighborhood or locality)
+                                            const area =
+                                              getContext('neighborhood') ||
+                                              getContext('locality') ||
+                                              '';
+                                            // City (place)
+                                            const city =
+                                              data.place_type?.includes('place')
+                                                ? data.text
+                                                : getContext('place') || '';
+                                            // County (region)
+                                            const county = getContext('region');
+                                            // Eircode (postcode)
+                                            const eircode = getContext('postcode');
+
+                                            field.onChange(val);
+                                            setValue('address', street);
+                                            setValue('area', area);
+                                            setValue('city', city);
+                                            setValue('county', county);
+                                            setValue('eircode', eircode);
+                                          }}
+                                        />
+                                      )}
+                                    />
                                     {errors.address && <span className="text-red-500 text-xs">{errors.address.message}</span>}
                                 </div>
                                 <div className="space-y-2">
@@ -806,7 +846,7 @@ export default function PostRoomPage() {
                                         <Button
                                           type="button"
                                           size="sm"
-                                          variant="destructive"
+                                          variant="ghost"
                                           onClick={() => removeViewingTime(vt.id)}
                                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
@@ -857,7 +897,17 @@ export default function PostRoomPage() {
                             Save as Draft
                         </Button>
                         <Button type="submit" size="lg" className="px-8" disabled={isSubmitting}>
-                            Publish Listing
+                            {isSubmitting ? (
+                              <>
+                                <svg className="animate-spin h-4 w-4 mr-2 inline" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                </svg>
+                                Publishing...
+                              </>
+                            ) : (
+                              "Publish Listing"
+                            )}
                         </Button>
                     </div>
                 </form>

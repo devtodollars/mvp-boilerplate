@@ -92,7 +92,7 @@ export const Navbar = ({ user }: { user: User | null }) => {
               <SheetContent side={'left'}>
                 <SheetHeader>
                   <SheetTitle className="font-bold text-xl">
-                    Shadcn/React
+                    GoLet.ie
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col justify-center items-center gap-2 mt-4">
@@ -111,7 +111,7 @@ export const Navbar = ({ user }: { user: User | null }) => {
                     variant="ghost"
                     onClick={handleAuth}
                   >
-                    {user ? 'Account' : 'Sign In'}
+                    {user ? user.email : 'Sign In'}
                   </Button>
                 </nav>
               </SheetContent>
@@ -156,7 +156,7 @@ export const Navbar = ({ user }: { user: User | null }) => {
               onClick={handleAuth}
               variant="ghost"
             >
-              {user ? 'Account' : 'Sign In'}
+              {user ? user.email : 'Sign In'}
             </Button>
             <ModeToggle />
           </div>

@@ -41,4 +41,16 @@ export async function createListing(
   } catch (error) {
     return { data: null, error };
   }
+}
+
+// Fetch all active listings
+export async function fetchListings() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('listings')
+    .select('*')
+    .eq('active', true)
+    .order('created_at', { ascending: false });
+    console.log(data)
+  return { data, error };
 } 
