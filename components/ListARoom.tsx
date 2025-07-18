@@ -121,6 +121,85 @@ function CalendarComponent({ selected, onSelect, disabled }: { selected?: Date, 
   );
 }
 
+// Helper to geocode address or eircode with better Irish Eircode support
+async function geocodeAddress(address: string, eircode: string): Promise<{ lat: number; lng: number } | null> {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  if (!token) {
+    console.error('Mapbox token not found');
+    return null;
+  }
+
+  console.log('Geocoding attempt:', { address, eircode });
+
+  // Try multiple geocoding strategies for better accuracy
+  const strategies = [];
+
+  // Strategy 1: Eircode only (most precise for Irish addresses)
+  if (eircode && eircode.trim()) {
+    strategies.push({
+      name: 'Eircode only',
+      url: `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(eircode.trim())}.json?country=IE&types=postcode&access_token=${token}`
+    });
+  }
+
+  // Strategy 2: Full address with Eircode
+  if (address && address.trim()) {
+    const fullAddress = [address, eircode].filter(Boolean).join(', ');
+    strategies.push({
+      name: 'Full address with Eircode',
+      url: `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?country=IE&access_token=${token}`
+    });
+  }
+
+  // Strategy 3: Address with "Ireland" suffix
+  if (address && address.trim()) {
+    const addressWithCountry = `${address.trim()}, Ireland`;
+    strategies.push({
+      name: 'Address with Ireland suffix',
+      url: `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(addressWithCountry)}.json?country=IE&access_token=${token}`
+    });
+  }
+
+  // Strategy 4: Eircode with "Ireland" suffix
+  if (eircode && eircode.trim()) {
+    const eircodeWithCountry = `${eircode.trim()}, Ireland`;
+    strategies.push({
+      name: 'Eircode with Ireland suffix',
+      url: `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(eircodeWithCountry)}.json?country=IE&access_token=${token}`
+    });
+  }
+
+  // Try each strategy in order
+  for (const strategy of strategies) {
+    try {
+      console.log(`Trying strategy: ${strategy.name}`);
+      const response = await fetch(strategy.url);
+      const data = await response.json();
+      
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center;
+        const result = { lat, lng };
+        
+        console.log(`✅ Success with ${strategy.name}:`, {
+          query: strategy.url.split('?')[0].split('/').pop(),
+          result,
+          place_name: data.features[0].place_name,
+          relevance: data.features[0].relevance
+        });
+        
+        return result;
+      } else {
+        console.log(`❌ No results for ${strategy.name}`);
+      }
+    } catch (error) {
+      console.error(`Error with ${strategy.name}:`, error);
+    }
+  }
+
+  console.error('❌ All geocoding strategies failed');
+  return null;
+}
+
 export default function PostRoomPage() {
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
     const [selectedFacilities, setSelectedFacilities] = useState<string[]>([])
@@ -254,6 +333,16 @@ export default function PostRoomPage() {
                 toast({ title: 'Error', description: 'You must be signed in to post a listing.', variant: 'destructive' });
                 return;
             }
+            // Geocode address/eircode for lat/lng
+            const coords = await geocodeAddress(data.address, data.eircode);
+            if (!coords) {
+                toast({ 
+                    title: 'Geocoding Error', 
+                    description: `Could not determine location from address: "${data.address}" or eircode: "${data.eircode}". Please check the address and eircode are correct. You can also try adding "Ireland" to the address or check the console for debugging information.`, 
+                    variant: 'destructive' 
+                });
+                return;
+            }
             // property_name is required by DB, use address for now
             const { data: listing, error } = await createListing(
                 {
@@ -261,6 +350,8 @@ export default function PostRoomPage() {
                   property_name: data.address,
                   user_id: user.id,
                   viewing_times: viewingTimes.map(vt => `${vt.date}T${vt.time}:00.000Z`),
+                  lat: coords.lat,
+                  lng: coords.lng,
                 },
                 uploadedImages,
                 uploadedVideos

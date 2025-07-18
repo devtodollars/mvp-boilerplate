@@ -1,175 +1,326 @@
-
-
+"use client"
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Heart, MapPin, Star } from "lucide-react"
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+import {
+  MapPin,
+  Heart,
+  Star,
+  Users,
+  Home,
+  Calendar,
+  Shield,
+  Play,
+  Wifi,
+  Car,
+  TreePine,
+  Waves,
+  Dumbbell,
+  PawPrint,
+} from "lucide-react"
 
-interface Property {
-  image?: string;
-  propertyName: string;
-  verified?: boolean;
-  propertyType: string;
-  active?: boolean;
-  address: string;
-  eircode?: string;
-  size?: string;
-  rating?: number;
-  reviews?: number;
-  description?: string;
-  availability?: string;
-  occupantsIfShared?: string | null;
-  applicants?: number;
-  amenities: string[];
-  viewingDatesAndTimes: string[];
-  price: number;
-  images?: string[]; // Added for carousel
-  property_name?: string; // Added for carousel
-  property_type?: string; // Added for carousel
-  city?: string; // Added for address
-  county?: string; // Added for address
-  available_from?: string; // Added for availability
-  occupants_if_shared?: string | null; // Added for occupants
-  monthly_rent?: number; // Added for price
-  viewing_dates_and_times?: string[]; // Added for viewing times
+interface PropertyViewProps {
+  selectedProperty: any
+  onMediaClick?: (media: Array<{ url: string; type: "image" | "video" }>, index: number) => void
 }
 
-interface PropertyComponentProps {
-  selectedProperty: Property;
-}
+export default function PropertyView({ selectedProperty, onMediaClick }: PropertyViewProps) {
+  if (!selectedProperty) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Select a property to view details</p>
+      </div>
+    )
+  }
 
-import { getListingImages } from '@/utils/supabase/storage';
+  // Helper to get media URLs
+  const getMediaUrls = (listing: any) => {
+    const media: Array<{ url: string; type: "image" | "video" }> = []
 
-export default function PropertyComponent({ selectedProperty }: PropertyComponentProps) {
-  // Support both camelCase and snake_case for viewing times
-  const viewings =
-    selectedProperty.viewingDatesAndTimes ||
-    selectedProperty.viewing_dates_and_times ||
-    [];
-  // Use scalable image utility
-  const images = getListingImages(selectedProperty.images);
+    if (listing.images && Array.isArray(listing.images)) {
+      listing.images.forEach((img: string) => {
+        media.push({ url: img, type: "image" })
+      })
+    }
+
+    if (listing.videos && Array.isArray(listing.videos)) {
+      listing.videos.forEach((video: string) => {
+        media.push({ url: video, type: "video" })
+      })
+    }
+
+    return media
+  }
+
+  const mediaUrls = getMediaUrls(selectedProperty)
+
+  const formatPropertyType = (type: string) => {
+    return type.charAt(0).toUpperCase() + type.slice(1)
+  }
+
+  const formatRoomType = (type: string) => {
+    return type.charAt(0).toUpperCase() + type.slice(1)
+  }
+
+  const getAmenityIcon = (amenity: string) => {
+    const iconMap: { [key: string]: any } = {
+      "Wi-Fi": Wifi,
+      Parking: Car,
+      "Garden Access": TreePine,
+      "Swimming Pool": Waves,
+      "Gym Access": Dumbbell,
+      "Pet Friendly": PawPrint,
+    }
+
+    const IconComponent = iconMap[amenity]
+    return IconComponent ? <IconComponent className="h-3 w-3" /> : null
+  }
+
+  // Helper to format viewing time
+  function formatViewingTime(viewing: string) {
+    const date = new Date(viewing);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleString(undefined, {
+        weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true
+      });
+    }
+    return viewing;
+  }
+
   return (
-    <div className="p-6 h-full overflow-y-auto">
-      <div className="space-y-6">
-        {/* Property Image Carousel */}
-        <div className="relative w-full h-64">
-          <Carousel className="w-full h-64">
-            <CarouselContent>
-              {images.map((img, idx) => (
-                <CarouselItem key={idx} className="w-full h-64">
-                  <Image
-                    src={img}
-                    alt={selectedProperty.property_name || selectedProperty.propertyName || 'Property'}
-                    width={500}
-                    height={300}
-                    className="rounded-lg object-cover w-full h-64"
-                  />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            {images.length > 1 && (
-              <>
-                <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white" />
-                <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white" />
-              </>
+    <div className="w-full h-full overflow-y-auto">
+      <div className="p-6 space-y-6">
+        {/* Media Carousel */}
+        {mediaUrls.length > 0 && (
+          <div className="relative">
+            <Carousel className="w-full">
+              <CarouselContent>
+                {mediaUrls.map((media, idx) => (
+                  <CarouselItem key={idx}>
+                    <div
+                      className="relative aspect-video cursor-pointer group rounded-xl overflow-hidden"
+                      onClick={() => onMediaClick?.(mediaUrls, idx)}
+                    >
+                      {media.type === "image" ? (
+                        <Image
+                          src={media.url || "/placeholder.svg"}
+                          alt={selectedProperty.property_name}
+                          fill
+                          className="object-cover transition-transform group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="relative w-full h-full">
+                          <video src={media.url} className="w-full h-full object-cover" muted />
+                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                            <Play className="h-16 w-16 text-white" />
+                          </div>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              {mediaUrls.length > 1 && (
+                <>
+                  <CarouselPrevious className="left-4" />
+                  <CarouselNext className="right-4" />
+                </>
+              )}
+            </Carousel>
+
+            {/* Media counter */}
+            {mediaUrls.length > 1 && (
+              <div className="absolute bottom-4 right-4 bg-black/70 text-white text-sm px-3 py-1 rounded-full">
+                {mediaUrls.length} media files
+              </div>
             )}
-          </Carousel>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="absolute top-2 right-2 bg-white/80 hover:bg-white"
-          >
-            <Heart className="h-4 w-4" />
-          </Button>
-          {selectedProperty.verified && (
-            <Badge className="absolute bottom-2 left-2 bg-green-500">Verified</Badge>
-          )}
-        </div>
+          </div>
+        )}
+
         {/* Property Header */}
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Badge variant="secondary">{selectedProperty.property_type || selectedProperty.propertyType}</Badge>
-            {selectedProperty.active && <Badge className="bg-green-500">Active</Badge>}
+        <div className="space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary">{formatPropertyType(selectedProperty.property_type)}</Badge>
+                <Badge variant="outline">{formatRoomType(selectedProperty.room_type)}</Badge>
+                {selectedProperty.ensuite && <Badge className="bg-blue-500">Ensuite</Badge>}
+                {selectedProperty.verified && (
+                  <Badge className="bg-green-500">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Verified
+                  </Badge>
+                )}
+              </div>
+
+              <h1 className="text-2xl font-bold text-gray-900">{selectedProperty.property_name}</h1>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-1 text-gray-600">
+                  <MapPin className="h-4 w-4" />
+                  <span>
+                    {selectedProperty.apartment_number && `${selectedProperty.apartment_number}, `}
+                    {selectedProperty.address}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-500">
+                  {selectedProperty.area}, {selectedProperty.city}, {selectedProperty.county} {selectedProperty.eircode}
+                </div>
+              </div>
+            </div>
+
+            <Button variant="outline" size="icon" className="shrink-0 bg-transparent">
+              <Heart className="h-4 w-4" />
+            </Button>
           </div>
-          <h2 className="text-2xl font-bold mb-2">{selectedProperty.property_name || selectedProperty.propertyName}</h2>
-          <div className="flex items-center gap-1 text-muted-foreground mb-1">
-            <MapPin className="h-4 w-4" />
-            <span>{selectedProperty.address}</span>
-          </div>
-          <p className="text-muted-foreground mb-3">
-            {selectedProperty.city}, {selectedProperty.county} • {selectedProperty.eircode} • {selectedProperty.size ? `${selectedProperty.size} sq ft` : ''}
-          </p>
-          <div className="flex items-center gap-1 mb-4">
-            <Star className="h-4 w-4 fill-current text-yellow-400" />
-            <span className="font-medium">{selectedProperty.rating}</span>
-            <span className="text-muted-foreground">({selectedProperty.reviews} reviews)</span>
+
+          {/* Price and Key Info */}
+          <div className="bg-gray-50 rounded-xl p-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-3xl font-bold text-gray-900">€{selectedProperty.monthly_rent}</div>
+                <div className="text-sm text-gray-500">per {selectedProperty.rent_frequency || "month"}</div>
+              </div>
+              <div className="text-right">
+                {selectedProperty.size && (
+                  <div>
+                    <div className="text-lg font-semibold">{selectedProperty.size} m²</div>
+                    <div className="text-sm text-gray-500">Floor area</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {selectedProperty.security_deposit > 0 && (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Security Deposit:</span>
+                  <span className="font-medium">€{selectedProperty.security_deposit}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
         {/* Description */}
         <div>
-          <h4 className="font-semibold mb-2">Description</h4>
-          <p className="text-muted-foreground">{selectedProperty.description}</p>
+          <h3 className="text-lg font-semibold mb-3">Description</h3>
+          <p className="text-gray-600 leading-relaxed">{selectedProperty.description}</p>
         </div>
-        {/* Availability & Interest */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h4 className="font-semibold mb-2">Availability</h4>
-            <p className="text-green-600 font-medium">{selectedProperty.availability || selectedProperty.available_from}</p>
-            {selectedProperty.occupants_if_shared && (
-              <p className="text-sm text-muted-foreground mt-1">{selectedProperty.occupants_if_shared}</p>
-            )}
-          </div>
-          <div>
-            <h4 className="font-semibold mb-2">Interest</h4>
-            <p className="text-muted-foreground">
-              {selectedProperty.applicants} applicant{selectedProperty.applicants !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-        {/* Amenities */}
+
+        {/* Key Details */}
         <div>
-          <h4 className="font-semibold mb-2">Amenities</h4>
-          <div className="flex flex-wrap gap-2">
-            {(selectedProperty.amenities || []).map((amenity: string) => (
-              <Badge key={amenity} variant="outline">
-                {amenity}
-              </Badge>
-            ))}
+          <h3 className="text-lg font-semibold mb-3">Property Details</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <div>
+                  <div className="text-sm font-medium">Available From</div>
+                  <div className="text-sm text-gray-600">{selectedProperty.available_from || "Now"}</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Home className="h-4 w-4 text-gray-500" />
+                <div>
+                  <div className="text-sm font-medium">Lease Duration</div>
+                  <div className="text-sm text-gray-600">{selectedProperty.lease_duration || "Flexible"}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {(selectedProperty.current_males > 0 || selectedProperty.current_females > 0) && (
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-gray-500" />
+                  <div>
+                    <div className="text-sm font-medium">Current Occupants</div>
+                    <div className="text-sm text-gray-600">
+                      {selectedProperty.current_males + selectedProperty.current_females} people
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedProperty.ber_rating && (
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-gray-500" />
+                  <div>
+                    <div className="text-sm font-medium">BER Rating</div>
+                    <div className="text-sm text-gray-600">{selectedProperty.ber_rating}</div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        {/* Viewing Times */}
-        {Array.isArray(viewings) && viewings.length > 0 && (
+
+        {/* Amenities */}
+        {selectedProperty.amenities && selectedProperty.amenities.length > 0 && (
           <div>
-            <h4 className="font-semibold mb-2">Available Viewings</h4>
-            <div className="space-y-2">
-              {viewings.map((viewing: string, index: number) => (
-                <Badge
-                  key={index}
-                  variant="outline"
-                  className="cursor-pointer hover:bg-primary hover:text-primary-foreground mr-2 mb-2"
-                >
-                  {viewing}
+            <h3 className="text-lg font-semibold mb-3">Amenities</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {selectedProperty.amenities.map((amenity: string) => (
+                <div key={amenity} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                  {getAmenityIcon(amenity)}
+                  <span className="text-sm">{amenity}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Nearby Facilities */}
+        {selectedProperty.nearby_facilities && selectedProperty.nearby_facilities.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Nearby Facilities</h3>
+            <div className="flex flex-wrap gap-2">
+              {selectedProperty.nearby_facilities.map((facility: string) => (
+                <Badge key={facility} variant="outline" className="text-xs">
+                  {facility}
                 </Badge>
               ))}
             </div>
           </div>
         )}
-        {/* Price */}
-        <div className="border-t pt-4">
-          <div className="text-center">
-            <span className="text-3xl font-bold">€{selectedProperty.price || selectedProperty.monthly_rent}</span>
-            <span className="text-muted-foreground"> / month</span>
+
+        {/* House Rules */}
+        {selectedProperty.house_rules && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3">House Rules</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">{selectedProperty.house_rules}</p>
           </div>
-        </div>
+        )}
+
+        {/* Viewing Times */}
+        {selectedProperty.viewing_times && selectedProperty.viewing_times.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Available Viewing Times</h3>
+            <div className="space-y-2">
+              {selectedProperty.viewing_times.map((time: string, index: number) => (
+                <Button key={index} variant="outline" className="w-full justify-start bg-transparent" size="sm">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {formatViewingTime(time)}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons */}
-        <div className="space-y-3">
-          <Button className="w-full">Book Viewing</Button>
-          <Button variant="outline" className="w-full bg-transparent">
+        <div className="space-y-3 pt-4 border-t">
+          <Button className="w-full" size="lg">
+            <Calendar className="h-4 w-4 mr-2" />
+            Book Viewing
+          </Button>
+          <Button variant="outline" className="w-full bg-transparent" size="lg">
             Contact Owner
           </Button>
         </div>
       </div>
     </div>
-  );
+  )
 }

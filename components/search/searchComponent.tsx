@@ -1,37 +1,53 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Search, SlidersHorizontal, Star, Heart, MapPin, List, Map } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Search, SlidersHorizontal, Heart, MapPin, List, Map, X, ChevronLeft, ChevronRight, Play, ArrowLeft, Filter } from "lucide-react"
 import PropertyView from "./propertyView"
-import { createClient } from "@/utils/supabase/client"
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel"
-import { fetchListings } from '@/utils/supabase/listings';
-import { getListingImages } from '@/utils/supabase/storage';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+import { fetchListings } from "@/utils/supabase/listings"
+import { getListingImages } from "@/utils/supabase/storage"
+import dynamic from "next/dynamic";
+
+const MapboxMap = dynamic(() => import("@/components/mapbox/MapboxMap"), { 
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg" />
+});
 
 export default function Component() {
   const [listings, setListings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<"list" | "details">("list")
+  const [viewMode, setViewMode] = useState<"list" | "map">("list")
   const [selectedProperty, setSelectedProperty] = useState<any | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
+  const [showPropertyDetails, setShowPropertyDetails] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+  const [mediaModal, setMediaModal] = useState<{
+    isOpen: boolean
+    media: Array<{ url: string; type: "image" | "video" }>
+    currentIndex: number
+  }>({
+    isOpen: false,
+    media: [],
+    currentIndex: 0,
+  })
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,20 +62,125 @@ export default function Component() {
     fetchData()
   }, [])
 
-  const handlePropertySelect = (property: any) => {
+  const handlePropertySelect = useCallback((property: any) => {
     setSelectedProperty(property)
-    if (window.innerWidth < 1024) {
-      setViewMode("details")
+    if (isClient && window.innerWidth < 1024) {
+      setShowPropertyDetails(true)
     }
+  }, [isClient])
+
+  const handleMediaClick = (media: Array<{ url: string; type: "image" | "video" }>, index: number) => {
+    setMediaModal({
+      isOpen: true,
+      media,
+      currentIndex: index,
+    })
+  }
+
+  const closeMediaModal = () => {
+    setMediaModal({ isOpen: false, media: [], currentIndex: 0 })
+  }
+
+  const navigateMedia = (direction: "prev" | "next") => {
+    setMediaModal((prev) => ({
+      ...prev,
+      currentIndex:
+        direction === "next"
+          ? (prev.currentIndex + 1) % prev.media.length
+          : (prev.currentIndex - 1 + prev.media.length) % prev.media.length,
+    }))
   }
 
   // Helper to get image URLs (array of strings)
-  const getImageUrls = (listing: any) => getListingImages(listing.images);
+  const getImageUrls = (listing: any) => getListingImages(listing.images)
+
+  // Helper to get all media URLs
+  const getMediaUrls = (listing: any) => {
+    const media: Array<{ url: string; type: "image" | "video" }> = []
+
+    if (listing.images && Array.isArray(listing.images)) {
+      listing.images.forEach((img: string) => {
+        media.push({ url: img, type: "image" })
+      })
+    }
+
+    if (listing.videos && Array.isArray(listing.videos)) {
+      listing.videos.forEach((video: string) => {
+        media.push({ url: video, type: "video" })
+      })
+    }
+
+    return media
+  }
+
+  // Helper to format viewing time
+  function formatViewingTime(viewing: string) {
+    // Try to parse as ISO date/time
+    const date = new Date(viewing);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleString(undefined, {
+        weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true
+      });
+    }
+    // Fallback to raw string
+    return viewing;
+  }
+
+  // Memoize the properties data for the map to prevent unnecessary re-renders
+  const mapProperties = useMemo(() => 
+    listings
+      .filter((p) => typeof p.lat === "number" && typeof p.lng === "number")
+      .map((p) => ({
+        id: p.id,
+        lat: p.lat,
+        lng: p.lng,
+        monthly_rent: p.monthly_rent,
+      })), [listings]
+  );
+
+  // Memoize the selected property for the map
+  const mapSelectedProperty = useMemo(() => 
+    selectedProperty && typeof selectedProperty.lat === "number" && typeof selectedProperty.lng === "number" ? {
+      id: selectedProperty.id,
+      lat: selectedProperty.lat,
+      lng: selectedProperty.lng,
+      monthly_rent: selectedProperty.monthly_rent,
+    } : null, [selectedProperty]
+  );
+
+  const currentMedia = mediaModal.media[mediaModal.currentIndex]
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className=" top-0 z-40">
+      {/* Mobile Header */}
+      <header className={`sticky top-0 z-40 lg:hidden mb-4 mt-4 ${viewMode === "map" ? "bg-transparent" : "bg-white"}`}>
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search properties..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-10 text-sm"
+                />
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(true)}
+              className="h-10 px-3"
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Desktop Header */}
+      <header className="border-b bg-white sticky top-0 z-40 hidden lg:block">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <div className="flex-1 max-w-md">
@@ -84,7 +205,6 @@ export default function Component() {
                 <DropdownMenuCheckboxItem>Entire place</DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem>Private room</DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem>Shared room</DropdownMenuCheckboxItem>
-                <Separator className="my-2" />
                 <DropdownMenuCheckboxItem>WiFi</DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem>Kitchen</DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem>Parking</DropdownMenuCheckboxItem>
@@ -95,161 +215,420 @@ export default function Component() {
         </div>
       </header>
 
+      {/* Mobile View Toggle */}
+      <div className="lg:hidden border-b bg-white">
+        <div className="flex">
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            className="flex-1 rounded-none h-12"
+            onClick={() => setViewMode("list")}
+          >
+            <List className="h-4 w-4 mr-2" />
+            List
+          </Button>
+          <Button
+            variant={viewMode === "map" ? "default" : "ghost"}
+            className="flex-1 rounded-none h-12"
+            onClick={() => setViewMode("map")}
+          >
+            <Map className="h-4 w-4 mr-2" />
+            Map
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Spacing */}
+      <div className="lg:hidden h-4 bg-gray-50"></div>
+
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="lg:container lg:mx-auto lg:px-4 lg:py-6">
         <div className="grid lg:grid-cols-2 gap-6 h-[calc(100vh-140px)]">
-          {/* Listings Section - Always visible on desktop, toggleable on mobile */}
-          <div className={`space-y-4 overflow-y-auto pr-2 pl-2 pb-2 ${viewMode === "details" ? "hidden lg:block" : ""}`}>
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-semibold">{listings.length} properties found</h1>
-              <div className="lg:hidden">
-                <Button
-                  variant={viewMode === "list" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode(viewMode === "list" ? "details" : "list")}
-                  className="gap-2"
-                >
-                  {viewMode === "list" ? (
-                    <>
-                      <Map className="h-4 w-4" />
-                      Show Details
-                    </>
-                  ) : (
-                    <>
-                      <List className="h-4 w-4" />
-                      Show List
-                    </>
-                  )}
-                </Button>
-              </div>
+          {/* Listings Section */}
+          <div className={`space-y-4 overflow-y-auto pr-2 ${viewMode === "map" ? "hidden lg:block" : ""}`}>
+            <div className="flex items-center justify-between px-4 lg:px-0 pt-4 lg:pt-0">
+              <h1 className="text-xl lg:text-2xl font-semibold">{listings.length} properties found</h1>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3 lg:space-y-4 px-4 lg:px-0 pb-20 lg:pb-0">
               {loading ? (
-                <div>Loading...</div>
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-muted-foreground">Loading properties...</div>
+                </div>
               ) : (
-                listings.map((property) => (
-                  <Card
-                    key={property.id}
-                    className={`overflow-hidden hover:shadow-lg transition-all cursor-pointer ${selectedProperty?.id === property.id ? "ring-2 ring-primary shadow-lg" : ""}`}
-                    onClick={() => handlePropertySelect(property)}
-                  >
-                    <CardContent className="p-0">
-                      <div className="flex gap-4 p-4">
-                        <div className="relative flex-shrink-0 w-48 h-36">
-                          <Carousel className="w-48 h-36">
-                            <CarouselContent>
-                              {getImageUrls(property).map((img: string, idx: number) => (
-                                <CarouselItem key={idx} className="w-48 h-36">
-                                  <Image
-                                    src={img}
-                                    alt={property.property_name}
-                                    width={200}
-                                    height={150}
-                                    className="rounded-lg object-cover w-48 h-36"
-                                  />
-                                </CarouselItem>
-                              ))}
-                            </CarouselContent>
-                            <CarouselPrevious />
-                            <CarouselNext />
-                          </Carousel>
-                          {property.verified && <Badge className="absolute bottom-2 left-2 bg-green-500">Verified</Badge>}
-                        </div>
+                listings.map((property) => {
+                  const mediaUrls = getMediaUrls(property)
 
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <Badge variant="secondary" className="mb-2">
-                                {property.property_type}
-                              </Badge>
-                              <h3 className="font-semibold text-lg leading-tight">{property.property_name}</h3>
-                              <div className="flex items-center gap-1 text-muted-foreground mt-1">
-                                <MapPin className="h-4 w-4" />
-                                <span className="text-sm">{property.address}</span>
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {property.eircode} • {property.size} m²
-                              </p>
+                  return (
+                    <Card
+                      key={property.id}
+                      className={`overflow-hidden hover:shadow-lg transition-all cursor-pointer border-2 ${
+                        selectedProperty?.id === property.id ? "border-black shadow-lg" : "border-transparent"
+                      }`}
+                      onClick={() => handlePropertySelect(property)}
+                    >
+                      <CardContent className="p-0">
+                        {/* Mobile Layout */}
+                        <div className="lg:hidden">
+                          {/* Image Section */}
+                          <div className="relative w-full h-48">
+                            {mediaUrls.length > 0 ? (
+                              <Carousel className="w-full h-48">
+                                <CarouselContent>
+                                  {mediaUrls.map((media, idx) => (
+                                    <CarouselItem key={idx} className="w-full h-48">
+                                      <div
+                                        className="relative w-full h-48 cursor-pointer group"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleMediaClick(mediaUrls, idx)
+                                        }}
+                                      >
+                                        {media.type === "image" ? (
+                                          <Image
+                                            src={media.url || "/placeholder.svg"}
+                                            alt={property.property_name}
+                                            width={400}
+                                            height={200}
+                                            className="rounded-t-lg object-cover w-full h-48 transition-transform group-hover:scale-105"
+                                          />
+                                        ) : (
+                                          <div className="relative w-full h-48">
+                                            <video
+                                              src={media.url}
+                                              className="rounded-t-lg object-cover w-full h-48"
+                                              muted
+                                            />
+                                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded-t-lg">
+                                              <Play className="h-12 w-12 text-white" />
+                                            </div>
+                                          </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-t-lg" />
+                                      </div>
+                                    </CarouselItem>
+                                  ))}
+                                </CarouselContent>
+                                {mediaUrls.length > 1 && (
+                                  <>
+                                    <CarouselPrevious className="left-2 h-8 w-8" />
+                                    <CarouselNext className="right-2 h-8 w-8" />
+                                  </>
+                                )}
+                              </Carousel>
+                            ) : (
+                              <Image
+                                src="/bedroom.png"
+                                alt={property.property_name}
+                                width={400}
+                                height={200}
+                                className="rounded-t-lg object-cover w-full h-48"
+                              />
+                            )}
+
+                            {/* Heart Button */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm hover:bg-white h-10 w-10 shadow-lg"
+                            >
+                              <Heart className="h-5 w-5" />
+                            </Button>
+
+                            {/* Price Badge */}
+                            <div className="absolute top-16 right-3 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg">
+                              <span className="text-lg font-bold text-gray-900">€{property.monthly_rent}</span>
+                              <span className="text-sm text-gray-600"> / {property.rent_frequency || "month"}</span>
                             </div>
-                            <div className="text-right">
-                              <div className="flex items-center gap-1">
-                                <Heart className="h-4 w-4" />
+
+                            {/* Verified Badge */}
+                            {property.verified && (
+                              <Badge className="absolute top-3 left-3 bg-green-500 text-white">
+                                Verified
+                              </Badge>
+                            )}
+
+                            {/* Media Count */}
+                            {mediaUrls.length > 1 && (
+                              <div className="absolute bottom-3 right-3 bg-black/70 text-white text-sm px-2 py-1 rounded-full">
+                                {mediaUrls.length} photos
                               </div>
-                            </div>
-                          </div>
-
-                          <p className="text-sm text-muted-foreground line-clamp-2">{property.description}</p>
-
-                          <div className="flex flex-wrap gap-2">
-                            {property.amenities.slice(0, 4).map((amenity: string) => (
-                              <Badge key={amenity} variant="outline" className="text-xs">
-                                {amenity}
-                              </Badge>
-                            ))}
-                            {property.amenities.length > 4 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{property.amenities.length - 4} more
-                              </Badge>
                             )}
                           </div>
 
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="space-y-1">
-                              <div className="text-green-600 font-medium">{property.availability}</div>
-                              {property.occupants_if_shared && (
-                                <div className="text-muted-foreground">{property.occupants_if_shared}</div>
-                              )}
-                              <div className="text-muted-foreground">
-                                {property.applicants} applicant{property.applicants !== 1 ? "s" : ""}
+                          {/* Content Section */}
+                          <div className="p-4 space-y-3">
+                            {/* Property Type & Location */}
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  {/* <Badge variant="secondary" className="text-sm">
+                                    {property.property_type?.charAt(0).toUpperCase() + property.property_type?.slice(1)}
+                                  </Badge> */}
+                                  <Badge variant="outline" className="text-sm">
+                                    {property.room_type?.charAt(0).toUpperCase() + property.room_type?.slice(1)}
+                                  </Badge>
+                                  {property.ensuite && <Badge className="bg-blue-500 text-white text-sm">Ensuite</Badge>}
+                                </div>
+                                <h3 className="font-semibold text-lg leading-tight line-clamp-2 break-words mb-2">
+                                  {property.property_name}
+                                </h3>
+                                <div className="flex items-center gap-2 text-gray-600 mb-1">
+                                  <MapPin className="h-4 w-4 flex-shrink-0" />
+                                  <span className="text-sm truncate">
+                                    {property.apartment_number && `${property.apartment_number}, `}
+                                    {property.address}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-500">
+                                  {property.area}, {property.city} {property.eircode}
+                                  {property.size && ` • ${property.size} m²`}
+                                </p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <span className="text-2xl font-bold">€{property.price}</span>
-                              <span className="text-muted-foreground"> / month</span>
-                            </div>
-                          </div>
 
-                          {Array.isArray(property.viewing_dates_and_times) && property.viewing_dates_and_times.length > 0 && (
-                            <div className="pt-2 border-t">
-                              <p className="text-xs text-muted-foreground mb-1">Next viewings:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {property.viewing_dates_and_times.slice(0, 2).map((viewing: string, index: number) => (
-                                  <Badge key={index} variant="outline" className="text-xs">
-                                    {viewing}
+                            {/* Description */}
+                            <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                              {property.description}
+                            </p>
+
+                            {/* Amenities */}
+                            {property.amenities && property.amenities.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {property.amenities.slice(0, 4).map((amenity: string) => (
+                                  <Badge key={amenity} variant="outline" className="text-xs">
+                                    {amenity}
                                   </Badge>
                                 ))}
-                                {property.viewing_dates_and_times.length > 2 && (
+                                {property.amenities.length > 4 && (
                                   <Badge variant="outline" className="text-xs">
-                                    +{property.viewing_dates_and_times.length - 2} more
+                                    +{property.amenities.length - 4} more
                                   </Badge>
                                 )}
                               </div>
+                            )}
+
+                            {/* Availability & Details */}
+                            <div className="space-y-2 pt-2 border-t border-gray-100">
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                  <div className="text-green-600 font-medium text-sm">
+                                    {property.available_from ? `Available ${property.available_from}` : "Available Now"}
+                                  </div>
+                                  {(property.current_males > 0 || property.current_females > 0) && (
+                                    <div className="text-gray-500 text-sm">
+                                      {property.current_males + property.current_females} current occupants
+                                    </div>
+                                  )}
+                                  {property.applicants && (
+                                    <div className="text-gray-500 text-sm">
+                                      {property.applicants.length} applicant{property.applicants.length !== 1 ? "s" : ""}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Viewing Times */}
+                              {property.viewing_times && property.viewing_times.length > 0 && (
+                                <div className="pt-2">
+                                  <p className="text-xs text-gray-500 mb-2">Next viewings:</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {property.viewing_times.slice(0, 2).map((viewing: string, index: number) => (
+                                      <Badge key={index} variant="outline" className="text-xs">
+                                        {formatViewingTime(viewing)}
+                                      </Badge>
+                                    ))}
+                                    {property.viewing_times.length > 2 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{property.viewing_times.length - 2} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+
+                        {/* Desktop Layout (unchanged) */}
+                        <div className="hidden lg:flex gap-4 p-4">
+                          <div className="relative flex-shrink-0 w-48 h-36">
+                            {mediaUrls.length > 0 ? (
+                              <Carousel className="w-48 h-36">
+                                <CarouselContent>
+                                  {mediaUrls.map((media, idx) => (
+                                    <CarouselItem key={idx} className="w-48 h-36">
+                                      <div
+                                        className="relative w-48 h-36 cursor-pointer group"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleMediaClick(mediaUrls, idx)
+                                        }}
+                                      >
+                                        {media.type === "image" ? (
+                                          <Image
+                                            src={media.url || "/placeholder.svg"}
+                                            alt={property.property_name}
+                                            width={200}
+                                            height={150}
+                                            className="rounded-lg object-cover w-48 h-36 transition-transform group-hover:scale-105"
+                                          />
+                                        ) : (
+                                          <div className="relative w-48 h-36">
+                                            <video
+                                              src={media.url}
+                                              className="rounded-lg object-cover w-48 h-36"
+                                              muted
+                                            />
+                                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded-lg">
+                                              <Play className="h-8 w-8 text-white" />
+                                            </div>
+                                          </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg" />
+                                      </div>
+                                    </CarouselItem>
+                                  ))}
+                                </CarouselContent>
+                                {mediaUrls.length > 1 && (
+                                  <>
+                                    <CarouselPrevious className="left-2" />
+                                    <CarouselNext className="right-2" />
+                                  </>
+                                )}
+                              </Carousel>
+                            ) : (
+                              <Image
+                                src="/bedroom.png"
+                                alt={property.property_name}
+                                width={200}
+                                height={150}
+                                className="rounded-lg object-cover w-48 h-36"
+                              />
+                            )}
+
+                            {property.verified && (
+                              <Badge className="absolute bottom-2 left-2 bg-green-500">Verified</Badge>
+                            )}
+
+                            {mediaUrls.length > 1 && (
+                              <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                                {mediaUrls.length}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex-1 space-y-2 min-w-0 overflow-hidden">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  {/* <Badge variant="secondary">
+                                    {property.property_type?.charAt(0).toUpperCase() + property.property_type?.slice(1)}
+                                  </Badge> */}
+                                  <Badge variant="outline">
+                                    {property.room_type?.charAt(0).toUpperCase() + property.room_type?.slice(1)}
+                                  </Badge>
+                                  {property.ensuite && <Badge className="bg-blue-500">Ensuite</Badge>}
+                                </div>
+                                <h3 className="font-semibold text-lg leading-tight line-clamp-2 break-words">
+                                  {property.property_name}
+                                </h3>
+                                <div className="flex items-center gap-1 text-muted-foreground mt-1">
+                                  <MapPin className="h-4 w-4" />
+                                  <span className="text-sm truncate">
+                                    {property.apartment_number && `${property.apartment_number}, `}
+                                    {property.address}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-1 truncate">
+                                  {property.area}, {property.city} {property.eircode}
+                                  {property.size && ` • ${property.size} m²`}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="hover:bg-red-50"
+                                >
+                                  <Heart className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            <p className="text-sm text-muted-foreground line-clamp-2 break-words">
+                              {property.description}
+                            </p>
+
+                            <div className="flex flex-wrap gap-2">
+                              {property.amenities?.slice(0, 4).map((amenity: string) => (
+                                <Badge key={amenity} variant="outline" className="text-xs">
+                                  {amenity}
+                                </Badge>
+                              ))}
+                              {property.amenities?.length > 4 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{property.amenities.length - 4} more
+                                </Badge>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between text-sm gap-4">
+                              <div className="space-y-1">
+                                <div className="text-green-600 font-medium">
+                                  {property.available_from ? `Available ${property.available_from}` : "Available Now"}
+                                </div>
+                                {(property.current_males > 0 || property.current_females > 0) && (
+                                  <div className="text-muted-foreground">
+                                    {property.current_males + property.current_females} current occupants
+                                  </div>
+                                )}
+                                {property.applicants && (
+                                  <div className="text-muted-foreground">
+                                    {property.applicants.length} applicant{property.applicants.length !== 1 ? "s" : ""}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <span className="text-2xl font-bold">€{property.monthly_rent}</span>
+                                <span className="text-muted-foreground"> / {property.rent_frequency || "month"}</span>
+                              </div>
+                            </div>
+
+                            {property.viewing_times && property.viewing_times.length > 0 && (
+                              <div className="pt-2 border-t">
+                                <p className="text-xs text-muted-foreground mb-1">Next viewings:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {property.viewing_times.slice(0, 2).map((viewing: string, index: number) => (
+                                    <Badge key={index} variant="outline" className="text-xs">
+                                      {formatViewingTime(viewing)}
+                                    </Badge>
+                                  ))}
+                                  {property.viewing_times.length > 2 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{property.viewing_times.length - 2} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })
               )}
             </div>
           </div>
 
-          {/* Right Panel - Map or Property Details */}
+          {/* Right Panel - Map or Property Details (Desktop) */}
           <div className={`${viewMode === "list" ? "hidden lg:block" : ""}`}>
             <div className="sticky top-24">
               <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">{viewMode === "list" ? "Map View" : "Property Details"}</h2>
                 <div className="flex gap-2">
-                  <Button
-                    variant={viewMode === "details" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setViewMode("details")}
-                    className="gap-2"
-                  >
-                    <List className="h-4 w-4" />
-                    Details View
-                  </Button>
                   <Button
                     variant={viewMode === "list" ? "default" : "outline"}
                     size="sm"
@@ -259,54 +638,29 @@ export default function Component() {
                     <Map className="h-4 w-4" />
                     Map View
                   </Button>
+                  <Button
+                    variant={viewMode === "map" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("map")}
+                    className="gap-2"
+                  >
+                    <List className="h-4 w-4" />
+                    Details View
+                  </Button>
                 </div>
               </div>
 
               <Card className="h-[calc(100vh-200px)]">
                 <CardContent className="p-0 h-full">
                   {viewMode === "list" ? (
-                    // Map View
-                    <div className="w-full h-full bg-gradient-to-br from-blue-50 to-green-50 rounded-lg flex items-center justify-center relative overflow-hidden">
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="w-full h-full bg-gradient-to-br from-blue-200 via-green-200 to-blue-300"></div>
-                      </div>
-
-                      {/* Property Markers */}
-                      <div className="absolute top-20 left-16">
-                        <div className="bg-white rounded-full p-2 shadow-lg border-2 border-blue-500">
-                          <span className="text-sm font-bold text-blue-600">€1800</span>
-                        </div>
-                      </div>
-                      <div className="absolute top-32 right-20">
-                        <div className="bg-white rounded-full p-2 shadow-lg border-2 border-green-500">
-                          <span className="text-sm font-bold text-green-600">€4500</span>
-                        </div>
-                      </div>
-                      <div className="absolute bottom-32 left-24">
-                        <div className="bg-white rounded-full p-2 shadow-lg border-2 border-purple-500">
-                          <span className="text-sm font-bold text-purple-600">€3200</span>
-                        </div>
-                      </div>
-                      <div className="absolute bottom-20 right-16">
-                        <div className="bg-white rounded-full p-2 shadow-lg border-2 border-orange-500">
-                          <span className="text-sm font-bold text-orange-600">€1200</span>
-                        </div>
-                      </div>
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <div className="bg-white rounded-full p-2 shadow-lg border-2 border-red-500">
-                          <span className="text-sm font-bold text-red-600">€2800</span>
-                        </div>
-                      </div>
-
-                      <div className="text-center z-10">
-                        <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-muted-foreground">Interactive Map View</p>
-                        <p className="text-sm text-muted-foreground mt-1">Property locations and pricing</p>
-                      </div>
-                    </div>
+                    <MapboxMap
+                      properties={mapProperties}
+                      selectedProperty={mapSelectedProperty}
+                      onSelect={handlePropertySelect}
+                      onMapClick={() => {}}
+                    />
                   ) : (
-                    // Property Details View
-                    <PropertyView selectedProperty={selectedProperty} />
+                    <PropertyView selectedProperty={selectedProperty} onMediaClick={handleMediaClick} />
                   )}
                 </CardContent>
               </Card>
@@ -314,6 +668,115 @@ export default function Component() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Map View */}
+      {viewMode === "map" && (
+        <div className="lg:hidden fixed inset-0 top-32 z-30">
+          <MapboxMap
+            properties={mapProperties}
+            selectedProperty={mapSelectedProperty}
+            onSelect={handlePropertySelect}
+            onMapClick={() => {}}
+          />
+          {/* Back Button */}
+          <div className="absolute top-4 left-4 z-40">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="bg-white/95 backdrop-blur-sm shadow-lg hover:bg-white border"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to List
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Property Details Sheet */}
+      <Sheet open={showPropertyDetails} onOpenChange={setShowPropertyDetails}>
+        <SheetContent side="bottom" className="h-[85vh] p-0">
+          <div className="flex flex-col h-full">
+            <div className="flex-shrink-0 p-6 pb-4 border-b bg-white">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPropertyDetails(false)}
+                  className="h-8 w-8"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <span className="font-semibold">Property Details</span>
+              </div>
+            </div>
+            <div className="flex-1 min-h-0">
+              {selectedProperty && (
+                <PropertyView selectedProperty={selectedProperty} onMediaClick={handleMediaClick} />
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Media Modal */}
+      <Dialog open={mediaModal.isOpen} onOpenChange={closeMediaModal}>
+        <DialogContent className="max-w-4xl w-full h-[90vh] p-0">
+          <DialogTitle className="text-white bg-black/50 px-3 py-1 rounded absolute top-4 left-4 z-10">
+            Property Media - {mediaModal.currentIndex + 1} of {mediaModal.media.length}
+          </DialogTitle>
+          
+          <DialogDescription className="sr-only">
+            View property images and videos
+          </DialogDescription>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 z-10 text-white bg-black/50 hover:bg-black/70"
+            onClick={closeMediaModal}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+
+          {mediaModal.media.length > 1 && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 text-white bg-black/50 hover:bg-black/70"
+                onClick={() => navigateMedia("prev")}
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 text-white bg-black/50 hover:bg-black/70"
+                onClick={() => navigateMedia("next")}
+              >
+                <ChevronRight className="h-6 w-6" />
+              </Button>
+            </>
+          )}
+
+          <div className="w-full h-full flex items-center justify-center bg-black">
+            {currentMedia &&
+              (currentMedia.type === "image" ? (
+                <Image
+                  src={currentMedia.url || "/placeholder.svg"}
+                  alt="Property media"
+                  width={800}
+                  height={600}
+                  className="max-w-full max-h-full object-contain"
+                />
+              ) : (
+                <video src={currentMedia.url} controls className="max-w-full max-h-full" autoPlay />
+              ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

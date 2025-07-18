@@ -94,6 +94,10 @@ export const listingSchema = z.object({
   // System fields (auto-managed)
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),
+
+  // Geolocation
+  lat: z.number().optional(),
+  lng: z.number().optional(),
   
   // Application Management (typically not set on creation)
   applicants: z.array(z.any()).default([]),
