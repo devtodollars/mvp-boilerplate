@@ -17,7 +17,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const timeoutRef = useRef<any>();
+  const timeoutRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Handle click outside to close suggestions

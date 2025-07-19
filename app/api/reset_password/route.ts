@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.redirect(
     getURL(
-      `/auth/update_password?toast_title=You are now signed in.&toast_description=Please enter a new password for your account`
+      `/auth/update_password?toast_title=Password Reset&toast_description=Please enter a new password for your account`
     )
   );
 }

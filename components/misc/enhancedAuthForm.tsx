@@ -12,9 +12,10 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AuthState, type StateInfo } from "@/utils/types"
 import SiGoogle from "@icons-pack/react-simple-icons/icons/SiGoogle"
+import { AccountCreationForm } from "./accountCreationForm"
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react"
 
-export function AuthForm({ state }: { state: AuthState }) {
+export function EnhancedAuthForm({ state }: { state: AuthState }) {
   const { toast } = useToast()
   const api = createApiClient(createClient())
   const searchParams = useSearchParams()
@@ -26,7 +27,8 @@ export function AuthForm({ state }: { state: AuthState }) {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [showProfileSetup, setShowProfileSetup] = useState(false)
+  const [showAccountCreation, setShowAccountCreation] = useState(false)
+  const [userPassword, setUserPassword] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const validateForm = () => {
@@ -65,23 +67,8 @@ export function AuthForm({ state }: { state: AuthState }) {
         setLoading(true)
         try {
           await api.passwordSignup({ email, password })
-          // After signup, try to sign in immediately
-          try {
-            await api.passwordSignin({ email, password })
-            setShowProfileSetup(true)
-          } catch (signinError) {
-            // If signin fails due to email confirmation, show message but still allow profile setup
-            if (signinError instanceof Error && signinError.message.includes('email_not_confirmed')) {
-              toast({
-                title: 'Account Created!',
-                description: 'Please check your email to confirm your account, then you can complete your profile.',
-              })
-              // Still show profile setup - user can complete it after email confirmation
-              setShowProfileSetup(true)
-            } else {
-              throw signinError
-            }
-          }
+          setUserPassword(password)
+          setShowAccountCreation(true)
         } catch (e) {
           if (e instanceof Error) {
             toast({
@@ -106,22 +93,7 @@ export function AuthForm({ state }: { state: AuthState }) {
         setLoading(true)
         try {
           await api.passwordSignin({ email, password })
-          // Check if user has profile, if not show profile setup
-          const supabase = createClient()
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user) {
-            const { data: userProfile } = await supabase
-              .from('users')
-              .select('first_name, last_name')
-              .eq('id', user.id)
-              .single()
-            
-            if (!userProfile || !userProfile.first_name) {
-              setShowProfileSetup(true)
-            } else {
-              router.refresh()
-            }
-          }
+          router.refresh()
         } catch (e) {
           if (e instanceof Error) {
             toast({
@@ -202,32 +174,46 @@ export function AuthForm({ state }: { state: AuthState }) {
       hasPasswordField: false,
       hasOAuth: false,
       onSubmit: async () => {
-        // This will be handled by the ProfileSetup component
+        // This will be handled by the AccountCreationForm
       },
     },
-  };
+  }
 
-  // add toast if error
+  // Handle toast messages from URL params
   useEffect(() => {
-    type ToastVariant = 'destructive' | 'default' | undefined | null;
-    const title = searchParams.get('toast_title') || undefined;
-    const description = searchParams.get('toast_description') || undefined;
-    const variant = searchParams.get('toast_variant') as ToastVariant;
+    type ToastVariant = "destructive" | "default" | undefined | null
+    const title = searchParams.get("toast_title") || undefined
+    const description = searchParams.get("toast_description") || undefined
+    const variant = searchParams.get("toast_variant") as ToastVariant
+
     if (title || description) {
       setTimeout(
         () =>
           toast({
             title,
             description,
-            variant
+            variant,
           }),
-        100
-      );
+        100,
+      )
     }
-  }, []);
-
+  }, [])
 
   const currState = stateInfo[authState]
+
+  // Show account creation form after successful signup
+  if (showAccountCreation) {
+    return (
+      <AccountCreationForm
+        userEmail={email}
+        userPassword={userPassword}
+        onComplete={() => {
+          setShowAccountCreation(false)
+          router.push("/")
+        }}
+      />
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -354,14 +340,7 @@ export function AuthForm({ state }: { state: AuthState }) {
                 <Button
                   variant="outline"
                   className="w-full bg-transparent"
-                  onClick={async () => {
-                    try {
-                      await api.oauthSignin("google")
-                      // OAuth will redirect to auth_callback, which will handle profile check
-                    } catch (error) {
-                      console.error("OAuth error:", error)
-                    }
-                  }}
+                  onClick={() => api.oauthSignin("google")}
                   disabled={loading}
                 >
                   <SiGoogle className="h-4 w-4 mr-2" />
@@ -417,7 +396,3 @@ export function AuthForm({ state }: { state: AuthState }) {
     </div>
   )
 }
-
-
-
-

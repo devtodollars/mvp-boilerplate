@@ -15,6 +15,25 @@ export async function GET(request: NextRequest) {
       const supabase = await createClient();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) throw error;
+
+      // Check if user has a complete profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .single();
+
+        // If user doesn't have a profile or is missing essential fields, redirect to account creation
+        if (!userProfile || !userProfile.first_name) {
+          return NextResponse.redirect(getURL('/auth/account_creation'));
+        }
+      }
+
+      // If user has a complete profile, redirect to home
+      return NextResponse.redirect(getURL('/'));
+
     } else if (errorMessage) {
       throw new Error(errorMessage);
     }

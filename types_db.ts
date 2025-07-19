@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-          extensions?: Json
           operationName?: string
           query?: string
           variables?: Json
+          extensions?: Json
         }
         Returns: Json
       }
@@ -231,25 +231,94 @@ export type Database = {
       }
       users: {
         Row: {
+          avatar_id: string | null
           avatar_url: string | null
           billing_address: Json | null
+          bio: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          first_name: string | null
           full_name: string | null
+          gender: Database["public"]["Enums"]["gender_enum"] | null
           id: string
+          last_login: string | null
+          last_name: string | null
+          liked_listings: string[] | null
+          marital_status:
+            | Database["public"]["Enums"]["marital_status_enum"]
+            | null
+          occupation: string | null
+          owned_listings: string[] | null
           payment_method: Json | null
+          pending_applications: string[] | null
+          pets: boolean | null
+          phone: string | null
+          rejected_applications: string[] | null
+          smoker: boolean | null
+          successful_applications: string[] | null
+          updated_at: string | null
+          uploaded_documents: string[] | null
+          verified: boolean | null
         }
         Insert: {
+          avatar_id?: string | null
           avatar_url?: string | null
           billing_address?: Json | null
+          bio?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          first_name?: string | null
           full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender_enum"] | null
           id: string
+          last_login?: string | null
+          last_name?: string | null
+          liked_listings?: string[] | null
+          marital_status?:
+            | Database["public"]["Enums"]["marital_status_enum"]
+            | null
+          occupation?: string | null
+          owned_listings?: string[] | null
           payment_method?: Json | null
+          pending_applications?: string[] | null
+          pets?: boolean | null
+          phone?: string | null
+          rejected_applications?: string[] | null
+          smoker?: boolean | null
+          successful_applications?: string[] | null
+          updated_at?: string | null
+          uploaded_documents?: string[] | null
+          verified?: boolean | null
         }
         Update: {
+          avatar_id?: string | null
           avatar_url?: string | null
           billing_address?: Json | null
+          bio?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          first_name?: string | null
           full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender_enum"] | null
           id?: string
+          last_login?: string | null
+          last_name?: string | null
+          liked_listings?: string[] | null
+          marital_status?:
+            | Database["public"]["Enums"]["marital_status_enum"]
+            | null
+          occupation?: string | null
+          owned_listings?: string[] | null
           payment_method?: Json | null
+          pending_applications?: string[] | null
+          pets?: boolean | null
+          phone?: string | null
+          rejected_applications?: string[] | null
+          smoker?: boolean | null
+          successful_applications?: string[] | null
+          updated_at?: string | null
+          uploaded_documents?: string[] | null
+          verified?: boolean | null
         }
         Relationships: []
       }
@@ -301,6 +370,7 @@ export type Database = {
       checkout_mode: "payment" | "setup" | "subscription"
       checkout_payment_status: "paid" | "unpaid" | "no_payment_required"
       checkout_status: "complete" | "expired" | "open"
+      gender_enum: "male" | "female" | "prefer_not_to_say"
       lease_duration_enum:
         | "1-month"
         | "2-months"
@@ -308,6 +378,12 @@ export type Database = {
         | "6-months"
         | "12-months"
         | "flexible"
+      marital_status_enum:
+        | "single"
+        | "married"
+        | "living with partner"
+        | "divorced"
+        | "widowed"
       nearby_facility_type:
         | "Bus Stop"
         | "Train Station"
@@ -642,7 +718,7 @@ export type Database = {
         Returns: undefined
       }
       can_insert_object: {
-        Args: { name: string; bucketid: string; owner: string; metadata: Json }
+        Args: { owner: string; name: string; metadata: Json; bucketid: string }
         Returns: undefined
       }
       delete_prefix: {
@@ -717,10 +793,10 @@ export type Database = {
       }
       search: {
         Args: {
-          bucketname: string
-          limits?: number
-          prefix: string
           sortorder?: string
+          limits?: number
+          bucketname: string
+          prefix: string
           sortcolumn?: string
           search?: string
           offsets?: number
@@ -955,6 +1031,7 @@ export const Constants = {
       checkout_mode: ["payment", "setup", "subscription"],
       checkout_payment_status: ["paid", "unpaid", "no_payment_required"],
       checkout_status: ["complete", "expired", "open"],
+      gender_enum: ["male", "female", "prefer_not_to_say"],
       lease_duration_enum: [
         "1-month",
         "2-months",
@@ -962,6 +1039,13 @@ export const Constants = {
         "6-months",
         "12-months",
         "flexible",
+      ],
+      marital_status_enum: [
+        "single",
+        "married",
+        "living with partner",
+        "divorced",
+        "widowed",
       ],
       nearby_facility_type: [
         "Bus Stop",

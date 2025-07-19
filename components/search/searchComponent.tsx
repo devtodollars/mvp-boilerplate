@@ -17,7 +17,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Search, SlidersHorizontal, Heart, MapPin, List, Map, X, ChevronLeft, ChevronRight, Play, ArrowLeft, Filter } from "lucide-react"
 import PropertyView from "./propertyView"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
-import { fetchListings } from "@/utils/supabase/listings"
+import { fetchListings, debugListings } from "@/utils/supabase/listings"
 import { getListingImages } from "@/utils/supabase/storage"
 import dynamic from "next/dynamic";
 
@@ -52,11 +52,37 @@ export default function Component() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
-      const { data, error } = await fetchListings()
-      if (!error && data) {
-        setListings(data)
-        setSelectedProperty(data[0] || null)
+      
+      try {
+        // Try the API route first (bypasses RLS)
+        const response = await fetch('/api/listings')
+        const result = await response.json()
+        
+        if (result.data && result.data.length > 0) {
+          console.log('Found listings via API route:', result.data.length)
+          setListings(result.data)
+          setSelectedProperty(result.data[0] || null)
+        } else {
+          console.log('No listings found via API route, trying client-side...')
+          
+          // Fallback to client-side fetch
+          const debugResult = await debugListings()
+          console.log('Debug result:', debugResult)
+          
+          const { data, error } = await fetchListings()
+          console.log('Client-side fetch result:', { data, error })
+          
+          if (!error && data) {
+            setListings(data)
+            setSelectedProperty(data[0] || null)
+          } else {
+            console.error('Error fetching listings:', error)
+          }
+        }
+      } catch (error) {
+        console.error('Error in fetchData:', error)
       }
+      
       setLoading(false)
     }
     fetchData()
