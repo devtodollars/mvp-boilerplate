@@ -277,8 +277,7 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
   const IconComponent = currentConfig.icon
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+    <Card className="w-full max-h-[90vh] overflow-y-auto">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-4">
             <div className="bg-primary/10 p-3 rounded-full">
@@ -531,7 +530,6 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
           )}
         </CardContent>
       </Card>
-    </div>
   )
 }
 

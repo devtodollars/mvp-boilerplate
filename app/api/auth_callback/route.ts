@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       // For OAuth users, always redirect to profile creation
       // This ensures all OAuth users go through the profile setup process
       console.log('OAuth user signed in, redirecting to profile creation');
-      return NextResponse.redirect(getURL('/auth?toast_title=Welcome&toast_description=Please complete your profile setup&toast_variant=default'));
+      return NextResponse.redirect(getURL('/auth/profile_setup?toast_title=Welcome&toast_description=Please complete your profile setup&toast_variant=default'));
 
     } else if (token_hash && type) {
       // Handle email confirmation flow
@@ -55,14 +55,14 @@ export async function GET(request: NextRequest) {
             .eq('id', user.id)
             .single();
 
-          // If user doesn't have a profile or is missing essential fields, redirect to auth page
+          // If user doesn't have a profile or is missing essential fields, redirect to profile page
           if (!userProfile || !userProfile.first_name) {
-            return NextResponse.redirect(getURL('/auth?toast_title=Welcome&toast_description=Please complete your profile setup&toast_variant=default'));
+            return NextResponse.redirect(getURL('/account/profile?toast_title=Welcome&toast_description=Please complete your profile setup&toast_variant=default'));
           }
         } catch (profileError) {
           console.error('Profile check error:', profileError);
-          // If profile check fails, redirect to auth page
-          return NextResponse.redirect(getURL('/auth?toast_title=Welcome&toast_description=Please complete your profile setup&toast_variant=default'));
+          // If profile check fails, redirect to profile page
+          return NextResponse.redirect(getURL('/account/profile?toast_title=Welcome&toast_description=Please complete your profile setup&toast_variant=default'));
         }
       }
 

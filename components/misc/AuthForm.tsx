@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AuthState, type StateInfo } from "@/utils/types"
 import SiGoogle from "@icons-pack/react-simple-icons/icons/SiGoogle"
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from "lucide-react"
 import { OtpVerification } from "./OtpVerification"
 import { AccountCreationForm } from "./accountCreationForm"
 
@@ -279,20 +279,64 @@ export function AuthForm({ state }: { state: AuthState }) {
   }
 
   // Show profile setup component
-  if (showProfileSetup) {
+  if (showProfileSetup || state === AuthState.ProfileSetup) {
     return (
-      <AccountCreationForm
-        userEmail={email}
-        userPassword={password}
-        onComplete={() => {
-          setShowProfileSetup(false)
-          toast({
-            title: "Profile Created!",
-            description: "Welcome to GoLet.ie! Your profile has been set up successfully.",
-          })
-          router.refresh()
-        }}
-      />
+      <div className="min-h-screen bg-white">
+        <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+            <div className="mb-8">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    router.push('/')
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Home
+                </Button>
+                <h1 className="text-3xl font-bold">Complete Your Profile</h1>
+              </div>
+            </div>
+            
+            {/* Profile Setup Notification */}
+            <Card className="mb-6 border-blue-200 bg-blue-50">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <User className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-blue-900">Profile Setup Required</h3>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Please complete your profile to access all features. This information helps us match you with compatible roommates and properties.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <AccountCreationForm
+              userEmail={email}
+              userPassword={password}
+              onComplete={() => {
+                if (state === AuthState.ProfileSetup) {
+                  router.push('/')
+                } else {
+                  setShowProfileSetup(false)
+                }
+                toast({
+                  title: "Profile Created!",
+                  description: "Welcome to GoLet.ie! Your profile has been set up successfully.",
+                })
+                router.refresh()
+              }}
+            />
+          </div>
+        </div>
+      </div>
     )
   }
 
