@@ -25,12 +25,13 @@ export const Hero = ({ user }: { user: User | null }) => {
       <div className="flex flex-col items-center text-center space-y-6 lg:items-start lg:text-start">
         <main className="text-5xl md:text-6xl font-bold">
           <h1 className="inline">
+            The Only {' '}
           <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
-              GoLet.ie
+              Safe
             </span>{' '}
           </h1>
           <h2 className="inline">
-          A Better Way to Rent!
+          way to rent in Ireland!
             </h2>
         </main>
 

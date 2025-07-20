@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
-          operationName?: string
-          query?: string
           variables?: Json
           extensions?: Json
+          operationName?: string
+          query?: string
         }
         Returns: Json
       }
@@ -327,7 +327,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      delete_auth_user: {
+        Args: { user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       amenity_type:
@@ -714,11 +717,11 @@ export type Database = {
     }
     Functions: {
       add_prefixes: {
-        Args: { _bucket_id: string; _name: string }
+        Args: { _name: string; _bucket_id: string }
         Returns: undefined
       }
       can_insert_object: {
-        Args: { owner: string; name: string; metadata: Json; bucketid: string }
+        Args: { bucketid: string; owner: string; name: string; metadata: Json }
         Returns: undefined
       }
       delete_prefix: {
@@ -758,12 +761,12 @@ export type Database = {
       }
       list_multipart_uploads_with_delimiter: {
         Args: {
-          bucket_id: string
-          prefix_param: string
           delimiter_param: string
           max_keys?: number
           next_key_token?: string
           next_upload_token?: string
+          bucket_id: string
+          prefix_param: string
         }
         Returns: {
           key: string
@@ -773,11 +776,11 @@ export type Database = {
       }
       list_objects_with_delimiter: {
         Args: {
-          delimiter_param: string
+          bucket_id: string
           start_after?: string
           next_token?: string
           max_keys?: number
-          bucket_id: string
+          delimiter_param: string
           prefix_param: string
         }
         Returns: {
@@ -794,17 +797,17 @@ export type Database = {
       search: {
         Args: {
           sortorder?: string
-          limits?: number
-          bucketname: string
-          prefix: string
           sortcolumn?: string
           search?: string
           offsets?: number
           levels?: number
+          limits?: number
+          bucketname: string
+          prefix: string
         }
         Returns: {
-          metadata: Json
           last_accessed_at: string
+          metadata: Json
           created_at: string
           updated_at: string
           id: string
@@ -813,34 +816,34 @@ export type Database = {
       }
       search_legacy_v1: {
         Args: {
-          levels?: number
-          offsets?: number
-          search?: string
-          sortorder?: string
           sortcolumn?: string
           prefix: string
           bucketname: string
           limits?: number
+          search?: string
+          sortorder?: string
+          levels?: number
+          offsets?: number
         }
         Returns: {
-          last_accessed_at: string
-          updated_at: string
           id: string
-          name: string
           metadata: Json
+          last_accessed_at: string
           created_at: string
+          updated_at: string
+          name: string
         }[]
       }
       search_v1_optimised: {
         Args: {
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
           prefix: string
           bucketname: string
           limits?: number
           levels?: number
           offsets?: number
+          search?: string
+          sortcolumn?: string
+          sortorder?: string
         }
         Returns: {
           name: string
@@ -853,19 +856,19 @@ export type Database = {
       }
       search_v2: {
         Args: {
-          prefix: string
           bucket_name: string
-          limits?: number
-          levels?: number
+          prefix: string
           start_after?: string
+          levels?: number
+          limits?: number
         }
         Returns: {
-          created_at: string
           key: string
+          metadata: Json
           name: string
           id: string
           updated_at: string
-          metadata: Json
+          created_at: string
         }[]
       }
     }

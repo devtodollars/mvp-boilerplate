@@ -22,9 +22,9 @@ export default async function SignIn(
     data: { user }
   } = await supabase.auth.getUser();
 
-  if (user && currState !== 'update_password' && currState !== 'account_creation') {
+  if (user && currState !== AuthState.ProfileSetup) {
     return redirect('/');
-  } else if (!user && currState === 'update_password') {
+  } else if (!user && currState === AuthState.ProfileSetup) {
     return redirect('/auth');
   }
 

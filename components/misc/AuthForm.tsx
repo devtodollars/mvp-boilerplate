@@ -13,6 +13,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { AuthState, type StateInfo } from "@/utils/types"
 import SiGoogle from "@icons-pack/react-simple-icons/icons/SiGoogle"
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react"
+import { OtpVerification } from "./OtpVerification"
+import { AccountCreationForm } from "./accountCreationForm"
 
 export function AuthForm({ state }: { state: AuthState }) {
   const { toast } = useToast()
@@ -27,6 +29,7 @@ export function AuthForm({ state }: { state: AuthState }) {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [showProfileSetup, setShowProfileSetup] = useState(false)
+  const [showOtpVerification, setShowOtpVerification] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const validateForm = () => {
@@ -65,23 +68,14 @@ export function AuthForm({ state }: { state: AuthState }) {
         setLoading(true)
         try {
           await api.passwordSignup({ email, password })
-          // After signup, try to sign in immediately
-          try {
-            await api.passwordSignin({ email, password })
-            setShowProfileSetup(true)
-          } catch (signinError) {
-            // If signin fails due to email confirmation, show message but still allow profile setup
-            if (signinError instanceof Error && signinError.message.includes('email_not_confirmed')) {
-              toast({
-                title: 'Account Created!',
-                description: 'Please check your email to confirm your account, then you can complete your profile.',
-              })
-              // Still show profile setup - user can complete it after email confirmation
-              setShowProfileSetup(true)
-            } else {
-              throw signinError
-            }
-          }
+          
+          toast({
+            title: 'Verification Code Sent!',
+            description: 'Please check your email for the 6-digit verification code.',
+          })
+          
+          // Show OTP verification component
+          setShowOtpVerification(true)
         } catch (e) {
           if (e instanceof Error) {
             toast({
@@ -179,10 +173,8 @@ export function AuthForm({ state }: { state: AuthState }) {
           await api.passwordUpdate(password)
           toast({
             title: "Password Updated",
-            description: "Redirecting to the home page...",
+            description: "Your password has been updated successfully.",
           })
-          setTimeout(() => router.replace("/"), 3000)
-          router.replace("/")
         } catch (e) {
           if (e instanceof Error) {
             toast({
@@ -207,12 +199,13 @@ export function AuthForm({ state }: { state: AuthState }) {
     },
   };
 
-  // add toast if error
+  // add toast if error and check for profile setup
   useEffect(() => {
     type ToastVariant = 'destructive' | 'default' | undefined | null;
     const title = searchParams.get('toast_title') || undefined;
     const description = searchParams.get('toast_description') || undefined;
     const variant = searchParams.get('toast_variant') as ToastVariant;
+    
     if (title || description) {
       setTimeout(
         () =>
@@ -224,10 +217,84 @@ export function AuthForm({ state }: { state: AuthState }) {
         100
       );
     }
-  }, []);
+
+    // Check if user needs profile setup (from OAuth flow)
+    const checkProfileSetup = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          // For OAuth users, always show profile setup
+          // This ensures all OAuth users complete their profile
+          console.log('OAuth user detected, showing profile setup')
+          setShowProfileSetup(true)
+        }
+      } catch (error) {
+        console.error('Profile check error:', error)
+        // If profile check fails, assume user needs profile setup
+        setShowProfileSetup(true)
+      }
+    }
+
+    // Check if we have a user (from OAuth callback)
+    if (searchParams.get('toast_title') === 'Welcome') {
+      checkProfileSetup()
+    }
+  }, [searchParams, toast]);
 
 
   const currState = stateInfo[authState]
+
+  // Show OTP verification component
+  if (showOtpVerification) {
+    return (
+      <OtpVerification
+        email={email}
+        onComplete={() => {
+          setShowOtpVerification(false)
+          // For OAuth users, always show profile setup
+          const checkProfileAndProceed = async () => {
+            try {
+              const supabase = createClient()
+              const { data: { user } } = await supabase.auth.getUser()
+              if (user) {
+                // Always show profile setup for OAuth users
+                console.log('OAuth user after OTP verification, showing profile setup')
+                setShowProfileSetup(true)
+              }
+            } catch (error) {
+              console.error('Profile check error:', error)
+              // If profile check fails, assume user needs profile setup
+              setShowProfileSetup(true)
+            }
+          }
+          checkProfileAndProceed()
+        }}
+        onBack={() => {
+          setShowOtpVerification(false)
+          setAuthState(AuthState.Signup)
+        }}
+      />
+    )
+  }
+
+  // Show profile setup component
+  if (showProfileSetup) {
+    return (
+      <AccountCreationForm
+        userEmail={email}
+        userPassword={password}
+        onComplete={() => {
+          setShowProfileSetup(false)
+          toast({
+            title: "Profile Created!",
+            description: "Welcome to GoLet.ie! Your profile has been set up successfully.",
+          })
+          router.refresh()
+        }}
+      />
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">

@@ -33,8 +33,8 @@ export default function MapboxMap({ properties, selectedProperty, onSelect, onMa
     const map = new mapboxgl.Map({
       container: mapRef.current,
       style: "mapbox://styles/golet/cmd7nb2nn00mz01sd0h1eg9he", // Replace with your actual GoLet style URL
-      center: properties[0] ? [properties[0].lng, properties[0].lat] : [0, 0],
-      zoom: 12,
+      center: properties[0] ? [properties[0].lng, properties[0].lat] : [-6.2603, 53.3498], // Dublin, Ireland coordinates
+      zoom: properties[0] ? 12 : 10, // Zoom out more for Dublin overview when no properties
       attributionControl: false,
     });
     mapInstance.current = map;

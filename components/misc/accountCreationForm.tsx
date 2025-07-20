@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation"
 import { createApiClient } from "@/utils/supabase/api"
 import { createClient } from "@/utils/supabase/client"
 import { userFormSchema, type UserForm, genderEnum, maritalStatusEnum } from "@/schemas/user"
-import { ChevronLeft, ChevronRight, User, Phone, Heart, Home, CalendarIcon } from "lucide-react"
+import { ChevronLeft, ChevronRight, User, Phone, Heart, Home, CalendarIcon, Search } from "lucide-react"
 import { z } from "zod"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/utils/cn"
@@ -197,16 +197,7 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
       console.log('Validated data:', validatedData)
 
       // Auth account is already created and email is confirmed at this point
-      // Just sign in to ensure we have the session
-      if (userEmail && userPassword) {
-        console.log('Signing in with confirmed email:', userEmail)
-        try {
-          await api.passwordSignin({ email: userEmail, password: userPassword })
-        } catch (error) {
-          console.error('Sign in error:', error)
-          throw error
-        }
-      }
+      // No need to sign in again as we should already have a session
       // For OAuth users, auth account already exists, so we just create the profile
 
       // Create user profile
@@ -216,36 +207,19 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
       }
       console.log('Profile data being sent:', profileData)
       
-      await api.createUserProfile(profileData)
+      const profileResult = await api.createUserProfile(profileData)
+      console.log('Profile creation result:', profileResult)
 
-      // Send email verification after profile creation
-      if (actualUserEmail || userEmail) {
-        try {
-          await api.sendEmailVerification(actualUserEmail || userEmail || '')
-          toast({
-            title: "Profile Created!",
-            description: "Please check your email to verify your account.",
-          })
-        } catch (error) {
-          console.error('Error sending email verification:', error)
-          toast({
-            title: "Profile Created!",
-            description: "Account created successfully. You can request email verification later.",
-          })
-        }
-      } else {
-        toast({
-          title: "Profile Created!",
-          description: "Welcome to our platform. You can now start browsing properties.",
-        })
-      }
+      toast({
+        title: "Profile Created!",
+        description: "Welcome to our platform. You can now start browsing properties.",
+      })
 
       setCurrentStep("complete")
 
-      // Redirect after a short delay
+      // Call onComplete to handle next step (no redirect)
       setTimeout(() => {
         onComplete()
-        router.push("/")
       }, 2000)
     } catch (error) {
       console.error('Error in handleSubmit:', error)
@@ -500,7 +474,7 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
           )}
 
           {currentStep === "complete" && (
-            <div className="text-center space-y-4">
+            <div className="text-center space-y-6">
               <div className="bg-green-50 p-6 rounded-lg">
                 <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Heart className="h-8 w-8 text-green-600" />
@@ -510,6 +484,22 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
                   Your profile has been created successfully. You can now start browsing properties and connecting with
                   potential roommates.
                 </p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  onClick={() => router.push('/search')}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Browse Properties
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => router.push('/')}
+                >
+                  Go to Home
+                </Button>
               </div>
             </div>
           )}

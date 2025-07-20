@@ -14,12 +14,13 @@ import { createClient } from "@/utils/supabase/client"
 import { UserForm, userFormSchema, genderEnum, maritalStatusEnum } from "@/schemas/user"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import { User, Phone, Briefcase, Heart, CalendarIcon, Edit, Save, X, ArrowLeft } from "lucide-react"
+import { User, Phone, Briefcase, Heart, CalendarIcon, Edit, Save, X, ArrowLeft, Loader2 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/utils/cn"
 import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { useRouter } from "next/navigation"
+import { AccountCreationForm } from "@/components/misc/accountCreationForm"
 
 export default function ProfilePage() {
   const { toast } = useToast()
@@ -28,6 +29,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState(false)
   const [userProfile, setUserProfile] = useState<any>(null)
+  const [showProfileCreation, setShowProfileCreation] = useState(false)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
 
   const form = useForm<UserForm>({
     resolver: zodResolver(userFormSchema),
@@ -60,6 +63,7 @@ export default function ProfilePage() {
           description: "Please sign in to view your profile.",
           variant: "destructive",
         })
+        setIsLoadingProfile(false)
         return
       }
 
@@ -72,13 +76,16 @@ export default function ProfilePage() {
       if (error) {
         console.error('Error fetching profile:', error)
         
-        // If user doesn't have a profile, redirect to account creation
+        // If user doesn't have a profile, show notification and profile creation form
         if (error.code === 'PGRST116') { // No rows returned
+          console.log('No profile found, showing profile creation form')
           toast({
-            title: "Profile Incomplete",
-            description: "Please complete your profile setup first.",
+            title: "Profile Not Set Up",
+            description: "Please complete your profile setup to continue.",
+            variant: "default",
           })
-          router.push('/auth/account_creation')
+          setShowProfileCreation(true)
+          setIsLoadingProfile(false)
           return
         }
         
@@ -87,6 +94,23 @@ export default function ProfilePage() {
           description: "Failed to load profile data.",
           variant: "destructive",
         })
+        setIsLoadingProfile(false)
+        return
+      }
+
+      // Check if profile has meaningful data (not just empty/null values)
+      const hasProfileData = profile.first_name && profile.last_name && 
+        (profile.phone || profile.bio || profile.occupation || profile.date_of_birth);
+      
+      if (!hasProfileData) {
+        console.log('Profile exists but has no meaningful data, showing profile creation form')
+        toast({
+          title: "Profile Not Complete",
+          description: "Please complete your profile setup to continue.",
+          variant: "default",
+        })
+        setShowProfileCreation(true)
+        setIsLoadingProfile(false)
         return
       }
 
@@ -112,6 +136,8 @@ export default function ProfilePage() {
         description: "Failed to load profile data.",
         variant: "destructive",
       })
+    } finally {
+      setIsLoadingProfile(false)
     }
   }
 
@@ -181,17 +207,124 @@ export default function ProfilePage() {
     setLoading(false)
   }
 
-  if (!userProfile) {
+  // Show loading state only while actually loading
+  if (isLoadingProfile) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4 text-muted-foreground">Loading profile...</p>
+      <div className="min-h-screen bg-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-8">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push('/account')}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Account
+                </Button>
+                <h1 className="text-3xl font-bold">Profile</h1>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                  <p className="text-muted-foreground">Loading profile...</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading state
+  if (isLoadingProfile) {
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-8">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push('/account')}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Account
+                </Button>
+                <h1 className="text-3xl font-bold">Profile</h1>
+              </div>
+            </div>
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                  <p className="text-muted-foreground">Loading profile...</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show profile creation form if no profile exists
+  if (showProfileCreation) {
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-8">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push('/account')}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Account
+                </Button>
+                <h1 className="text-3xl font-bold">Complete Your Profile</h1>
+              </div>
+            </div>
+            
+            {/* Profile Setup Notification */}
+            <Card className="mb-6 border-blue-200 bg-blue-50">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <User className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-blue-900">Profile Setup Required</h3>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Please complete your profile to access all features. This information helps us match you with compatible roommates and properties.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <AccountCreationForm
+              onComplete={() => {
+                setShowProfileCreation(false)
+                fetchUserProfile() // Refresh to show the profile
+                toast({
+                  title: "Profile Created Successfully!",
+                  description: "Your profile has been set up. You can now edit it anytime.",
+                })
+              }}
+            />
+          </div>
+        </div>
       </div>
     )
   }

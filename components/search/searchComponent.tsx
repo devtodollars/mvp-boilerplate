@@ -362,7 +362,7 @@ export default function Component() {
                             </Button>
 
                             {/* Price Badge */}
-                            <div className="absolute top-16 right-3 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg">
+                            <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg">
                               <span className="text-lg font-bold text-gray-900">€{property.monthly_rent}</span>
                               <span className="text-sm text-gray-600"> / {property.rent_frequency || "month"}</span>
                             </div>

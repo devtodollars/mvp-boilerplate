@@ -16,7 +16,18 @@ export default function AccountCreationPage() {
     const checkUser = async () => {
       try {
         const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { user }, error } = await supabase.auth.getUser()
+        
+        if (error) {
+          console.error('Auth error:', error)
+          toast({
+            title: "Authentication Required",
+            description: "Please sign in to continue.",
+            variant: "destructive",
+          })
+          router.push('/auth/signin')
+          return
+        }
         
         if (!user) {
           toast({
@@ -29,16 +40,22 @@ export default function AccountCreationPage() {
         }
 
         // Check if user already has a complete profile
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('first_name, last_name')
-          .eq('id', user.id)
-          .single()
+        try {
+          const { data: userProfile } = await supabase
+            .from('users')
+            .select('first_name, last_name')
+            .eq('id', user.id)
+            .single()
 
-        if (userProfile && userProfile.first_name) {
-          // User already has a complete profile, redirect to home
-          router.push('/')
-          return
+          if (userProfile && userProfile.first_name) {
+            // User already has a complete profile, redirect to home
+            router.push('/')
+            return
+          }
+        } catch (profileError) {
+          console.error('Profile check error:', profileError)
+          // If profile check fails, assume user needs to complete profile
+          // Don't redirect, let them continue with account creation
         }
 
         setUserEmail(user.email || "")
@@ -54,7 +71,15 @@ export default function AccountCreationPage() {
       }
     }
 
+    // Add timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      setLoading(false)
+      router.push('/auth/signin')
+    }, 5000) // 5 second timeout
+
     checkUser()
+    
+    return () => clearTimeout(timeout)
   }, [router, toast])
 
   if (loading) {
@@ -77,7 +102,7 @@ export default function AccountCreationPage() {
             title: "Profile Created!",
             description: "Welcome to our platform. You can now start browsing properties.",
           })
-          router.push('/')
+          // No redirect - let the form handle navigation
         }}
       />
     </div>

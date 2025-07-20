@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 import { Search } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Input } from '@/components/ui/input';
+import ProfileNotification from '@/components/misc/ProfileNotification';
 
 export default async function WelcomeCard() {
     const supabase = await createClient();
@@ -15,6 +16,7 @@ export default async function WelcomeCard() {
 
     return (
         <>
+            <ProfileNotification />
             <div className="flex justify-center items-center min-h-screen">
                 <Card className="w-[340px]">
                     <CardContent className="p-4">

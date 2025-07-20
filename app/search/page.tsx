@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from '@/components/ui/input';
 import SearchComponent from '@/components/search/searchComponent';
 import { Footer } from '@/components/landing/Footer';
+import ProfileNotification from '@/components/misc/ProfileNotification';
 
 export default async function WelcomeCard() {
     const supabase = await createClient();
@@ -17,9 +18,8 @@ export default async function WelcomeCard() {
 
     return (
         <>
-
+            <ProfileNotification />
             <SearchComponent />
-           
         </>
     );
 }

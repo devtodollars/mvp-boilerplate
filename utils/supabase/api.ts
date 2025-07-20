@@ -10,22 +10,56 @@ import { UserForm } from '@/schemas/user';
 
 export const createApiClient = (supabase: SupabaseClient<Database>) => {
   const passwordSignup = async (creds: SignUpWithPasswordCredentials) => {
-    const res = await supabase.auth.signUp(creds);
-    if (res.error) throw res.error;
+    // Use OTP for email verification instead of confirmation URL
+    const email = 'email' in creds ? creds.email : undefined;
+    const password = creds.password;
     
-    // Don't require email confirmation immediately - let user complete profile first
+    if (!email) {
+      throw new Error('Email is required for signup');
+    }
+    
+    const res = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true,
+        data: {
+          password, // Store password for later use
+        }
+      }
+    });
+    
+    if (res.error) {
+      // Handle specific error cases with better messages
+      if (res.error.message.includes('User already registered')) {
+        throw new Error('An account with this email already exists. Please sign in instead.');
+      } else if (res.error.message.includes('Invalid login credentials')) {
+        throw new Error('An account with this email already exists. Please sign in instead.');
+      } else {
+        throw res.error;
+      }
+    }
+    
     return res.data;
   };
   
-  const sendEmailVerification = async (email: string) => {
-    const res = await supabase.auth.resend({
-      type: 'signup',
-      email: email,
-      options: {
-        emailRedirectTo: getURL('/api/auth_callback')
-      }
+  const verifyOtp = async (email: string, token: string) => {
+    const res = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email'
     });
-    if (res.error) throw res.error;
+    
+    if (res.error) {
+      // Handle specific error cases with better messages
+      if (res.error.message.includes('Invalid OTP')) {
+        throw new Error('Invalid verification code. Please check your email and try again.');
+      } else if (res.error.message.includes('Token expired')) {
+        throw new Error('Verification code has expired. Please request a new one.');
+      } else {
+        throw res.error;
+      }
+    }
+    
     return res.data;
   };
   const passwordSignin = async (creds: SignInWithPasswordCredentials) => {
@@ -137,6 +171,8 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     return { success: true, data: data[0] };
   };
 
+
+
   return {
     passwordSignin,
     passwordSignup,
@@ -145,6 +181,6 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     oauthSignin,
     signOut,
     createUserProfile,
-    sendEmailVerification
+    verifyOtp
   };
 };

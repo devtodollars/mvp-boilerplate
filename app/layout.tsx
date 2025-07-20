@@ -9,6 +9,7 @@ import PostHogPageViewWrapper from '@/components/misc/PostHogPageViewWrapper';
 import { Navbar } from '@/components/landing/Navbar';
 import { Footer } from '@/components/landing/Footer';
 import { ScrollToTop } from '@/components/landing/ScrollToTop';
+import { AuthProvider } from '@/components/providers/AuthProvider';
 import { createClient } from '@/utils/supabase/server';
 
 const meta = {
@@ -66,17 +67,19 @@ export default async function RootLayout({ children }: PropsWithChildren) {
       <ThemeProvider>
         <PHProvider>
           <body>
-            <PostHogPageViewWrapper />
-            <Navbar user={user} />
-            <main
-              id="skip"
-              className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"
-            >
-              {children}
-            </main>
-            <Footer />
-            <ScrollToTop />
-            <Toaster />
+            <AuthProvider>
+              <PostHogPageViewWrapper />
+              <Navbar user={user} />
+              <main
+                id="skip"
+                className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"
+              >
+                {children}
+              </main>
+              <Footer />
+              <ScrollToTop />
+              <Toaster />
+            </AuthProvider>
           </body>
         </PHProvider>
       </ThemeProvider>

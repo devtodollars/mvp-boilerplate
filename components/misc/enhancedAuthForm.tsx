@@ -151,10 +151,8 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
           await api.passwordUpdate(password)
           toast({
             title: "Password Updated",
-            description: "Redirecting to the home page...",
+            description: "Your password has been updated successfully.",
           })
-          setTimeout(() => router.replace("/"), 3000)
-          router.replace("/")
         } catch (e) {
           if (e instanceof Error) {
             toast({
@@ -209,7 +207,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
         userPassword={userPassword}
         onComplete={() => {
           setShowAccountCreation(false)
-          router.push("/")
+          // No redirect - let the form handle navigation
         }}
       />
     )

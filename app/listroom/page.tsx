@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { getSubscription, getUser } from '@/utils/supabase/queries';
 import ListARoom from '@/components/ListARoom';
+import ProfileNotification from '@/components/misc/ProfileNotification';
 
 export default async function ListRoom() {
     const supabase: any = await createClient();
@@ -17,5 +18,10 @@ export default async function ListRoom() {
         return redirect('/auth/signin');
     }
 
-    return <ListARoom />;
+    return (
+        <>
+            <ProfileNotification />
+            <ListARoom />
+        </>
+    );
 }
