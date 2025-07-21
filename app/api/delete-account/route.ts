@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
+import { extractFilePathFromUrl, deleteStorageFiles } from '@/utils/supabase/storage';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -26,7 +27,74 @@ export async function DELETE(request: NextRequest) {
     const adminClient = createAdminClient();
     console.log('Admin client created');
 
-    // Delete user profile from database first
+    // Step 1: Get all user's listings to extract image paths
+    console.log('Fetching user listings for image cleanup...');
+    const { data: userListings, error: listingsError } = await supabase
+      .from('listings')
+      .select('id, images, videos')
+      .eq('user_id', user.id);
+
+    if (listingsError) {
+      console.error('Error fetching user listings:', listingsError);
+      // Continue with deletion even if we can't fetch listings
+    } else {
+      console.log(`Found ${userListings?.length || 0} listings to clean up`);
+      
+      // Step 2: Delete all images and videos from storage buckets
+      if (userListings && userListings.length > 0) {
+        const imagePaths: string[] = [];
+        const videoPaths: string[] = [];
+
+        // Extract file paths from listings
+        userListings.forEach(listing => {
+          if (listing.images && Array.isArray(listing.images)) {
+            listing.images.forEach((imageUrl: any) => {
+              if (typeof imageUrl === 'string') {
+                const fileInfo = extractFilePathFromUrl(imageUrl);
+                if (fileInfo && fileInfo.bucket === 'listing-images') {
+                  imagePaths.push(fileInfo.path);
+                }
+              }
+            });
+          }
+          
+          if (listing.videos && Array.isArray(listing.videos)) {
+            listing.videos.forEach((videoUrl: any) => {
+              if (typeof videoUrl === 'string') {
+                const fileInfo = extractFilePathFromUrl(videoUrl);
+                if (fileInfo && fileInfo.bucket === 'listing-videos') {
+                  videoPaths.push(fileInfo.path);
+                }
+              }
+            });
+          }
+        });
+
+        console.log(`Found ${imagePaths.length} images and ${videoPaths.length} videos to delete`);
+
+        // Delete images from listing-images bucket
+        if (imagePaths.length > 0) {
+          const imageResult = await deleteStorageFiles(imagePaths, 'listing-images');
+          if (imageResult.success) {
+            console.log(`Successfully deleted ${imagePaths.length} images`);
+          } else {
+            console.error('Error deleting images:', imageResult.error);
+          }
+        }
+
+        // Delete videos from listing-videos bucket
+        if (videoPaths.length > 0) {
+          const videoResult = await deleteStorageFiles(videoPaths, 'listing-videos');
+          if (videoResult.success) {
+            console.log(`Successfully deleted ${videoPaths.length} videos`);
+          } else {
+            console.error('Error deleting videos:', videoResult.error);
+          }
+        }
+      }
+    }
+
+    // Step 3: Delete user profile from database
     console.log('Deleting user profile for user ID:', user.id);
     
     // Try with regular client first
@@ -58,7 +126,7 @@ export async function DELETE(request: NextRequest) {
       console.log('User profile deleted successfully via regular client');
     }
 
-    // Try to delete auth user using admin privileges
+    // Step 4: Delete auth user
     console.log('Attempting to delete auth user...');
     let authDeleted = false;
     
@@ -91,7 +159,7 @@ export async function DELETE(request: NextRequest) {
           return NextResponse.json(
             { 
               success: true, 
-              message: 'Profile deleted successfully. Please contact support to complete account deletion.',
+              message: 'Profile and media deleted successfully. Please contact support to complete account deletion.',
               warning: 'Auth account deletion failed - contact support'
             },
             { status: 200 }
@@ -106,7 +174,7 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json(
           { 
             success: true, 
-            message: 'Profile deleted successfully. Please contact support to complete account deletion.',
+            message: 'Profile and media deleted successfully. Please contact support to complete account deletion.',
             warning: 'Auth account deletion failed - contact support'
           },
           { status: 200 }
@@ -115,7 +183,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: true, message: 'Account deleted successfully' },
+      { success: true, message: 'Account and all associated data deleted successfully' },
       { status: 200 }
     );
 

@@ -3,15 +3,41 @@ import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input"
 import { User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/utils/supabase/client';
+import { createApiClient } from '@/utils/supabase/api';
+import ProfileCompletionDialog from '@/components/misc/ProfileCompletionDialog';
 
 export const Hero = ({ user }: { user: User | null }) => {
   const router = useRouter();
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [isCheckingProfile, setIsCheckingProfile] = useState(false);
 
-  const handlePostRoom = () => {
-    if (user) {
-      router.push('/listroom');
-    } else {
+  const handlePostRoom = async () => {
+    if (!user) {
       router.push('/auth');
+      return;
+    }
+
+    setIsCheckingProfile(true);
+    
+    try {
+      const supabase = createClient();
+      const api = createApiClient(supabase);
+      const { completed } = await api.checkProfileCompletion();
+      
+      if (completed) {
+        router.push('/listroom');
+      } else {
+        setShowProfileDialog(true);
+      }
+    } catch (error) {
+      console.error('Error checking profile completion:', error);
+      // If there's an error, allow them to proceed to listroom page
+      // where they'll be redirected to profile completion if needed
+      router.push('/listroom');
+    } finally {
+      setIsCheckingProfile(false);
     }
   };
 
@@ -58,8 +84,16 @@ export const Hero = ({ user }: { user: User | null }) => {
               variant="default"
               className="w-full md:w-auto"
               onClick={handlePostRoom}
+              disabled={isCheckingProfile}
             >
-              Post a Room
+              {isCheckingProfile ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Checking...
+                </>
+              ) : (
+                'Post a Room'
+              )}
             </Button>
           </div>
         </div>
@@ -72,6 +106,13 @@ export const Hero = ({ user }: { user: User | null }) => {
 
       {/* Shadow effect */}
       <div className="shadow"></div>
+      
+      {/* Profile Completion Dialog */}
+      <ProfileCompletionDialog
+        isOpen={showProfileDialog}
+        onClose={() => setShowProfileDialog(false)}
+        user={user}
+      />
     </section>
   );
 };

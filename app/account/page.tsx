@@ -183,9 +183,6 @@ export default function AccountPage() {
         throw new Error(responseData.error || 'Failed to delete account');
       }
 
-      // Sign out the user
-      await api.signOut();
-
       // Show appropriate message based on response
       if (responseData.warning) {
         toast({
@@ -200,8 +197,13 @@ export default function AccountPage() {
         });
       }
       
+      // Reset loading state and close dialog before redirect
+      setDeleteLoading(false);
       setDeleteDialogOpen(false);
       setDeleteEmail('');
+      
+      // Sign out the user and redirect
+      await api.signOut();
       router.push('/');
     } catch (error) {
       console.error('Error deleting account:', error);
@@ -285,6 +287,12 @@ export default function AccountPage() {
             >
               Profile
             </button>
+            <Link
+              href="/applications"
+              className="text-left px-3 py-2 rounded-lg transition-all duration-200 text-muted-foreground hover:text-primary hover:bg-primary/10"
+            >
+              My Applications
+            </Link>
             <button
               onClick={() => scrollToSection('signout')}
               className={`text-left px-3 py-2 rounded-lg transition-all duration-200 ${
@@ -463,6 +471,8 @@ export default function AccountPage() {
                 </Dialog>
               </CardFooter>
             </Card>
+            
+
           </div>
         </div>
       </main>

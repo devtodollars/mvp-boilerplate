@@ -173,6 +173,216 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
 
 
 
+  const checkProfileCompletion = async (): Promise<{ completed: boolean; profile?: any }> => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        return { completed: false };
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        // PGRST116 means no rows returned (profile doesn't exist)
+        if (profileError.code === 'PGRST116') {
+          return { completed: false };
+        }
+        console.error('Error checking profile completion:', profileError);
+        return { completed: false };
+      }
+
+      // Check if profile has required fields
+      const hasRequiredFields = profile && 
+        profile.first_name && 
+        profile.last_name && 
+        profile.phone && 
+        profile.bio && 
+        profile.occupation && 
+        profile.date_of_birth;
+
+      return { 
+        completed: !!hasRequiredFields, 
+        profile: hasRequiredFields ? profile : null 
+      };
+    } catch (error) {
+      console.error('Error in checkProfileCompletion:', error);
+      return { completed: false };
+    }
+  };
+
+  // Application functions
+  const applyToProperty = async (listingId: string, notes?: string) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data, error } = await supabase.rpc('add_application_to_queue', {
+        listing_uuid: listingId,
+        user_uuid: user.id,
+        application_notes: notes || null
+      });
+
+      if (error) {
+        if (error.code === '23505') { // Unique constraint violation
+          throw new Error('You have already applied to this property');
+        }
+        throw error;
+      }
+
+      return { success: true, applicationId: data };
+    } catch (error) {
+      console.error('Error applying to property:', error);
+      throw error;
+    }
+  };
+
+  const getUserApplications = async () => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data, error } = await supabase
+        .from('applications')
+        .select(`
+          *,
+          listing:listings(
+            id,
+            property_name,
+            address,
+            city,
+            county,
+            monthly_rent,
+            property_type,
+            room_type,
+            images
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('applied_at', { ascending: false });
+
+      if (error) throw error;
+
+      return { success: true, applications: data };
+    } catch (error) {
+      console.error('Error fetching user applications:', error);
+      throw error;
+    }
+  };
+
+  const getListingApplications = async (listingId: string) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      // First check if user owns the listing
+      const { data: listing, error: listingError } = await supabase
+        .from('listings')
+        .select('user_id')
+        .eq('id', listingId)
+        .single();
+
+      if (listingError) throw listingError;
+
+      if (listing.user_id !== user.id) {
+        throw new Error('Unauthorized: You can only view applications for your own listings');
+      }
+
+      const { data, error } = await supabase
+        .from('applications')
+        .select(`
+          *,
+          user:users(
+            id,
+            first_name,
+            last_name,
+            email,
+            phone,
+            bio,
+            occupation
+          )
+        `)
+        .eq('listing_id', listingId)
+        .order('position', { ascending: true });
+
+      if (error) throw error;
+
+      return { success: true, applications: data };
+    } catch (error) {
+      console.error('Error fetching listing applications:', error);
+      throw error;
+    }
+  };
+
+  const updateApplicationStatus = async (applicationId: string, status: 'accepted' | 'rejected' | 'withdrawn', notes?: string) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data, error } = await supabase.rpc('update_application_status', {
+        application_uuid: applicationId,
+        new_status: status,
+        review_notes: notes || null
+      });
+
+      if (error) throw error;
+
+      return { success: true, updated: data };
+    } catch (error) {
+      console.error('Error updating application status:', error);
+      throw error;
+    }
+  };
+
+  const withdrawApplication = async (applicationId: string) => {
+    return updateApplicationStatus(applicationId, 'withdrawn');
+  };
+
+  const checkUserApplication = async (listingId: string) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        return { hasApplied: false, application: null };
+      }
+
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*')
+        .eq('listing_id', listingId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') { // No rows returned
+          return { hasApplied: false, application: null };
+        }
+        throw error;
+      }
+
+      return { hasApplied: true, application: data };
+    } catch (error) {
+      console.error('Error checking user application:', error);
+      return { hasApplied: false, application: null };
+    }
+  };
+
   return {
     passwordSignin,
     passwordSignup,
@@ -181,6 +391,13 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     oauthSignin,
     signOut,
     createUserProfile,
-    verifyOtp
+    verifyOtp,
+    checkProfileCompletion,
+    applyToProperty,
+    getUserApplications,
+    getListingApplications,
+    updateApplicationStatus,
+    withdrawApplication,
+    checkUserApplication
   };
 };

@@ -322,6 +322,60 @@ export type Database = {
         }
         Relationships: []
       }
+      applications: {
+        Row: {
+          id: string
+          listing_id: string
+          user_id: string
+          status: string
+          position: number
+          applied_at: string
+          reviewed_at: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          listing_id: string
+          user_id: string
+          status?: string
+          position: number
+          applied_at?: string
+          reviewed_at?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          listing_id?: string
+          user_id?: string
+          status?: string
+          position?: number
+          applied_at?: string
+          reviewed_at?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -329,6 +383,30 @@ export type Database = {
     Functions: {
       delete_auth_user: {
         Args: { user_id: string }
+        Returns: undefined
+      }
+      get_next_application_position: {
+        Args: { listing_uuid: string }
+        Returns: number
+      }
+      add_application_to_queue: {
+        Args: { 
+          listing_uuid: string
+          user_uuid: string
+          application_notes?: string | null
+        }
+        Returns: string
+      }
+      update_application_status: {
+        Args: { 
+          application_uuid: string
+          new_status: string
+          review_notes?: string | null
+        }
+        Returns: boolean
+      }
+      reorder_application_queue: {
+        Args: { listing_uuid: string }
         Returns: undefined
       }
     }

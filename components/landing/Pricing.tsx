@@ -11,11 +11,13 @@ import {
 } from '@/components/ui/card';
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
+import { createApiClient } from '@/utils/supabase/api';
 import { Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { getURL } from '@/utils/helpers';
 import { useToast } from '@/components/ui/use-toast';
+import ProfileCompletionDialog from '@/components/misc/ProfileCompletionDialog';
 
 enum PopularPlanType {
   NO = 0,
@@ -93,7 +95,32 @@ export const Pricing = ({ user }: { user: User | null }) => {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState<boolean>(false);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  
   const handleClick = async (price: PricingProps) => {
+    // Handle "Post a Room" specifically
+    if (price.title === 'Post a Room') {
+      if (!user) {
+        return router.push('/auth');
+      }
+      
+      try {
+        const api = createApiClient(supabase);
+        const { completed } = await api.checkProfileCompletion();
+        
+        if (completed) {
+          router.push('/listroom');
+        } else {
+          setShowProfileDialog(true);
+        }
+      } catch (error) {
+        console.error('Error checking profile completion:', error);
+        // If there's an error, allow them to proceed to listroom page
+        router.push('/listroom');
+      }
+      return;
+    }
+    
     if (price.redirectURL) {
       return router.push(price.redirectURL);
     }
@@ -202,6 +229,13 @@ export const Pricing = ({ user }: { user: User | null }) => {
           </Card>
         ))}
       </div>
+      
+      {/* Profile Completion Dialog */}
+      <ProfileCompletionDialog
+        isOpen={showProfileDialog}
+        onClose={() => setShowProfileDialog(false)}
+        user={user}
+      />
     </section>
   );
 };

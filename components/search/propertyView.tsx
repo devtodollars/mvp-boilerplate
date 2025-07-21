@@ -18,7 +18,16 @@ import {
   Waves,
   Dumbbell,
   PawPrint,
+  User,
+  Clock,
+  CheckCircle,
+  XCircle,
 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/utils/supabase/client"
+import { createApiClient } from "@/utils/supabase/api"
+import { useToast } from "@/components/ui/use-toast"
+import ApplicationDialog from "@/components/misc/ApplicationDialog"
 
 interface PropertyViewProps {
   selectedProperty: any
@@ -26,6 +35,89 @@ interface PropertyViewProps {
 }
 
 export default function PropertyView({ selectedProperty, onMediaClick }: PropertyViewProps) {
+  const [showApplicationDialog, setShowApplicationDialog] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [userApplication, setUserApplication] = useState<any>(null);
+  const [isCheckingApplication, setIsCheckingApplication] = useState(false);
+  const { toast } = useToast();
+
+  // Check if user has already applied to this property
+  useEffect(() => {
+    const checkApplication = async () => {
+      if (!selectedProperty) return;
+      
+      setIsCheckingApplication(true);
+      try {
+        const supabase = createClient();
+        const api = createApiClient(supabase);
+        const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id);
+        setUserApplication(application);
+      } catch (error) {
+        console.error('Error checking application:', error);
+      } finally {
+        setIsCheckingApplication(false);
+      }
+    };
+
+    checkApplication();
+  }, [selectedProperty]);
+
+  const handleApply = async (notes?: string) => {
+    if (!selectedProperty) return;
+    
+    setIsApplying(true);
+    try {
+      const supabase = createClient();
+      const api = createApiClient(supabase);
+      await api.applyToProperty(selectedProperty.id, notes);
+      
+      toast({
+        title: 'Application Submitted!',
+        description: 'Your application has been added to the queue. You will be notified of updates.',
+        variant: 'default',
+      });
+      
+      // Refresh application status
+      const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id);
+      setUserApplication(application);
+    } catch (error) {
+      console.error('Error applying:', error);
+      throw error;
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const getApplicationStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'accepted':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'rejected':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'withdrawn':
+        return <XCircle className="h-4 w-4 text-gray-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getApplicationStatusText = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pending Review';
+      case 'accepted':
+        return 'Application Accepted';
+      case 'rejected':
+        return 'Application Rejected';
+      case 'withdrawn':
+        return 'Application Withdrawn';
+      default:
+        return 'Unknown Status';
+    }
+  };
+
   if (!selectedProperty) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -310,16 +402,73 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Application Status or Action Buttons */}
         <div className="space-y-3 pt-4 border-t">
-          <Button className="w-full" size="lg">
-            <Calendar className="h-4 w-4 mr-2" />
-            Book Viewing
-          </Button>
-          <Button variant="outline" className="w-full bg-transparent" size="lg">
-            Contact Owner
-          </Button>
+          {isCheckingApplication ? (
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <span className="ml-2 text-muted-foreground">Checking application status...</span>
+            </div>
+          ) : userApplication ? (
+            <div className="space-y-3">
+              {/* Application Status */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  {getApplicationStatusIcon(userApplication.status)}
+                  <span className="font-medium">{getApplicationStatusText(userApplication.status)}</span>
+                </div>
+                {userApplication.status === 'pending' && (
+                  <div className="text-sm text-gray-600">
+                    You are #{userApplication.position} in the queue
+                  </div>
+                )}
+                {userApplication.applied_at && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Applied on {new Date(userApplication.applied_at).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+              
+              {/* Withdraw Button for pending applications */}
+              {userApplication.status === 'pending' && (
+                <Button 
+                  variant="outline" 
+                  className="w-full bg-transparent" 
+                  size="lg"
+                  onClick={() => {
+                    // TODO: Implement withdraw functionality
+                    toast({
+                      title: 'Withdraw Application',
+                      description: 'Withdraw functionality will be implemented soon.',
+                      variant: 'default',
+                    });
+                  }}
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Withdraw Application
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Button 
+              className="w-full" 
+              size="lg"
+              onClick={() => setShowApplicationDialog(true)}
+            >
+              <User className="h-4 w-4 mr-2" />
+              Apply to Property
+            </Button>
+          )}
         </div>
+
+        {/* Application Dialog */}
+        <ApplicationDialog
+          isOpen={showApplicationDialog}
+          onClose={() => setShowApplicationDialog(false)}
+          property={selectedProperty}
+          onApply={handleApply}
+          isApplying={isApplying}
+        />
       </div>
     </div>
   )
