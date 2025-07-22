@@ -22,6 +22,8 @@ interface ApplicationDialogProps {
   property: any;
   onApply: (notes?: string) => Promise<void>;
   isApplying: boolean;
+  isAuthenticated: boolean;
+  isReapplication?: boolean;
 }
 
 export default function ApplicationDialog({ 
@@ -29,7 +31,9 @@ export default function ApplicationDialog({
   onClose, 
   property, 
   onApply, 
-  isApplying 
+  isApplying,
+  isAuthenticated,
+  isReapplication = false
 }: ApplicationDialogProps) {
   const [notes, setNotes] = useState('');
   const { toast } = useToast();
@@ -49,6 +53,11 @@ export default function ApplicationDialog({
     }
   };
 
+  const handleSignIn = () => {
+    const currentUrl = window.location.pathname + window.location.search;
+    window.location.href = `/auth/signin?redirect=${encodeURIComponent(currentUrl)}`;
+  };
+
   const handleClose = () => {
     setNotes('');
     onClose();
@@ -60,10 +69,10 @@ export default function ApplicationDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary">
             <User className="h-5 w-5" />
-            Apply to Property
+            {isReapplication ? 'Re-apply to Property' : 'Apply to Property'}
           </DialogTitle>
           <DialogDescription className="text-base">
-            Join the queue for this property
+            {isReapplication ? 'Resubmit your application to join the queue' : 'Join the queue for this property'}
           </DialogDescription>
         </DialogHeader>
         
@@ -96,6 +105,13 @@ export default function ApplicationDialog({
               <li>• The property owner will review applications in order</li>
               <li>• You can withdraw your application at any time</li>
             </ul>
+            {isReapplication && (
+              <div className="mt-3 pt-3 border-t border-blue-200">
+                <p className="text-sm text-blue-700 font-medium">
+                  📝 <strong>Re-applying:</strong> Your previous application will be updated and you'll be added to the end of the queue.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Application Notes */}
@@ -138,23 +154,33 @@ export default function ApplicationDialog({
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleApply}
-            disabled={isApplying}
-            className="flex items-center gap-2"
-          >
-            {isApplying ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Applying...
-              </>
-            ) : (
-              <>
-                <User className="h-4 w-4" />
-                Apply to Property
-              </>
-            )}
-          </Button>
+          {isAuthenticated ? (
+            <Button
+              onClick={handleApply}
+              disabled={isApplying}
+              className="flex items-center gap-2"
+            >
+              {isApplying ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  {isReapplication ? 'Re-applying...' : 'Applying...'}
+                </>
+              ) : (
+                <>
+                  <User className="h-4 w-4" />
+                  {isReapplication ? 'Re-apply to Property' : 'Apply to Property'}
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSignIn}
+              className="flex items-center gap-2"
+            >
+              <User className="h-4 w-4" />
+              Sign In to Apply
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

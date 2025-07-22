@@ -19,6 +19,8 @@ import PropertyView from "./propertyView"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import { fetchListings, debugListings } from "@/utils/supabase/listings"
 import { getListingImages } from "@/utils/supabase/storage"
+import { createClient } from "@/utils/supabase/client"
+import { createApiClient } from "@/utils/supabase/api"
 import dynamic from "next/dynamic";
 
 const MapboxMap = dynamic(() => import("@/components/mapbox/MapboxMap"), { 
@@ -35,6 +37,8 @@ export default function Component() {
   const [showFilters, setShowFilters] = useState(false)
   const [showPropertyDetails, setShowPropertyDetails] = useState(false)
   const [isClient, setIsClient] = useState(false)
+  const [likedListings, setLikedListings] = useState<Set<string>>(new Set())
+  const [likingListing, setLikingListing] = useState<string | null>(null)
   const [mediaModal, setMediaModal] = useState<{
     isOpen: boolean
     media: Array<{ url: string; type: "image" | "video" }>
@@ -47,6 +51,33 @@ export default function Component() {
 
   useEffect(() => {
     setIsClient(true)
+  }, [])
+
+  // Check liked listings on mount
+  useEffect(() => {
+    const checkLikedListings = async () => {
+      try {
+        const supabase = createClient()
+        const api = createApiClient(supabase)
+        
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('liked_listings')
+            .eq('id', user.id)
+            .single()
+          
+          if (userData?.liked_listings) {
+            setLikedListings(new Set(userData.liked_listings))
+          }
+        }
+      } catch (error) {
+        console.error('Error checking liked listings:', error)
+      }
+    }
+
+    checkLikedListings()
   }, [])
 
   useEffect(() => {
@@ -115,6 +146,37 @@ export default function Component() {
           ? (prev.currentIndex + 1) % prev.media.length
           : (prev.currentIndex - 1 + prev.media.length) % prev.media.length,
     }))
+  }
+
+  const handleLike = async (listingId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    if (likingListing) return // Prevent multiple clicks
+    
+    setLikingListing(listingId)
+    
+    try {
+      const supabase = createClient()
+      const api = createApiClient(supabase)
+      
+      const result = await api.toggleLikeListing(listingId)
+      
+      if (result.success) {
+        setLikedListings(prev => {
+          const newSet = new Set(prev)
+          if (result.isLiked) {
+            newSet.add(listingId)
+          } else {
+            newSet.delete(listingId)
+          }
+          return newSet
+        })
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error)
+    } finally {
+      setLikingListing(null)
+    }
   }
 
   // Helper to get image URLs (array of strings)
@@ -355,10 +417,15 @@ export default function Component() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm hover:bg-white h-10 w-10 shadow-lg"
+                              onClick={(e) => handleLike(property.id, e)}
+                              disabled={likingListing === property.id}
+                              className={`absolute top-3 right-3 bg-white/95 backdrop-blur-sm hover:bg-white h-10 w-10 shadow-lg transition-colors ${
+                                likedListings.has(property.id) ? 'text-red-500' : 'text-gray-600'
+                              }`}
                             >
-                              <Heart className="h-5 w-5" />
+                              <Heart 
+                                className={`h-5 w-5 ${likedListings.has(property.id) ? 'fill-current' : ''}`} 
+                              />
                             </Button>
 
                             {/* Price Badge */}
@@ -575,10 +642,15 @@ export default function Component() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="hover:bg-red-50"
+                                  onClick={(e) => handleLike(property.id, e)}
+                                  disabled={likingListing === property.id}
+                                  className={`hover:bg-red-50 transition-colors ${
+                                    likedListings.has(property.id) ? 'text-red-500' : 'text-gray-600'
+                                  }`}
                                 >
-                                  <Heart className="h-4 w-4" />
+                                  <Heart 
+                                    className={`h-4 w-4 ${likedListings.has(property.id) ? 'fill-current' : ''}`} 
+                                  />
                                 </Button>
                               </div>
                             </div>
@@ -661,7 +733,7 @@ export default function Component() {
                     onClick={() => setViewMode("list")}
                     className="gap-2"
                   >
-                    <Map className="h-4 w-4" />
+                    <Map className="h-2 w-4" />
                     Map View
                   </Button>
                   <Button
@@ -676,7 +748,7 @@ export default function Component() {
                 </div>
               </div>
 
-              <Card className="h-[calc(100vh-200px)]">
+              <Card className="h-[calc(100vh-250px)]">
                 <CardContent className="p-0 h-full">
                   {viewMode === "list" ? (
                     <MapboxMap
@@ -747,7 +819,7 @@ export default function Component() {
 
       {/* Media Modal */}
       <Dialog open={mediaModal.isOpen} onOpenChange={closeMediaModal}>
-        <DialogContent className="max-w-4xl w-full h-[90vh] p-0">
+        <DialogContent className="max-w-4xl w-full h-[90vh] p-0 bg-transparent border-0 shadow-none rounded-lg overflow-hidden">
           <DialogTitle className="text-white bg-black/50 px-3 py-1 rounded absolute top-4 left-4 z-10">
             Property Media - {mediaModal.currentIndex + 1} of {mediaModal.media.length}
           </DialogTitle>

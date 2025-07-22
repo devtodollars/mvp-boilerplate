@@ -224,6 +224,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
         throw new Error('User not authenticated');
       }
 
+      // Use the updated function that handles both new applications and re-applications
       const { data, error } = await supabase.rpc('add_application_to_queue', {
         listing_uuid: listingId,
         user_uuid: user.id,
@@ -231,8 +232,33 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       });
 
       if (error) {
-        if (error.code === '23505') { // Unique constraint violation
-          throw new Error('You have already applied to this property');
+        // Handle unique constraint violation specifically
+        if (error.code === '23505') {
+          // This means the user already has an application, try to update it
+          const { data: existingApp } = await supabase
+            .from('applications')
+            .select('id')
+            .eq('listing_id', listingId)
+            .eq('user_id', user.id)
+            .single();
+          
+          if (existingApp) {
+            // Update the existing application
+            const { data: updatedApp, error: updateError } = await supabase
+              .from('applications')
+              .update({
+                status: 'pending',
+                notes: notes || null,
+                applied_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingApp.id)
+              .select()
+              .single();
+            
+            if (updateError) throw updateError;
+            return { success: true, applicationId: updatedApp.id };
+          }
         }
         throw error;
       }
@@ -383,6 +409,152 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
   };
 
+  // Like/Unlike functions
+  const toggleLikeListing = async (listingId: string) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get current user's liked listings
+      const { data: userData, error: userDataError } = await supabase
+        .from('users')
+        .select('liked_listings')
+        .eq('id', user.id)
+        .single();
+
+      if (userDataError) throw userDataError;
+
+      const currentLikedListings = userData.liked_listings || [];
+      const isCurrentlyLiked = currentLikedListings.includes(listingId as any);
+
+      let newLikedListings: any[];
+      if (isCurrentlyLiked) {
+        // Remove from liked listings
+        newLikedListings = currentLikedListings.filter(id => id !== listingId);
+      } else {
+        // Add to liked listings
+        newLikedListings = [...currentLikedListings, listingId];
+      }
+
+      // Update user's liked listings
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          liked_listings: newLikedListings,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      return { 
+        success: true, 
+        isLiked: !isCurrentlyLiked,
+        likedListings: newLikedListings
+      };
+    } catch (error) {
+      console.error('Error toggling like listing:', error);
+      throw error;
+    }
+  };
+
+  const getUserLikedListings = async () => {
+    try {
+      console.log('getUserLikedListings: Starting...');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      console.log('getUserLikedListings: User found:', user.id);
+      const { data: userData, error: userDataError } = await supabase
+        .from('users')
+        .select('liked_listings')
+        .eq('id', user.id)
+        .single();
+
+      if (userDataError) {
+        console.error('getUserLikedListings: Error fetching user data:', userDataError);
+        throw userDataError;
+      }
+
+      console.log('getUserLikedListings: User data:', userData);
+      const likedListingIds = userData.liked_listings || [];
+
+      console.log('getUserLikedListings: Liked listing IDs:', likedListingIds);
+
+      if (likedListingIds.length === 0) {
+        console.log('getUserLikedListings: No liked listings found');
+        return { success: true, listings: [] };
+      }
+
+      // Fetch the actual listing data for liked listings
+      console.log('getUserLikedListings: About to query listings with IDs:', likedListingIds);
+      
+      // First, let's check if the listing exists at all (without the active filter)
+      const { data: allListings, error: allListingsError } = await supabase
+        .from('listings')
+        .select('*')
+        .in('id', likedListingIds);
+      
+      console.log('getUserLikedListings: All listings found (without active filter):', allListings);
+      if (allListings && allListings.length > 0) {
+        console.log('getUserLikedListings: First listing active status:', allListings[0].active);
+        console.log('getUserLikedListings: First listing full data:', allListings[0]);
+      }
+      
+      // Get all liked listings (both active and inactive) so users can see their favorites
+      const { data: listings, error: listingsError } = await supabase
+        .from('listings')
+        .select('*')
+        .in('id', likedListingIds)
+        .order('created_at', { ascending: false });
+
+      if (listingsError) {
+        console.error('getUserLikedListings: Error fetching listings:', listingsError);
+        throw listingsError;
+      }
+
+      console.log('getUserLikedListings: Fetched listings:', listings);
+      console.log('getUserLikedListings: Number of listings found:', listings?.length || 0);
+      console.log('getUserLikedListings: First listing:', listings?.[0]);
+      return { success: true, listings: listings || [] };
+    } catch (error) {
+      console.error('Error fetching user liked listings:', error);
+      throw error;
+    }
+  };
+
+  const checkIfListingLiked = async (listingId: string) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        return { success: false, isLiked: false };
+      }
+
+      const { data: userData, error: userDataError } = await supabase
+        .from('users')
+        .select('liked_listings')
+        .eq('id', user.id)
+        .single();
+
+      if (userDataError) throw userDataError;
+
+      const likedListings = userData.liked_listings || [];
+      const isLiked = likedListings.includes(listingId as any);
+
+      return { success: true, isLiked };
+    } catch (error) {
+      console.error('Error checking if listing is liked:', error);
+      throw error;
+    }
+  };
+
   return {
     passwordSignin,
     passwordSignup,
@@ -398,6 +570,9 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     getListingApplications,
     updateApplicationStatus,
     withdrawApplication,
-    checkUserApplication
+    checkUserApplication,
+    toggleLikeListing,
+    getUserLikedListings,
+    checkIfListingLiked
   };
 };

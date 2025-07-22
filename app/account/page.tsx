@@ -293,6 +293,12 @@ export default function AccountPage() {
             >
               My Applications
             </Link>
+            <Link
+              href="/liked"
+              className="text-left px-3 py-2 rounded-lg transition-all duration-200 text-muted-foreground hover:text-primary hover:bg-primary/10"
+            >
+              My Favorites
+            </Link>
             <button
               onClick={() => scrollToSection('signout')}
               className={`text-left px-3 py-2 rounded-lg transition-all duration-200 ${

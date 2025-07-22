@@ -28,6 +28,7 @@ import { createClient } from "@/utils/supabase/client"
 import { createApiClient } from "@/utils/supabase/api"
 import { useToast } from "@/components/ui/use-toast"
 import ApplicationDialog from "@/components/misc/ApplicationDialog"
+import WithdrawConfirmationDialog from "@/components/misc/WithdrawConfirmationDialog"
 
 interface PropertyViewProps {
   selectedProperty: any
@@ -36,34 +37,121 @@ interface PropertyViewProps {
 
 export default function PropertyView({ selectedProperty, onMediaClick }: PropertyViewProps) {
   const [showApplicationDialog, setShowApplicationDialog] = useState(false);
+  const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [userApplication, setUserApplication] = useState<any>(null);
   const [isCheckingApplication, setIsCheckingApplication] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [likedListings, setLikedListings] = useState<Set<string>>(new Set());
+  const [likingListing, setLikingListing] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Check if user has already applied to this property
+  // Check if user is authenticated and has already applied to this property
   useEffect(() => {
-    const checkApplication = async () => {
+    const checkUserAndApplication = async () => {
       if (!selectedProperty) return;
       
       setIsCheckingApplication(true);
       try {
         const supabase = createClient();
+        
+        // First check if user is authenticated
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        setUser(user);
+        
+        if (userError || !user) {
+          // User is not authenticated, don't check for applications
+          setIsCheckingApplication(false);
+          return;
+        }
+        
+        // User is authenticated, check for existing application
         const api = createApiClient(supabase);
         const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id);
         setUserApplication(application);
       } catch (error) {
-        console.error('Error checking application:', error);
+        console.error('Error checking user and application:', error);
       } finally {
         setIsCheckingApplication(false);
       }
     };
 
-    checkApplication();
+    checkUserAndApplication();
   }, [selectedProperty]);
 
+  // Check liked listings on mount
+  useEffect(() => {
+    const checkLikedListings = async () => {
+      try {
+        const supabase = createClient();
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('liked_listings')
+            .eq('id', user.id)
+            .single();
+          
+          if (userData?.liked_listings) {
+            setLikedListings(new Set(userData.liked_listings));
+          }
+        }
+      } catch (error) {
+        console.error('Error checking liked listings:', error);
+      }
+    };
+
+    checkLikedListings();
+  }, []);
+
+  const handleLike = async (listingId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (likingListing) return; // Prevent multiple clicks
+    
+    setLikingListing(listingId);
+    
+    try {
+      const supabase = createClient();
+      const api = createApiClient(supabase);
+      
+      const result = await api.toggleLikeListing(listingId);
+      
+      if (result.success) {
+        setLikedListings(prev => {
+          const newSet = new Set(prev);
+          if (result.isLiked) {
+            newSet.add(listingId);
+          } else {
+            newSet.delete(listingId);
+          }
+          return newSet;
+        });
+        
+        toast({
+          title: result.isLiked ? 'Added to Favorites!' : 'Removed from Favorites',
+          description: result.isLiked 
+            ? 'This property has been added to your favorites.'
+            : 'This property has been removed from your favorites.',
+          variant: 'default',
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update favorites. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLikingListing(null);
+    }
+  };
+
   const handleApply = async (notes?: string) => {
-    if (!selectedProperty) return;
+    if (!selectedProperty || !user) return;
     
     setIsApplying(true);
     try {
@@ -71,9 +159,14 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       const api = createApiClient(supabase);
       await api.applyToProperty(selectedProperty.id, notes);
       
+      // Check if this was a re-application
+      const isReapplication = userApplication && userApplication.status !== 'pending';
+      
       toast({
-        title: 'Application Submitted!',
-        description: 'Your application has been added to the queue. You will be notified of updates.',
+        title: isReapplication ? 'Application Resubmitted!' : 'Application Submitted!',
+        description: isReapplication 
+          ? 'Your application has been resubmitted and added to the queue.'
+          : 'Your application has been added to the queue. You will be notified of updates.',
         variant: 'default',
       });
       
@@ -85,6 +178,47 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       throw error;
     } finally {
       setIsApplying(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!userApplication || !user) return;
+    
+    setIsWithdrawing(true);
+    try {
+      const response = await fetch(`/api/applications/${userApplication.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'withdrawn' }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to withdraw application');
+      }
+
+      // Update local state
+      setUserApplication((prev: any) => prev ? { ...prev, status: 'withdrawn' } : null);
+      
+      toast({
+        title: 'Application Withdrawn',
+        description: 'Your application has been withdrawn successfully.',
+        variant: 'default',
+      });
+      
+      // Close the confirmation dialog
+      setShowWithdrawDialog(false);
+    } catch (error) {
+      console.error('Error withdrawing application:', error);
+      toast({
+        title: 'Withdrawal Failed',
+        description: error instanceof Error ? error.message : 'There was an error withdrawing your application.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsWithdrawing(false);
     }
   };
 
@@ -263,8 +397,18 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
               </div>
             </div>
 
-            <Button variant="outline" size="icon" className="shrink-0 bg-transparent">
-              <Heart className="h-4 w-4" />
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className={`shrink-0 bg-transparent transition-colors ${
+                likedListings.has(selectedProperty.id) ? 'text-red-500 border-red-200' : ''
+              }`}
+              onClick={(e) => handleLike(selectedProperty.id, e)}
+              disabled={likingListing === selectedProperty.id}
+            >
+              <Heart 
+                className={`h-4 w-4 ${likedListings.has(selectedProperty.id) ? 'fill-current' : ''}`} 
+              />
             </Button>
           </div>
 
@@ -409,6 +553,30 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
               <span className="ml-2 text-muted-foreground">Checking application status...</span>
             </div>
+          ) : !user ? (
+            <div className="space-y-3">
+              {/* Not signed in state */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium text-blue-800">Sign in to Apply</span>
+                </div>
+                <p className="text-sm text-blue-700 mb-3">
+                  You need to be signed in to apply to this property.
+                </p>
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={() => {
+                    const currentUrl = window.location.pathname + window.location.search;
+                    window.location.href = `/auth/signin?redirect=${encodeURIComponent(currentUrl)}`;
+                  }}
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Sign In to Apply
+                </Button>
+              </div>
+            </div>
           ) : userApplication ? (
             <div className="space-y-3">
               {/* Application Status */}
@@ -429,23 +597,36 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
                 )}
               </div>
               
-              {/* Withdraw Button for pending applications */}
+              {/* Action Buttons */}
               {userApplication.status === 'pending' && (
                 <Button 
                   variant="outline" 
                   className="w-full bg-transparent" 
                   size="lg"
-                  onClick={() => {
-                    // TODO: Implement withdraw functionality
-                    toast({
-                      title: 'Withdraw Application',
-                      description: 'Withdraw functionality will be implemented soon.',
-                      variant: 'default',
-                    });
-                  }}
+                  onClick={() => setShowWithdrawDialog(true)}
+                  disabled={isWithdrawing}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Withdraw Application
+                </Button>
+              )}
+              
+              {/* Re-apply button for withdrawn, rejected, or accepted applications */}
+              {(userApplication.status === 'withdrawn' || userApplication.status === 'rejected' || userApplication.status === 'accepted') && (
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={() => {
+                    if (!user) {
+                      const currentUrl = window.location.pathname + window.location.search;
+                      window.location.href = `/auth/signin?redirect=${encodeURIComponent(currentUrl)}`;
+                    } else {
+                      setShowApplicationDialog(true);
+                    }
+                  }}
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  {userApplication.status === 'withdrawn' ? 'Apply Again' : 'Apply to Property'}
                 </Button>
               )}
             </div>
@@ -453,7 +634,14 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
             <Button 
               className="w-full" 
               size="lg"
-              onClick={() => setShowApplicationDialog(true)}
+              onClick={() => {
+                if (!user) {
+                  const currentUrl = window.location.pathname + window.location.search;
+                  window.location.href = `/auth/signin?redirect=${encodeURIComponent(currentUrl)}`;
+                } else {
+                  setShowApplicationDialog(true);
+                }
+              }}
             >
               <User className="h-4 w-4 mr-2" />
               Apply to Property
@@ -468,6 +656,17 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
           property={selectedProperty}
           onApply={handleApply}
           isApplying={isApplying}
+          isAuthenticated={!!user}
+          isReapplication={!!(userApplication && userApplication.status !== 'pending')}
+        />
+
+        {/* Withdraw Confirmation Dialog */}
+        <WithdrawConfirmationDialog
+          isOpen={showWithdrawDialog}
+          onClose={() => setShowWithdrawDialog(false)}
+          onConfirm={handleWithdraw}
+          isWithdrawing={isWithdrawing}
+          propertyName={selectedProperty.property_name}
         />
       </div>
     </div>
