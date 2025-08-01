@@ -19,10 +19,33 @@ export async function GET(request: NextRequest) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) throw error;
 
-      // For OAuth users, always redirect to profile creation
-      // This ensures all OAuth users go through the profile setup process
-      console.log('OAuth user signed in, redirecting to profile creation');
-      return NextResponse.redirect(getURL('/auth/profile_setup?toast_title=Welcome&toast_description=Please complete your profile setup&toast_variant=default'));
+      // Check if user has a complete profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        try {
+          const { data: userProfile } = await supabase
+            .from('users')
+            .select('first_name, last_name')
+            .eq('id', user.id)
+            .single();
+
+          // If user doesn't have a profile or is missing essential fields, redirect to profile page
+          if (!userProfile || !userProfile.first_name) {
+            console.log('OAuth user needs profile completion, redirecting to profile setup');
+            return NextResponse.redirect(getURL('/auth/profile_setup?toast_title=Welcome&toast_description=Please complete your profile setup&toast_variant=default'));
+          } else {
+            console.log('OAuth user has complete profile, redirecting to home');
+            return NextResponse.redirect(getURL('/?toast_title=Welcome back&toast_description=Successfully signed in!&toast_variant=default'));
+          }
+        } catch (profileError) {
+          console.error('Profile check error:', profileError);
+          // If profile check fails, redirect to profile page
+          return NextResponse.redirect(getURL('/auth/profile_setup?toast_title=Welcome&toast_description=Please complete your profile setup&toast_variant=default'));
+        }
+      }
+
+      // Fallback redirect
+      return NextResponse.redirect(getURL('/?toast_title=Welcome&toast_description=Successfully signed in!&toast_variant=default'));
 
     } else if (token_hash && type) {
       // Handle email confirmation flow

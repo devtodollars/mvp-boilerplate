@@ -56,12 +56,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: PropsWithChildren) {
-  // Get the user data for the Navbar
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
   return (
     <html lang="en">
       <ThemeProvider>
@@ -69,7 +63,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
           <body>
             <AuthProvider>
               <PostHogPageViewWrapper />
-              <Navbar user={user} />
+              <Navbar />
               <main
                 id="skip"
                 className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"

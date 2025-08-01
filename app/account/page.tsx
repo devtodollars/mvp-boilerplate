@@ -10,7 +10,6 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '@/components/ui/use-toast';
@@ -26,25 +25,58 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { 
+  AlertTriangle, 
+  Trash2, 
+  User as UserIcon, 
+  Building2, 
+  Heart, 
+  MapPin, 
+  Euro, 
+  Calendar, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  Eye,
+  Edit,
+  Plus,
+  ArrowRight,
+  Home,
+  Loader2,
+  Star,
+  TrendingUp,
+  BarChart3,
+  FileUser,
+  FileX,
+  ChevronRight,
+  HomeIcon,
+  UserCog
+} from 'lucide-react';
+import Image from 'next/image';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 export default function AccountPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { user, isLoading: isLoadingUser } = useAuth();
+  
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [activeSection, setActiveSection] = useState('general');
 
-  // Create Supabase client once and memoize it
-  const supabase = useMemo(() => createClient(), []);
+  // Dashboard data
+  const [applications, setApplications] = useState<any[]>([]);
+  const [ownedListings, setOwnedListings] = useState<any[]>([]);
+  const [likedListings, setLikedListings] = useState<any[]>([]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      const supabase = createClient();
       const { data: profile, error } = await supabase
         .from('users')
         .select('*')
@@ -63,65 +95,142 @@ export default function AccountPage() {
     }
   };
 
+  const fetchDashboardData = async (userId: string) => {
+    try {
+      setIsLoadingDashboard(true);
+      const supabase = createClient();
+      const api = createApiClient(supabase);
+
+      // Create individual promises with proper error handling
+      const applicationsPromise = api.getUserApplications()
+        .then(result => result)
+        .catch(() => ({ success: false, applications: [] }));
+        
+      const ownedPromise = fetchOwnedListings(userId);
+      
+      const likedPromise = api.getUserLikedListings()
+        .then(result => result)
+        .catch(() => ({ success: false, listings: [] }));
+
+      // Set a timeout for all operations
+      const timeoutId = setTimeout(() => {
+        console.warn('Dashboard data loading timeout reached');
+      }, 10000);
+
+      // Fetch all data in parallel with individual timeouts
+      const [applicationsResult, ownedResult, likedResult] = await Promise.allSettled([
+        Promise.race([
+          applicationsPromise,
+          new Promise<{ success: false; applications: [] }>((_, reject) => 
+            setTimeout(() => reject({ success: false, applications: [] }), 8000)
+          )
+        ]).catch(() => ({ success: false, applications: [] })),
+        
+        Promise.race([
+          ownedPromise,
+          new Promise<{ success: false; listings: [] }>((_, reject) => 
+            setTimeout(() => reject({ success: false, listings: [] }), 8000)
+          )
+        ]).catch(() => ({ success: false, listings: [] })),
+        
+        Promise.race([
+          likedPromise,
+          new Promise<{ success: false; listings: [] }>((_, reject) => 
+            setTimeout(() => reject({ success: false, listings: [] }), 8000)
+          )
+        ]).catch(() => ({ success: false, listings: [] }))
+      ]);
+
+      clearTimeout(timeoutId);
+
+      // Handle results with proper type checking
+      if (applicationsResult.status === 'fulfilled' && applicationsResult.value?.success) {
+        setApplications(applicationsResult.value.applications || []);
+      } else {
+        setApplications([]);
+      }
+
+      if (ownedResult.status === 'fulfilled' && ownedResult.value?.success) {
+        setOwnedListings(ownedResult.value.listings || []);
+      } else {
+        setOwnedListings([]);
+      }
+
+      if (likedResult.status === 'fulfilled' && likedResult.value?.success) {
+        setLikedListings(likedResult.value.listings || []);
+      } else {
+        setLikedListings([]);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      // Set empty arrays as fallback
+      setApplications([]);
+      setOwnedListings([]);
+      setLikedListings([]);
+    } finally {
+      setIsLoadingDashboard(false);
+    }
+  };
+
+  const fetchOwnedListings = async (userId: string) => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return { success: true, listings: data || [] };
+    } catch (error) {
+      console.error('Error fetching owned listings:', error);
+      return { success: false, listings: [] };
+    }
+  };
+  
   useEffect(() => {
-    // Get initial user state
-    const getUser = async () => {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) {
-          console.error('Error getting user:', error);
-          router.push('/auth/signin');
-          return;
-        }
-        setUser(user);
-        
-        // Fetch user profile if user exists
-        if (user) {
-          const profile = await fetchUserProfile(user.id);
-          setUserProfile(profile);
-        }
-      } catch (error) {
-        console.error('Error getting user:', error);
-        router.push('/auth/signin');
-      } finally {
-        setIsLoadingUser(false);
-      }
-    };
+    if (!user) return;
 
-    // Set up auth state listener for real-time updates
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setUserProfile(null);
-          router.push('/auth/signin');
-        } else if (session?.user) {
-          setUser(session.user);
-          // Fetch user profile
-          const profile = await fetchUserProfile(session.user.id);
-          setUserProfile(profile);
-        } else if (event === 'TOKEN_REFRESHED' && !session?.user) {
-          // Token refreshed but no user, redirect to sign in
-          router.push('/auth/signin');
-        }
-        
-        setIsLoadingUser(false);
-      }
-    );
+    // Initial data fetch
+    fetchUserProfile(user.id).then(setUserProfile);
+    fetchDashboardData(user.id);
 
-    // Get initial user
-    getUser();
-    
-    // Cleanup subscription
+    // Set up real-time subscription for new listings
+    const supabase = createClient();
+    const channel = supabase
+      .channel('realtime-listings')
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'listings',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('New listing created:', payload.new);
+          // Re-fetch owned listings to update the count
+          fetchOwnedListings(user.id).then(result => {
+            if (result.success) {
+              setOwnedListings(result.listings);
+            }
+          });
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on component unmount
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
-  }, [supabase.auth, router]);
+  }, [user]);
 
   // Memoize API client to prevent unnecessary re-creation
-  const api = useMemo(() => createApiClient(supabase), [supabase]);
+  const api = useMemo(() => {
+    const supabase = createClient();
+    return createApiClient(supabase);
+  }, []);
 
   const scrollToSection = (sectionId: string) => {
     setActiveSection(sectionId);
@@ -142,6 +251,7 @@ export default function AccountPage() {
         title: 'Signed out successfully!'
       });
       router.push('/');
+      router.refresh();
     } catch (error) {
       console.error('Sign out error:', error);
       toast({
@@ -217,14 +327,89 @@ export default function AccountPage() {
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="h-3 w-3 text-amber-500" />;
+      case 'accepted':
+        return <CheckCircle className="h-3 w-3 text-emerald-500" />;
+      case 'rejected':
+        return <XCircle className="h-3 w-3 text-red-500" />;
+      case 'withdrawn':
+        return <XCircle className="h-3 w-3 text-gray-500" />;
+      default:
+        return <Clock className="h-3 w-3 text-gray-500" />;
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Under Review';
+      case 'accepted':
+        return 'Accepted';
+      case 'rejected':
+        return 'Not Selected';
+      case 'withdrawn':
+        return 'Withdrawn';
+      default:
+        return 'Unknown';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'accepted':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'rejected':
+        return 'bg-red-50 text-red-700 border-red-200';
+      case 'withdrawn':
+        return 'bg-gray-50 text-gray-700 border-gray-200';
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getMediaUrls = (listing: any) => {
+    const media: Array<{ url: string; type: "image" | "video" }> = []
+
+    if (listing.images && Array.isArray(listing.images)) {
+      listing.images.forEach((img: string) => {
+        media.push({ url: img, type: "image" })
+      })
+    }
+
+    if (listing.videos && Array.isArray(listing.videos)) {
+      listing.videos.forEach((video: string) => {
+        media.push({ url: video, type: "video" })
+      })
+    }
+
+    return media
+  };
+
+  const getApplicationStats = () => {
+    const stats = {
+      total: applications.length,
+      pending: applications.filter(app => app.status === 'pending').length,
+      accepted: applications.filter(app => app.status === 'accepted').length,
+      rejected: applications.filter(app => app.status === 'rejected').length,
+      withdrawn: applications.filter(app => app.status === 'withdrawn').length,
+    };
+    return stats;
+  };
+
   if (isLoadingUser) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl">
-          <CardContent className="p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl border-0 shadow-xl">
+          <CardContent className="p-8">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4 text-muted-foreground">Loading account...</p>
+              <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading Your Account</h3>
+              <p className="text-gray-600">Setting up your dashboard...</p>
             </div>
           </CardContent>
         </Card>
@@ -234,13 +419,17 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl">
-          <CardContent className="p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl border-0 shadow-xl">
+          <CardContent className="p-8">
             <div className="text-center">
-              <p className="text-muted-foreground">You need to be signed in to view this page.</p>
-              <Button onClick={() => router.push('/auth/signin')} className="mt-4">
-                Sign In
+              <div className="bg-blue-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <UserIcon className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Sign In Required</h3>
+              <p className="text-gray-600 mb-6">You need to be signed in to view your account dashboard.</p>
+              <Button onClick={() => router.push('/auth/signin')} size="lg">
+                Sign In to Continue
               </Button>
             </div>
           </CardContent>
@@ -250,83 +439,84 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-white">
-      <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 p-4 md:gap-8 md:p-10">
-        <div className="mx-auto grid w-full max-w-6xl gap-2">
-          <h1 className="text-3xl font-semibold">Account</h1>
-        </div>
-        <div className="mx-auto grid w-full max-w-6xl items-start gap-6 md:grid-cols-[180px_1fr] lg:grid-cols-[250px_1fr]">
-          <nav className="grid gap-4 text-sm">
-            <button
-              onClick={() => scrollToSection('general')}
-              className={`text-left px-3 py-2 rounded-lg transition-all duration-200 ${
-                activeSection === 'general'
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-md'
-                  : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
-              }`}
-            >
-              General
-            </button>
-            <button
-              onClick={() => scrollToSection('email')}
-              className={`text-left px-3 py-2 rounded-lg transition-all duration-200 ${
-                activeSection === 'email'
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-md'
-                  : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
-              }`}
-            >
-              Email
-            </button>
-            <button
-              onClick={() => scrollToSection('profile')}
-              className={`text-left px-3 py-2 rounded-lg transition-all duration-200 ${
-                activeSection === 'profile'
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-md'
-                  : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
-              }`}
-            >
-              Profile
-            </button>
-            <Link
-              href="/applications"
-              className="text-left px-3 py-2 rounded-lg transition-all duration-200 text-muted-foreground hover:text-primary hover:bg-primary/10"
-            >
-              My Applications
-            </Link>
-            <Link
-              href="/liked"
-              className="text-left px-3 py-2 rounded-lg transition-all duration-200 text-muted-foreground hover:text-primary hover:bg-primary/10"
-            >
-              My Favorites
-            </Link>
-            <button
-              onClick={() => scrollToSection('signout')}
-              className={`text-left px-3 py-2 rounded-lg transition-all duration-200 ${
-                activeSection === 'signout'
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-md'
-                  : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
-              }`}
-            >
-              Sign Out
-            </button>
-            <button
-              onClick={() => scrollToSection('delete')}
-              className={`text-left px-3 py-2 rounded-lg transition-all duration-200 ${
-                activeSection === 'delete'
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-md'
-                  : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
-              }`}
-            >
-              Delete Account
-            </button>
-            <Link 
-              href="mailto:support@golet.com" 
-              className="text-left px-3 py-2 rounded-lg transition-all duration-200 text-muted-foreground hover:text-primary hover:bg-primary/10"
-            >
-              Support
-            </Link>
+    <div className="flex min-h-screen w-full flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
+      <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 p-3 sm:p-4 md:gap-8 md:p-10">
+        <div className="mx-auto grid w-full max-w-7xl items-start gap-4 sm:gap-6 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr]">
+          {/* Navigation Sidebar - Hidden on mobile, sticky on desktop */}
+          <nav className="hidden lg:grid gap-2 text-sm lg:sticky lg:top-[6.5rem]">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+              <CardContent className="p-3 sm:p-4">
+                <div className="space-y-1">
+                  <button
+                    onClick={() => scrollToSection('general')}
+                    className={`flex items-center space-x-3 w-full px-4 py-2.5 rounded-lg transition-all duration-200 ${
+                      activeSection === 'general' 
+                        ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary border-l-4 border-primary' 
+                        : 'hover:bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <UserCog className="h-4 w-4" />
+                    <span className="font-medium">General</span>
+                  </button>
+                  <button
+                    onClick={() => scrollToSection('profile')}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
+                      activeSection === 'profile'
+                        ? 'bg-blue-600 text-white font-semibold shadow-md'
+                        : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                    }`}
+                  >
+                    <UserIcon className="h-4 w-4" />
+                    Profile
+                  </button>
+                  <div className="border-t pt-2 mt-2">
+                    <button
+                      onClick={() => scrollToSection('signout')}
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
+                        activeSection === 'signout'
+                          ? 'bg-blue-600 text-white font-semibold shadow-md'
+                          : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                      }`}
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                    <button
+                      onClick={() => scrollToSection('delete')}
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
+                        activeSection === 'delete'
+                          ? 'bg-red-600 text-white font-semibold shadow-md'
+                          : 'text-red-600 hover:text-red-700 hover:bg-red-50'
+                      }`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete Account
+                    </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </nav>
-          <div className="grid gap-6">
+
+          {/* Main Content - Full width on mobile */}
+          <div className="grid gap-4 sm:gap-6 lg:gap-8">
+            {/* Mobile Header - Only visible on mobile */}
+            <div className="grid gap-2 lg:hidden">
+                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
+                    Account Dashboard
+                </h1>
+                <p className="text-sm sm:text-base text-gray-600">Manage your account and property activity</p>
+            </div>
+            
+            {/* Desktop Header - Hidden on mobile */}
+            <div className="hidden lg:grid gap-2">
+                <h1 className="text-4xl font-bold bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
+                    Account Dashboard
+                </h1>
+                <p className="text-gray-600">Manage your account settings and view your property activity</p>
+            </div>
+            
+            {/* Welcome Card */}
             <Card id="general" className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-white to-gray-50/50">
               <CardHeader>
                 <CardTitle className="text-2xl">
@@ -349,20 +539,95 @@ export default function AccountPage() {
                 </div>
               </CardContent>
             </Card>
-            
-            <Card id="email" className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-white to-blue-50/30">
-              <CardHeader>
-                <CardTitle>Email</CardTitle>
-                <CardDescription>
-                  The email associated with your account
-                </CardDescription>
+
+            {/* Overview Section */}
+            <Card id="overview" className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2 text-2xl">
+                    <BarChart3 className="h-6 w-6 text-blue-600" />
+                    Property Activity Overview
+                    </CardTitle>
+                    <CardDescription>
+                    Your recent activity and property management at a glance
+                    </CardDescription>
+                </div>
               </CardHeader>
               <CardContent>
-                <form>
-                  <Input placeholder="Email" value={user.email || ''} disabled />
-                </form>
+                {isLoadingDashboard ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-3" />
+                      <p className="text-gray-600">Loading your activity...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                                          {/* Quick Stats - Light Gradients */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+                        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+                          <CardContent className="p-5 sm:p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <p className="text-blue-700 text-xs sm:text-sm font-medium">Applications</p>
+                                <p className="text-2xl sm:text-3xl font-bold text-blue-900">{applications.length}</p>
+                                <p className="text-blue-600 text-xs">
+                                  {applications.filter(a => a.status === 'pending').length} pending
+                                </p>
+                              </div>
+                              <div className="bg-blue-500/10 p-2.5 sm:p-3 rounded-full">
+                                <FileUser className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+                          <CardContent className="p-5 sm:p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <p className="text-purple-700 text-xs sm:text-sm font-medium">My Listings</p>
+                                <p className="text-2xl sm:text-3xl font-bold text-purple-900">{ownedListings.length}</p>
+                                <p className="text-purple-600 text-xs">
+                                  {ownedListings.filter(l => l.active).length} active
+                                </p>
+                              </div>
+                              <div className="bg-purple-500/10 p-2.5 sm:p-3 rounded-full">
+                                <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-gradient-to-br from-red-50 to-pink-100 border border-red-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] sm:col-span-2 lg:col-span-1">
+                          <CardContent className="p-5 sm:p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <p className="text-red-700 text-xs sm:text-sm font-medium">Favorites</p>
+                                <p className="text-2xl sm:text-3xl font-bold text-red-900">{likedListings.length}</p>
+                                <p className="text-red-600 text-xs">Saved properties</p>
+                              </div>
+                              <div className="bg-red-500/10 p-2.5 sm:p-3 rounded-full">
+                                <Heart className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+            
+                  </>
+                )}
               </CardContent>
+                             <CardFooter className="border-t px-6 py-4">
+               <Button onClick={() => router.push('/dashboard')}>
+                     <TrendingUp className="h-4 w-4 mr-2" />
+                     View Full Dashboard
+                 </Button>
+               </CardFooter>
             </Card>
+            
+            {/* Profile Section */}
             <Card id="profile" className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-white to-green-50/30">
               <CardHeader>
                 <CardTitle>Your Profile</CardTitle>
@@ -376,6 +641,8 @@ export default function AccountPage() {
                 </Button>
               </CardFooter>
             </Card>
+
+            {/* Sign Out Section */}
             <Card id="signout" className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-white to-orange-50/30">
               <CardHeader>
                 <CardTitle>Sign out</CardTitle>
@@ -387,6 +654,8 @@ export default function AccountPage() {
                 </Button>
               </CardFooter>
             </Card>
+
+            {/* Delete Account Section */}
             <Card id="delete" className="shadow-lg hover:shadow-xl transition-all duration-300 border-red-200 bg-gradient-to-br from-red-50 to-red-100/50">
               <CardHeader>
                 <CardTitle className="text-red-700 flex items-center gap-2">
@@ -462,7 +731,7 @@ export default function AccountPage() {
                       >
                         {deleteLoading ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             Deleting...
                           </>
                         ) : (
@@ -477,8 +746,6 @@ export default function AccountPage() {
                 </Dialog>
               </CardFooter>
             </Card>
-            
-
           </div>
         </div>
       </main>

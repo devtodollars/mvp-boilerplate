@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo, useCallback } from "react"
+import { useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,7 +18,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Search, SlidersHorizontal, Heart, MapPin, List, Map, X, ChevronLeft, ChevronRight, Play, ArrowLeft, Filter } from "lucide-react"
 import PropertyView from "./propertyView"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
-import { fetchListings, debugListings } from "@/utils/supabase/listings"
+import { fetchListings, debugListings, trackListingView } from "@/utils/supabase/listings"
 import { getListingImages } from "@/utils/supabase/storage"
 import { createClient } from "@/utils/supabase/client"
 import { createApiClient } from "@/utils/supabase/api"
@@ -29,6 +30,7 @@ const MapboxMap = dynamic(() => import("@/components/mapbox/MapboxMap"), {
 });
 
 export default function Component() {
+  const searchParams = useSearchParams()
   const [listings, setListings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<"list" | "map">("list")
@@ -92,7 +94,24 @@ export default function Component() {
         if (result.data && result.data.length > 0) {
           console.log('Found listings via API route:', result.data.length)
           setListings(result.data)
-          setSelectedProperty(result.data[0] || null)
+          
+          // Handle URL parameters for property selection and view mode
+          const propertyId = searchParams.get('id')
+          const viewModeParam = searchParams.get('view')
+          
+                      if (propertyId) {
+              const property = result.data.find((listing: any) => listing.id === propertyId)
+              if (property) {
+                setSelectedProperty(property)
+                if (viewModeParam === 'detailed') {
+                  setViewMode('map')
+                }
+              } else {
+                setSelectedProperty(result.data[0] || null)
+              }
+            } else {
+              setSelectedProperty(result.data[0] || null)
+            }
         } else {
           console.log('No listings found via API route, trying client-side...')
           
@@ -105,7 +124,24 @@ export default function Component() {
           
           if (!error && data) {
             setListings(data)
-            setSelectedProperty(data[0] || null)
+            
+            // Handle URL parameters for property selection and view mode
+            const propertyId = searchParams.get('id')
+            const viewModeParam = searchParams.get('view')
+            
+            if (propertyId) {
+              const property = data.find((listing: any) => listing.id === propertyId)
+              if (property) {
+                setSelectedProperty(property)
+                if (viewModeParam === 'detailed') {
+                  setViewMode('map')
+                }
+              } else {
+                setSelectedProperty(data[0] || null)
+              }
+            } else {
+              setSelectedProperty(data[0] || null)
+            }
           } else {
             console.error('Error fetching listings:', error)
           }
@@ -117,10 +153,20 @@ export default function Component() {
       setLoading(false)
     }
     fetchData()
-  }, [])
+  }, [searchParams])
 
-  const handlePropertySelect = useCallback((property: any) => {
+  const handlePropertySelect = useCallback(async (property: any) => {
     setSelectedProperty(property)
+    
+    // Track view when property is selected
+    if (property?.id) {
+      try {
+        await trackListingView(property.id);
+      } catch (error) {
+        console.error('Error tracking view:', error);
+      }
+    }
+    
     if (isClient && window.innerWidth < 1024) {
       setShowPropertyDetails(true)
     }
@@ -515,7 +561,7 @@ export default function Component() {
                                   )}
                                   {property.applicants && (
                                     <div className="text-gray-500 text-sm">
-                                      {property.applicants.length} applicant{property.applicants.length !== 1 ? "s" : ""}
+                                      {property.applicants.count || 0} applicant{(property.applicants.count || 0) !== 1 ? "s" : ""}
                                     </div>
                                   )}
                                 </div>
@@ -684,7 +730,7 @@ export default function Component() {
                                 )}
                                 {property.applicants && (
                                   <div className="text-muted-foreground">
-                                    {property.applicants.length} applicant{property.applicants.length !== 1 ? "s" : ""}
+                                    {property.applicants.count || 0} applicant{(property.applicants.count || 0) !== 1 ? "s" : ""}
                                   </div>
                                 )}
                               </div>
@@ -748,17 +794,21 @@ export default function Component() {
                 </div>
               </div>
 
-              <Card className="h-[calc(100vh-250px)]">
-                <CardContent className="p-0 h-full">
+              <Card className="max-h-[600px] overflow-y-auto">
+                <CardContent className="p-0">
                   {viewMode === "list" ? (
-                    <MapboxMap
-                      properties={mapProperties}
-                      selectedProperty={mapSelectedProperty}
-                      onSelect={handlePropertySelect}
-                      onMapClick={() => {}}
-                    />
+                    <div className="h-[500px]">
+                      <MapboxMap
+                        properties={mapProperties}
+                        selectedProperty={mapSelectedProperty}
+                        onSelect={handlePropertySelect}
+                        onMapClick={() => {}}
+                      />
+                    </div>
                   ) : (
-                    <PropertyView selectedProperty={selectedProperty} onMediaClick={handleMediaClick} />
+                    <div className="max-h-[600px] overflow-y-auto">
+                      <PropertyView selectedProperty={selectedProperty} onMediaClick={handleMediaClick} />
+                    </div>
                   )}
                 </CardContent>
               </Card>

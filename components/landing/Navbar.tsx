@@ -18,13 +18,13 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
 import { ModeToggle } from './mode-toggle';
 import { LogoIcon } from './Icons';
-import { User } from '@supabase/supabase-js';
 import { createApiClient } from '@/utils/supabase/api';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
 import { usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 interface RouteProps {
   href: string;
@@ -50,17 +50,36 @@ const routeList: RouteProps[] = [
   }
 ];
 
-export const Navbar = ({ user }: { user: User | null }) => {
+export const Navbar = () => {
   const router = useRouter();
   const { toast } = useToast();
   const api = createApiClient(createClient());
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const pathname = usePathname();
+  const { user } = useAuth();
   const handleAuth = async () => {
     if (user) {
-      return router.push('/account');
+      return router.push('/dashboard');
     }
     return router.push('/auth');
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await api.signOut();
+      toast({
+        title: 'Signed out successfully!'
+      });
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast({
+        title: 'Error signing out',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
   return (
     <header className="sticky border-b-[1px] top-0 z-40 w-full bg-white dark:border-b-slate-700 dark:bg-background">
@@ -80,7 +99,7 @@ export const Navbar = ({ user }: { user: User | null }) => {
           {/* mobile */}
           {pathname === '/' && (
           <span className="flex md:hidden"> 
-            <ModeToggle />
+            {/* <ModeToggle /> */}
 
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger className="px-2" asChild>
@@ -107,12 +126,30 @@ export const Navbar = ({ user }: { user: User | null }) => {
                       {label}
                     </a>
                   ))}
-                  <Button
-                    variant="ghost"
-                    onClick={handleAuth}
-                  >
-                    {user ? user.email : 'Sign In'}
-                  </Button>
+                  {user ? (
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        variant="ghost"
+                        onClick={handleAuth}
+                      >
+                        {user.email}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSignOut}
+                      >
+                        Sign Out
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      onClick={handleAuth}
+                    >
+                      Sign In
+                    </Button>
+                  )}
                 </nav>
               </SheetContent>
             </Sheet>
@@ -152,13 +189,31 @@ export const Navbar = ({ user }: { user: User | null }) => {
 
 
           <div className="hidden md:flex gap-2">
-            <Button
-              onClick={handleAuth}
-              variant="ghost"
-            >
-              {user ? user.email : 'Sign In'}
-            </Button>
-            <ModeToggle />
+            {user ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleAuth}
+                  variant="ghost"
+                >
+                  Hello {user.email?.split('@')[0]} 👋
+                </Button>
+                <Button
+                  onClick={handleSignOut}
+                  variant="outline"
+                  size="sm"
+                >
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleAuth}
+                variant="ghost"
+              >
+                Sign In
+              </Button>
+            )}
+            {/* <ModeToggle /> */}
           </div>
         </NavigationMenuList>
       </NavigationMenu>

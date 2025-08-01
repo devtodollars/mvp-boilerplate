@@ -315,8 +315,8 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
   }
 
   return (
-    <div className="w-full h-full overflow-y-auto">
-      <div className="p-6 space-y-6">
+    <div className="w-full overflow-y-auto">
+      <div className="p-4 space-y-4">
         {/* Media Carousel */}
         {mediaUrls.length > 0 && (
           <div className="relative">
@@ -325,7 +325,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
                 {mediaUrls.map((media, idx) => (
                   <CarouselItem key={idx}>
                     <div
-                      className="relative aspect-video cursor-pointer group rounded-xl overflow-hidden"
+                      className="relative h-48 cursor-pointer group rounded-lg overflow-hidden"
                       onClick={() => onMediaClick?.(mediaUrls, idx)}
                     >
                       {media.type === "image" ? (
@@ -339,7 +339,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
                         <div className="relative w-full h-full">
                           <video src={media.url} className="w-full h-full object-cover" muted />
                           <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                            <Play className="h-16 w-16 text-white" />
+                            <Play className="h-8 w-8 text-white" />
                           </div>
                         </div>
                       )}
@@ -358,40 +358,40 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
 
             {/* Media counter */}
             {mediaUrls.length > 1 && (
-              <div className="absolute bottom-4 right-4 bg-black/70 text-white text-sm px-3 py-1 rounded-full">
-                {mediaUrls.length} media files
+              <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                {mediaUrls.length} photos
               </div>
             )}
           </div>
         )}
 
         {/* Property Header */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex items-start justify-between">
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="secondary">{formatPropertyType(selectedProperty.property_type)}</Badge>
-                <Badge variant="outline">{formatRoomType(selectedProperty.room_type)}</Badge>
-                {selectedProperty.ensuite && <Badge className="bg-blue-500">Ensuite</Badge>}
+                <Badge variant="secondary" className="text-xs">{formatPropertyType(selectedProperty.property_type)}</Badge>
+                <Badge variant="outline" className="text-xs">{formatRoomType(selectedProperty.room_type)}</Badge>
+                {selectedProperty.ensuite && <Badge className="bg-blue-500 text-xs">Ensuite</Badge>}
                 {selectedProperty.verified && (
-                  <Badge className="bg-green-500">
+                  <Badge className="bg-green-500 text-xs">
                     <Shield className="h-3 w-3 mr-1" />
                     Verified
                   </Badge>
                 )}
               </div>
 
-              <h1 className="text-2xl font-bold text-gray-900">{selectedProperty.property_name}</h1>
+              <h1 className="text-xl font-bold text-gray-900">{selectedProperty.property_name}</h1>
 
               <div className="space-y-1">
-                <div className="flex items-center gap-1 text-gray-600">
-                  <MapPin className="h-4 w-4" />
+                <div className="flex items-center gap-1 text-gray-600 text-sm">
+                  <MapPin className="h-3 w-3" />
                   <span>
                     {selectedProperty.apartment_number && `${selectedProperty.apartment_number}, `}
                     {selectedProperty.address}
                   </span>
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-xs text-gray-500">
                   {selectedProperty.area}, {selectedProperty.city}, {selectedProperty.county} {selectedProperty.eircode}
                 </div>
               </div>

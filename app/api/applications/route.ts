@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
+
     const { listingId, notes } = await request.json();
 
     // Get the current user

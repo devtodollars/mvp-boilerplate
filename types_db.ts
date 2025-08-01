@@ -94,6 +94,8 @@ export type Database = {
           verified: boolean
           videos: Json
           viewing_times: string[] | null
+          views_count: number | null
+          last_viewed_at: string | null
         }
         Insert: {
           active?: boolean
@@ -139,6 +141,8 @@ export type Database = {
           verified?: boolean
           videos?: Json
           viewing_times?: string[] | null
+          views_count?: number | null
+          last_viewed_at?: string | null
         }
         Update: {
           active?: boolean
@@ -408,6 +412,22 @@ export type Database = {
       reorder_application_queue: {
         Args: { listing_uuid: string }
         Returns: undefined
+      }
+      increment_listing_views: {
+        Args: { listing_uuid: string }
+        Returns: number
+      }
+      get_listing_applicant_count: {
+        Args: { listing_uuid: string }
+        Returns: number
+      }
+      get_listing_stats: {
+        Args: { listing_uuid: string }
+        Returns: {
+          applicant_count: number
+          views_count: number
+          last_viewed_at: string | null
+        }[]
       }
     }
     Enums: {

@@ -224,46 +224,29 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
         throw new Error('User not authenticated');
       }
 
-      // Use the updated function that handles both new applications and re-applications
-      const { data, error } = await supabase.rpc('add_application_to_queue', {
-        listing_uuid: listingId,
-        user_uuid: user.id,
-        application_notes: notes || null
+      console.log('Applying to property:', { listingId, userId: user.id, notes });
+
+      // Use the server API endpoint instead of calling the database function directly
+      const response = await fetch('/api/applications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          listingId,
+          notes
+        }),
       });
 
-      if (error) {
-        // Handle unique constraint violation specifically
-        if (error.code === '23505') {
-          // This means the user already has an application, try to update it
-          const { data: existingApp } = await supabase
-            .from('applications')
-            .select('id')
-            .eq('listing_id', listingId)
-            .eq('user_id', user.id)
-            .single();
-          
-          if (existingApp) {
-            // Update the existing application
-            const { data: updatedApp, error: updateError } = await supabase
-              .from('applications')
-              .update({
-                status: 'pending',
-                notes: notes || null,
-                applied_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', existingApp.id)
-              .select()
-              .single();
-            
-            if (updateError) throw updateError;
-            return { success: true, applicationId: updatedApp.id };
-          }
-        }
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create application');
       }
 
-      return { success: true, applicationId: data };
+      const result = await response.json();
+      console.log('API result:', result);
+
+      return { success: true, applicationId: result.applicationId };
     } catch (error) {
       console.error('Error applying to property:', error);
       throw error;
@@ -393,16 +376,15 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
         .select('*')
         .eq('listing_id', listingId)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to handle no rows gracefully
 
       if (error) {
-        if (error.code === 'PGRST116') { // No rows returned
-          return { hasApplied: false, application: null };
-        }
-        throw error;
+        console.error('Error checking user application:', error);
+        return { hasApplied: false, application: null };
       }
 
-      return { hasApplied: true, application: data };
+      // maybeSingle() returns null if no rows found, which is what we want
+      return { hasApplied: !!data, application: data };
     } catch (error) {
       console.error('Error checking user application:', error);
       return { hasApplied: false, application: null };

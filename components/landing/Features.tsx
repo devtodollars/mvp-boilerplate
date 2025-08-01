@@ -38,7 +38,6 @@ const features: FeatureProps[] = [
 const featureList: string[] = [
   "ID-Verified users",
   "Scam and Deposit protection",
-  "In-app messaging",
   "Tenant profiles",
   "Transparent queueing system",
   "Secure Escrow Deposits",
@@ -81,7 +80,7 @@ export const Features = () => {
               <img
                 src={image}
                 alt="About feature"
-                className="w-[200px] lg:w-[300px] mx-auto"
+                className="w-[300px] lg:w-[500px] mx-auto"
               />
             </CardFooter>
           </Card>

@@ -1,10 +1,66 @@
-"use client"
+'use client';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { createClient } from '@/utils/supabase/client';
+import { User } from '@supabase/supabase-js';
 
-import { PropsWithChildren } from "react"
-import { useAuthRefresh } from "@/hooks/use-auth-refresh"
+const AuthContext = createContext<{ 
+  user: User | null; 
+  isLoading: boolean;
+  signOut: () => Promise<void>;
+}>({ 
+  user: null,
+  isLoading: true,
+  signOut: async () => {},
+});
 
-export function AuthProvider({ children }: PropsWithChildren) {
-  useAuthRefresh()
-  
-  return <>{children}</>
-} 
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event, session?.user?.email);
+      
+      if (event === 'SIGNED_OUT') {
+        // Clear user state immediately on sign out
+        setUser(null);
+        setIsLoading(false);
+      } else {
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      }
+    });
+
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase.auth]);
+
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
+  const value = { user, isLoading, signOut };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  return useContext(AuthContext);
+}; 

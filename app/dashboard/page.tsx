@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { createApiClient } from '@/utils/supabase/api';
 import { Button } from '@/components/ui/button';
+import { trackListingView } from '@/utils/supabase/listings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
@@ -35,7 +36,8 @@ import {
   LayoutGrid,
   FileSearch,
   FileX,
-  Search
+  Search,
+  Settings
 } from 'lucide-react';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -124,15 +126,52 @@ export default function ApplicationsPage() {
 
     const fetchOwnedListings = async (supabase: any, userId: string) => {
       try {
-        const { data, error } = await supabase
+        // First, fetch the listings
+        const { data: listings, error: listingsError } = await supabase
           .from('listings')
           .select('*')
           .eq('user_id', userId)
-          .eq('active', true)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        return { success: true, listings: data || [] };
+        if (listingsError) throw listingsError;
+
+        // Then, for each listing, get the applicant count using the new function
+        const listingsWithApplicants = await Promise.all(
+          (listings || []).map(async (listing: any) => {
+            try {
+              const { data: statsData, error: statsError } = await supabase.rpc('get_listing_stats', {
+                listing_uuid: listing.id
+              });
+
+              if (statsError) {
+                console.error(`Error getting stats for listing ${listing.id}:`, statsError);
+                return {
+                  ...listing,
+                  applicants: { count: 0 },
+                  views_count: listing.views_count || 0
+                };
+              }
+
+              const stats = statsData && statsData.length > 0 ? statsData[0] : null;
+              return {
+                ...listing,
+                applicants: { 
+                  count: stats?.applicant_count || 0 
+                },
+                views_count: stats?.views_count || listing.views_count || 0
+              };
+            } catch (error) {
+              console.error(`Error processing listing ${listing.id}:`, error);
+              return {
+                ...listing,
+                applicants: { count: 0 },
+                views_count: listing.views_count || 0
+              };
+            }
+          })
+        );
+
+        return { success: true, listings: listingsWithApplicants };
       } catch (error) {
         console.error('Error fetching owned listings:', error);
         return { success: false, listings: [] };
@@ -289,8 +328,8 @@ export default function ApplicationsPage() {
               <span className="hidden sm:inline">Back</span>
             </Button>
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
-                Property Dashboard
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
+                Dashboard
               </h1>
               <p className="text-sm sm:text-base text-gray-600 mt-0.5 sm:mt-1">
                 Manage your property portfolio and applications
@@ -298,10 +337,15 @@ export default function ApplicationsPage() {
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-3">
-            <Badge variant="outline" className="bg-white/80 backdrop-blur-sm border-blue-200 text-blue-700">
-              <Star className="h-3 w-3 mr-1" />
-              {userProfile?.first_name || 'User'}
-            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/account')}
+              className="flex items-center gap-2 hover:bg-white/80 transition-colors"
+            >
+              <Settings className="h-4 w-4" />
+              Account Settings
+            </Button>
           </div>
         </div>
 
@@ -422,13 +466,14 @@ export default function ApplicationsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Button 
                     onClick={() => router.push('/search')} 
-                    className="h-20 flex flex-col items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                    variant="outline"
+                    className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
                   >
                     <Home className="h-6 w-6" />
                     <span>Browse Properties</span>
                   </Button>
                   <Button 
-                    onClick={() => router.push('/listroom')} 
+                    onClick={() => router.push('/listroom')}
                     variant="outline"
                     className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
                   >
@@ -463,20 +508,21 @@ export default function ApplicationsPage() {
                 <CardContent>
                   {applications.length === 0 ? (
                     <div className="text-center py-12 sm:py-16">
-                      <FileX className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
                       <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-2">No applications yet</h3>
                       <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6 px-4">Start browsing properties to find your perfect home</p>
-                      <Button onClick={() => router.push('/search')} className="bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 text-sm sm:text-base">
+                      <Button onClick={() => router.push('/search')} variant="outline" className=" text-sm sm:text-base">
                         <Search className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                         Browse Properties
                       </Button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                    <div className="space-y-3">
                       {applications.slice(0, 3).map((application) => (
-                        <Card key={application.id} className="border shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden">
-                          <div className="relative h-40 sm:h-48">
-                            {application.listing?.images && application.listing.images.length > 0 ? (
+                        <div key={application.id} className="flex items-center gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200">
+                          {/* Property Image */}
+                          <div className="relative w-16 h-16 flex-shrink-0 p-1">
+                            <div className="relative w-full h-full rounded-lg overflow-hidden">
+                              {application.listing?.images && application.listing.images.length > 0 ? (
                                 <Image
                                   src={application.listing.images[0]}
                                   alt={application.listing.property_name}
@@ -484,77 +530,75 @@ export default function ApplicationsPage() {
                                   className="object-cover"
                                 />
                               ) : (
-                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                  <Building2 className="h-8 w-8 text-gray-400" />
+                                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-lg">
+                                  <Building2 className="h-6 w-6 text-gray-400" />
                                 </div>
                               )}
                             </div>
-                          <CardContent className="p-3 sm:p-4">
-                            <div className="flex items-start justify-between gap-3 mb-3">
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-base sm:text-lg truncate">
-                                  {application.listing?.property_name || 'Property Name'}
-                                </h3>
-                                <p className="text-xs sm:text-sm text-gray-600 truncate">
-                                  {application.listing?.property_address || 'Address not available'}
-                                </p>
-                              </div>
-                              <Badge className={`${getStatusColor(application.status)} shrink-0 text-xs`}>
+                          </div>
+
+                          {/* Property Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <h3 className="font-semibold text-sm text-gray-900 truncate">
+                                {application.listing?.property_name || 'Property Name'}
+                              </h3>
+                              <Badge className={`${getStatusColor(application.status)} shrink-0 text-xs px-2 py-0.5`}>
                                 {getStatusIcon(application.status)}
                                 <span className="ml-1">{getStatusText(application.status)}</span>
                               </Badge>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4 text-xs sm:text-sm">
-                              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-600">
-                                <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-                                <span className="truncate">Applied {new Date(application.created_at).toLocaleDateString()}</span>
+                            
+                            <p className="text-xs text-gray-600 truncate mb-2">
+                              {application.listing?.property_address || 'Address not available'}
+                            </p>
+                            
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>{new Date(application.created_at).toLocaleDateString()}</span>
                               </div>
-                              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-600">
-                                <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                                <span className="truncate">{new Date(application.created_at).toLocaleTimeString()}</span>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{new Date(application.created_at).toLocaleTimeString()}</span>
                               </div>
                             </div>
+                          </div>
 
-                            {application.message && (
-                              <div className="mb-3 sm:mb-4">
-                                <p className="text-xs sm:text-sm text-gray-700 font-medium mb-1">Your Message:</p>
-                                <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{application.message}</p>
-                              </div>
-                            )}
-
-                            <div className="flex gap-2">
+                          {/* Actions */}
+                          <div className="flex flex-col gap-2 flex-shrink-0">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-xs px-3 py-1 h-8"
+                              onClick={() => router.push(`/search?id=${application.listing?.id}&view=detailed`)}
+                            >
+                              View
+                            </Button>
+                            {application.status === 'pending' && (
                               <Button 
-                                variant="outline" 
+                                variant="destructive" 
                                 size="sm"
-                                className="flex-1 text-xs sm:text-sm"
-                                onClick={() => router.push(`/search?id=${application.listing?.id}`)}
+                                className="text-xs px-3 py-1 h-8"
+                                onClick={() => handleWithdrawApplication(application.id)}
                               >
-                                View Property
+                                Withdraw
                               </Button>
-                              {application.status === 'pending' && (
-                                <Button 
-                                  variant="destructive" 
-                                  size="sm"
-                                  className="flex-1 text-xs sm:text-sm"
-                                  onClick={() => handleWithdrawApplication(application.id)}
-                                >
-                                  Withdraw
-                                </Button>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
+                            )}
+                          </div>
+                        </div>
                       ))}
                       {applications.length > 3 && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => setActiveTab('applications')}
-                          className="w-full"
-                        >
-                          View All Applications ({applications.length})
-                        </Button>
+                        <div className="pt-2 border-t border-gray-100">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setActiveTab('applications')}
+                            className="w-full text-sm"
+                          >
+                            View All Applications ({applications.length})
+                          </Button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -589,43 +633,60 @@ export default function ApplicationsPage() {
                         const firstImage = mediaUrls.length > 0 ? mediaUrls[0].url : null;
                         
                         return (
-                          <div key={listing.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                            <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                              {firstImage ? (
-                                <Image
-                                  src={firstImage}
-                                  alt={listing.property_name}
-                                  fill
-                                  className="object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                  <Home className="h-6 w-6 text-gray-400" />
-                                </div>
-                              )}
+                          <div key={listing.id} className="flex items-center gap-4 p-4 bg-white rounded-lg border border-gray-200 hover:border-red-300 hover:shadow-md transition-all duration-200">
+                            <div className="relative w-16 h-16 flex-shrink-0 p-1">
+                              <div className="relative w-full h-full rounded-lg overflow-hidden">
+                                {firstImage ? (
+                                  <Image
+                                    src={firstImage}
+                                    alt={listing.property_name}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-lg">
+                                    <Home className="h-6 w-6 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-sm truncate text-gray-900">
+                              <h4 className="font-semibold text-sm truncate text-gray-900 mb-1">
                                 {listing.property_name}
                               </h4>
+                              <p className="text-xs text-gray-600 truncate mb-2">
+                                {listing.property_address || 'Address not available'}
+                              </p>
                               <p className="text-xs text-gray-500 flex items-center gap-1">
-                                <Euro className="h-3 w-3" />
-                                €{listing.monthly_rent}
+                            
+                                € {listing.monthly_rent}/month
                               </p>
                             </div>
-                            <Heart className="h-4 w-4 text-red-500 fill-current" />
+                            <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                              <Heart className="h-4 w-4 text-red-500 fill-current" />
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="text-xs px-3 py-1 h-8"
+                                onClick={() => router.push(`/search?id=${listing.id}&view=detailed`)}
+                              >
+                                View
+                              </Button>
+                            </div>
                           </div>
                         );
                       })}
                       {likedListings.length > 3 && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => setActiveTab('favorites')}
-                          className="w-full"
-                        >
-                          View All Favorites ({likedListings.length})
-                        </Button>
+                        <div className="pt-2 border-t border-gray-100">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setActiveTab('favorites')}
+                            className="w-full text-sm"
+                          >
+                            View All Favorites ({likedListings.length})
+                          </Button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -671,14 +732,14 @@ export default function ApplicationsPage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-4">
                     {applications.map((application) => (
-                      <Card key={application.id} className="border shadow-md hover:shadow-lg transition-all duration-300">
-                        <CardContent className="p-6">
-                          <div className="flex items-start gap-4">
-                            {/* Property Image */}
-                            <div className="relative w-24 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                              {application.listing.images && application.listing.images.length > 0 ? (
+                      <div key={application.id} className="bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 overflow-hidden">
+                        <div className="flex">
+                          {/* Property Image */}
+                          <div className="w-48 flex-shrink-0 p-4">
+                            <div className="relative w-full h-32 rounded-lg overflow-hidden">
+                              {application.listing?.images && application.listing.images.length > 0 ? (
                                 <Image
                                   src={application.listing.images[0]}
                                   alt={application.listing.property_name}
@@ -686,91 +747,117 @@ export default function ApplicationsPage() {
                                   className="object-cover"
                                 />
                               ) : (
-                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                  <Building2 className="h-8 w-8 text-gray-400" />
+                                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-lg">
+                                  <Building2 className="h-10 w-10 text-gray-400" />
                                 </div>
                               )}
                             </div>
+                            
+                            {/* Status and Price Badges Below Image */}
+                            <div className="flex flex-col gap-2 mt-3">
+                              {/* Status Badge */}
+                              <Badge className={`${getStatusColor(application.status)} shadow-sm w-fit`}>
+                                {getStatusIcon(application.status)}
+                                <span className="ml-1 font-medium">{getStatusText(application.status)}</span>
+                              </Badge>
 
-                            {/* Application Details */}
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-3">
-                                <div>
-                                  <h4 className="font-semibold text-lg text-gray-900">
-                                    {application.listing.property_name}
-                                  </h4>
-                                  <p className="text-gray-600 flex items-center gap-2">
-                                    <MapPin className="h-4 w-4" />
-                                    {application.listing.address}, {application.listing.city}
-                                  </p>
-                                </div>
-                                <Badge className={`${getStatusColor(application.status)} flex items-center gap-1`}>
-                                  {getStatusIcon(application.status)}
-                                  {getStatusText(application.status)}
-                                </Badge>
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                  <Euro className="h-4 w-4" />
-                                  <span>€{application.listing.monthly_rent}/month</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                  <Calendar className="h-4 w-4" />
-                                  <span>Applied {new Date(application.applied_at).toLocaleDateString()}</span>
-                                </div>
-                                {application.status === 'pending' && (
-                                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <Users className="h-4 w-4" />
-                                    <span>Position #{application.position} in queue</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {application.notes && (
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                                  <p className="text-sm text-blue-800">
-                                    <strong>Your application notes:</strong> {application.notes}
-                                  </p>
-                                </div>
-                              )}
-
-                              <div className="flex gap-2">
-                                {application.status === 'pending' && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openWithdrawDialog(application)}
-                                    className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    disabled={withdrawingApplicationId === application.id}
-                                  >
-                                    {withdrawingApplicationId === application.id ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Withdrawing...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Trash2 className="h-4 w-4" />
-                                        Withdraw
-                                      </>
-                                    )}
-                                  </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => router.push(`/search?property=${application.listing.id}`)}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                  View Property
-                                </Button>
+                              {/* Price Badge */}
+                              <div className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm border border-gray-200 w-fit">
+                                <span className="text-sm font-bold text-gray-900">€{application.listing?.monthly_rent}</span>
+                                <span className="text-xs text-gray-600">/month</span>
                               </div>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
+
+                          {/* Application Details */}
+                          <div className="flex-1 p-6">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1">
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                  {application.listing?.property_name || 'Property Name'}
+                                </h3>
+                                <div className="flex items-center gap-2 text-gray-600 mb-3">
+                                  <MapPin className="h-4 w-4 text-gray-500" />
+                                  <span className="text-sm">
+                                    {application.listing?.property_address || 'Address not available'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Application Info Grid */}
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Calendar className="h-4 w-4 text-gray-500" />
+                                <span>Applied {new Date(application.created_at).toLocaleDateString()}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Clock className="h-4 w-4 text-gray-500" />
+                                <span>{new Date(application.created_at).toLocaleTimeString()}</span>
+                              </div>
+                              {application.status === 'pending' && application.position && (
+                                <div className="flex items-center gap-2 text-sm text-amber-600">
+                                  <Users className="h-4 w-4" />
+                                  <span>Position #{application.position} in queue</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Application Message */}
+                            {application.message && (
+                              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                <div className="flex items-start gap-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                                  <div>
+                                    <p className="text-sm font-medium text-blue-900 mb-1">Your Application Message:</p>
+                                    <p className="text-sm text-blue-800 leading-relaxed">{application.message}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-3">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  if (application.listing?.id) {
+                                    await trackListingView(application.listing.id);
+                                  }
+                                  router.push(`/search?id=${application.listing?.id}&view=detailed`);
+                                }}
+                                className="flex items-center gap-2 hover:bg-blue-50 hover:border-blue-300"
+                              >
+                                <Eye className="h-4 w-4" />
+                                View Property
+                              </Button>
+                              
+                              {application.status === 'pending' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openWithdrawDialog(application)}
+                                  className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
+                                  disabled={withdrawingApplicationId === application.id}
+                                >
+                                  {withdrawingApplicationId === application.id ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      Withdrawing...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Trash2 className="h-4 w-4" />
+                                      Withdraw Application
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -840,25 +927,7 @@ export default function ApplicationsPage() {
                                 €{listing.monthly_rent}
                               </Badge>
                             </div>
-                            <div className="absolute top-3 left-3">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-white/90 hover:bg-white">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Edit Listing
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View Public Page
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
+                            
                           </div>
                           <CardContent className="p-4">
                             <h4 className="font-semibold text-lg mb-2 line-clamp-1 text-gray-900">
@@ -868,29 +937,44 @@ export default function ApplicationsPage() {
                               <MapPin className="h-4 w-4" />
                               {listing.city}, {listing.county}
                             </p>
-                            <div className="flex items-center justify-between">
-                              <Badge variant="outline" className="text-xs">
-                                {listing.room_type}
-                              </Badge>
+                            <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1 text-xs text-emerald-600">
-                                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                                  Active
+                                  <CheckCircle className="h-3 w-3" />
+                                  <span>{listing.applicants?.count || 0} applicants</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-blue-600">
+                                  <Eye className="h-3 w-3" />
+                                  <span>{listing.views_count || 0} views</span>
                                 </div>
                               </div>
+                              
+                              {/* Active/Inactive Status Badge */}
+                              <Badge 
+                                variant={listing.active ? "default" : "secondary"}
+                                className={`text-xs ${listing.active ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
+                              >
+                                {listing.active ? 'Active' : 'Inactive'}
+                              </Badge>
                             </div>
+                            
+                            {/* Action Buttons */}
                             <div className="flex gap-2">
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="flex-1"
-                                onClick={() => router.push(`/search?id=${listing.id}`)}
+                                className="flex-1 text-xs"
+                                onClick={async () => {
+                                  await trackListingView(listing.id);
+                                  router.push(`/search?id=${listing.id}&view=detailed`);
+                                }}
                               >
                                 View
                               </Button>
                               <Button 
                                 size="sm" 
-                                className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700"
+                                variant="outline"
+                                className="flex-1 text-xs"
                                 onClick={() => router.push(`/listroom?edit=${listing.id}`)}
                               >
                                 Edit
@@ -980,14 +1064,15 @@ export default function ApplicationsPage() {
                               {listing.city}, {listing.county}
                             </p>
                             <div className="flex items-center justify-between">
-                              <Badge variant="outline" className="text-xs">
+                              {/* <Badge variant="outline" className="text-xs">
                                 {listing.room_type}
-                              </Badge>
-                              <Button 
-                                size="sm" 
-                                className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 text-xs sm:text-sm"
-                                onClick={() => router.push(`/search?id=${listing.id}`)}
-                              >
+                              </Badge> */}
+                                                              <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="flex-1 text-xs sm:text-sm"
+                                  onClick={() => router.push(`/search?id=${listing.id}&view=detailed`)}
+                                >
                                 View Details
                               </Button>
                             </div>
