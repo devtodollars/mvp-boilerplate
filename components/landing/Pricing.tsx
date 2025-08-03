@@ -198,7 +198,7 @@ export const Pricing = ({ user }: { user: User | null }) => {
               </CardTitle>
               <div>
                 <span className="text-3xl font-bold">€{pricing.price}</span>
-                <span className="text-muted-foreground"> / 90 days</span>
+                <span className="text-muted-foreground"> / 30 days</span>
               </div>
 
               <CardDescription>{pricing.description}</CardDescription>

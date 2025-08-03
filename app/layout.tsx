@@ -11,6 +11,7 @@ import { Footer } from '@/components/landing/Footer';
 import { ScrollToTop } from '@/components/landing/ScrollToTop';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { createClient } from '@/utils/supabase/server';
+import ChatTabs from '@/components/ChatTabs';
 
 const meta = {
   title: "GoLet.ie | Ireland's First Scam-Free Rental Platform",
@@ -72,6 +73,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
               </main>
               <Footer />
               <ScrollToTop />
+              <ChatTabs />
               <Toaster />
             </AuthProvider>
           </body>

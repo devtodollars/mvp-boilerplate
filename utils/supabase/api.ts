@@ -10,7 +10,6 @@ import { UserForm } from '@/schemas/user';
 
 export const createApiClient = (supabase: SupabaseClient<Database>) => {
   const passwordSignup = async (creds: SignUpWithPasswordCredentials) => {
-    // Use OTP for email verification instead of confirmation URL
     const email = 'email' in creds ? creds.email : undefined;
     const password = creds.password;
     
@@ -18,13 +17,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       throw new Error('Email is required for signup');
     }
     
-    const res = await supabase.auth.signInWithOtp({
+    // Try to sign up the user
+    const res = await supabase.auth.signUp({
       email,
+      password,
       options: {
-        shouldCreateUser: true,
-        data: {
-          password, // Store password for later use
-        }
+        emailRedirectTo: getURL('/api/auth_callback')
       }
     });
     
@@ -32,8 +30,10 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       // Handle specific error cases with better messages
       if (res.error.message.includes('User already registered')) {
         throw new Error('An account with this email already exists. Please sign in instead.');
-      } else if (res.error.message.includes('Invalid login credentials')) {
-        throw new Error('An account with this email already exists. Please sign in instead.');
+      } else if (res.error.message.includes('Email not confirmed')) {
+        throw new Error('Please check your email and click the confirmation link to complete your registration.');
+      } else if (res.error.message.includes('Signup disabled')) {
+        throw new Error('Signup is currently disabled. Please contact support.');
       } else {
         throw res.error;
       }

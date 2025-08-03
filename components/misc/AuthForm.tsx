@@ -70,12 +70,12 @@ export function AuthForm({ state }: { state: AuthState }) {
           await api.passwordSignup({ email, password })
           
           toast({
-            title: 'Verification Code Sent!',
-            description: 'Please check your email for the 6-digit verification code.',
+            title: 'Account Already Created!',
+            description: 'Please sign in to continue. Or forgot your password?',
           })
           
-          // Show OTP verification component
-          setShowOtpVerification(true)
+          // Redirect to signin page after successful signup
+          router.push('/auth/signin')
         } catch (e) {
           if (e instanceof Error) {
             toast({

@@ -4,6 +4,8 @@ import { useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { About } from '@/components/landing/About'
+import { Changelog } from '@/components/landing/Changelog'
+import { Comparison } from '@/components/landing/Comparison'
 import { Cta } from '@/components/landing/Cta'
 import { FAQ } from '@/components/landing/FAQ'
 import { Features } from '@/components/landing/Features'
@@ -42,9 +44,11 @@ export function HomePageWrapper({ user }: HomePageWrapperProps) {
       <Hero user={user} />
       <Features />
       <Pricing user={user} />
-      <Cta />
+      <Comparison />
+      {/* <Cta /> */}
       <About />
       <FAQ />
+      <Changelog />
     </>
   )
 } 

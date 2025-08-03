@@ -40,6 +40,7 @@ npm run dev
 ### Bugs
 * Fix adress search and latlng mapping (currently incorrect)
 * Verify acount deletion deletes also the objects from buckets
+* Privacy Policy and terms of conditions
 
 
 ### MVP Features

@@ -37,12 +37,15 @@ import {
   FileSearch,
   FileX,
   Search,
-  Settings
+  Settings,
+  MessageSquare
 } from 'lucide-react';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DeleteListingDialog } from '@/components/DeleteListingDialog';
+import { PaymentStatusCard } from '@/components/PaymentStatusCard';
 
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<any[]>([]);
@@ -55,6 +58,8 @@ export default function ApplicationsPage() {
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedListingForDelete, setSelectedListingForDelete] = useState<any>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -387,7 +392,7 @@ export default function ApplicationsPage() {
                 <div className="space-y-1">
                   <p className="text-emerald-700 text-xs sm:text-sm font-medium">Accepted</p>
                   <p className="text-xl sm:text-2xl md:text-3xl font-bold text-emerald-900">{getApplicationStats().accepted}</p>
-                  <p className="text-emerald-600 text-[10px] sm:text-xs mt-0.5 sm:mt-1">Successful apps</p>
+                  <p className="text-emerald-600 text-[10px] sm:text-xs mt-0.5 sm:mt-1">Successful applications</p>
                 </div>
                 <div className="bg-emerald-500/10 p-2 sm:p-2.5 md:p-3 rounded-full self-end sm:self-auto">
                   <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-emerald-600" />
@@ -580,9 +585,26 @@ export default function ApplicationsPage() {
                                 variant="destructive" 
                                 size="sm"
                                 className="text-xs px-3 py-1 h-8"
-                                onClick={() => handleWithdrawApplication(application.id)}
+                                onClick={() => openWithdrawDialog(application)}
                               >
                                 Withdraw
+                              </Button>
+                            )}
+                            {application.status === 'accepted' && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="text-xs px-3 py-1 h-8"
+                                onClick={() => {
+                                  // This will trigger the ChatTabs component to open
+                                  // We'll use a custom event to communicate between components
+                                  window.dispatchEvent(new CustomEvent('openChat', {
+                                    detail: { applicationId: application.id }
+                                  }))
+                                }}
+                              >
+                                <MessageSquare className="h-3 w-3 mr-1" />
+                                Chat
                               </Button>
                             )}
                           </div>
@@ -902,85 +924,112 @@ export default function ApplicationsPage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 gap-6">
                     {ownedListings.map((listing) => {
                       const mediaUrls = getMediaUrls(listing);
                       const firstImage = mediaUrls.length > 0 ? mediaUrls[0].url : null;
                       
                       return (
                         <Card key={listing.id} className="border shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden">
-                          <div className="relative h-48">
-                            {firstImage ? (
-                              <Image
-                                src={firstImage}
-                                alt={listing.property_name}
-                                fill
-                                className="object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                <Building2 className="h-12 w-12 text-gray-400" />
-                              </div>
-                            )}
-                            <div className="absolute top-3 right-3">
-                              <Badge className="bg-white/95 text-gray-800 font-semibold shadow-lg">
-                                €{listing.monthly_rent}
-                              </Badge>
-                            </div>
-                            
-                          </div>
-                          <CardContent className="p-4">
-                            <h4 className="font-semibold text-lg mb-2 line-clamp-1 text-gray-900">
-                              {listing.property_name}
-                            </h4>
-                            <p className="text-sm text-gray-600 flex items-center gap-2 mb-3">
-                              <MapPin className="h-4 w-4" />
-                              {listing.city}, {listing.county}
-                            </p>
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1 text-xs text-emerald-600">
-                                  <CheckCircle className="h-3 w-3" />
-                                  <span>{listing.applicants?.count || 0} applicants</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-xs text-blue-600">
-                                  <Eye className="h-3 w-3" />
-                                  <span>{listing.views_count || 0} views</span>
+                          {/* Mobile: Stacked layout, Desktop: Side-by-side */}
+                          <div className="flex flex-col lg:flex-row">
+                            {/* Left side - Image and basic info */}
+                            <div className="w-full lg:w-1/2">
+                              <div className="relative h-48 lg:h-48">
+                                {firstImage ? (
+                                  <Image
+                                    src={firstImage}
+                                    alt={listing.property_name}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                    <Building2 className="h-12 w-12 text-gray-400" />
+                                  </div>
+                                )}
+                                <div className="absolute top-3 right-3">
+                                  <Badge className="bg-white/95 text-gray-800 font-semibold shadow-lg">
+                                    €{listing.monthly_rent}
+                                  </Badge>
                                 </div>
                               </div>
-                              
-                              {/* Active/Inactive Status Badge */}
-                              <Badge 
-                                variant={listing.active ? "default" : "secondary"}
-                                className={`text-xs ${listing.active ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}
-                              >
-                                {listing.active ? 'Active' : 'Inactive'}
-                              </Badge>
+                              <div className="p-4">
+                                <h4 className="font-semibold text-lg mb-2 line-clamp-1 text-gray-900">
+                                  {listing.property_name}
+                                </h4>
+                                <p className="text-sm text-gray-600 flex items-center gap-2 mb-3">
+                                  <MapPin className="h-4 w-4" />
+                                  {listing.city}, {listing.county}
+                                </p>
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1 text-xs text-emerald-600">
+                                      <CheckCircle className="h-3 w-3" />
+                                      <span>{listing.applicants?.count || 0} applicants</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-xs text-blue-600">
+                                      <Eye className="h-3 w-3" />
+                                      <span>{listing.views_count || 0} views</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Action Buttons */}
+                                <div className="flex gap-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="flex-1 text-xs"
+                                    onClick={async () => {
+                                      await trackListingView(listing.id);
+                                      router.push(`/search?id=${listing.id}&view=detailed`);
+                                    }}
+                                  >
+                                    View
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="flex-1 text-xs"
+                                    onClick={() => router.push(`/edit-listing/${listing.id}`)}
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="flex-1 text-xs"
+                                    onClick={() => router.push(`/applications/${listing.id}`)}
+                                  >
+                                    Manage
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="destructive"
+                                    className="flex-1 text-xs"
+                                    onClick={() => {
+                                      setSelectedListingForDelete(listing);
+                                      setShowDeleteDialog(true);
+                                    }}
+                                  >
+                                    Delete
+                                  </Button>
+                                </div>
+                              </div>
                             </div>
                             
-                            {/* Action Buttons */}
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="flex-1 text-xs"
-                                onClick={async () => {
-                                  await trackListingView(listing.id);
-                                  router.push(`/search?id=${listing.id}&view=detailed`);
+                            {/* Right side - Payment status */}
+                            <div className="w-full lg:w-1/2 p-4">
+                              <PaymentStatusCard 
+                                listing={listing}
+                                onStatusUpdate={() => {
+                                  // Refresh the page to update listing data
+                                  window.location.reload();
                                 }}
-                              >
-                                View
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="flex-1 text-xs"
-                                onClick={() => router.push(`/listroom?edit=${listing.id}`)}
-                              >
-                                Edit
-                              </Button>
+                              />
                             </div>
-                          </CardContent>
+                          </div>
                         </Card>
                       );
                     })}
@@ -1156,6 +1205,18 @@ export default function ApplicationsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Listing Dialog */}
+        {selectedListingForDelete && (
+          <DeleteListingDialog
+            isOpen={showDeleteDialog}
+            onClose={() => {
+              setShowDeleteDialog(false);
+              setSelectedListingForDelete(null);
+            }}
+            listing={selectedListingForDelete}
+          />
+        )}
       </div>
     </div>
   );

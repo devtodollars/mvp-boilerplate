@@ -25,6 +25,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/components/providers/AuthProvider';
+import NotificationBell from '@/components/NotificationBell';
 
 interface RouteProps {
   href: string;
@@ -191,6 +192,7 @@ export const Navbar = () => {
           <div className="hidden md:flex gap-2">
             {user ? (
               <div className="flex items-center gap-2">
+                <NotificationBell />
                 <Button
                   onClick={handleAuth}
                   variant="ghost"

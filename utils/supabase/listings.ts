@@ -147,4 +147,69 @@ export const getListingApplicantCount = async (listingId: string) => {
     console.error('Error in getListingApplicantCount:', error);
     return 0;
   }
+};
+
+// Update a listing
+export const updateListing = async (
+  listingId: string,
+  listing: Database['public']['Tables']['listings']['Update'],
+  newImages: File[],
+  newVideos: File[]
+) => {
+  const supabase = createClient();
+  try {
+    // Upload new images and videos if any
+    let newImageUrls: string[] = [];
+    let newVideoUrls: string[] = [];
+    
+    if (newImages.length > 0) {
+      newImageUrls = await uploadListingMedia(newImages, 'listing-images');
+    }
+    if (newVideos.length > 0) {
+      newVideoUrls = await uploadListingMedia(newVideos, 'listing-videos');
+    }
+
+    // Get existing media URLs
+    const { data: existingListing } = await supabase
+      .from('listings')
+      .select('images, videos')
+      .eq('id', listingId)
+      .single();
+
+    // Combine existing and new media
+    const existingImages = Array.isArray(existingListing?.images) ? existingListing.images : [];
+    const existingVideos = Array.isArray(existingListing?.videos) ? existingListing.videos : [];
+    const allImages = [...existingImages, ...newImageUrls];
+    const allVideos = [...existingVideos, ...newVideoUrls];
+
+    // Update the listing
+    const { data, error } = await supabase
+      .from('listings')
+      .update({
+        ...listing,
+        images: allImages,
+        videos: allVideos,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', listingId)
+      .select()
+      .single();
+
+    return { data, error };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
+
+// Get a single listing by ID
+export const getListingById = async (listingId: string) => {
+  const supabase = createClient();
+  
+  const { data, error } = await supabase
+    .from('listings')
+    .select('*')
+    .eq('id', listingId)
+    .single();
+
+  return { data, error };
 }; 

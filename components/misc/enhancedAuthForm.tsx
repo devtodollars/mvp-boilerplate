@@ -67,8 +67,14 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
         setLoading(true)
         try {
           await api.passwordSignup({ email, password })
-          setUserPassword(password)
-          setShowAccountCreation(true)
+          
+          toast({
+            title: 'Account Already Created!',
+            description: 'Please sign in to continue. Or forgot your password?',
+          })
+          
+          // Redirect to signin page after successful signup
+          router.push('/auth/signin')
         } catch (e) {
           if (e instanceof Error) {
             toast({
