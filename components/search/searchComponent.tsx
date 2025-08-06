@@ -22,6 +22,9 @@ import { fetchListings, debugListings, trackListingView } from "@/utils/supabase
 import { getListingImages } from "@/utils/supabase/storage"
 import { createClient } from "@/utils/supabase/client"
 import { createApiClient } from "@/utils/supabase/api"
+import { buildSupabaseQuery } from "./AISearchLogic"
+import { SearchFilters } from "./AdvancedSearchFilters"
+import EnhancedSearchBar from "./EnhancedSearchBar"
 import dynamic from "next/dynamic";
 
 const MapboxMap = dynamic(() => import("@/components/mapbox/MapboxMap"), { 
@@ -29,13 +32,24 @@ const MapboxMap = dynamic(() => import("@/components/mapbox/MapboxMap"), {
   loading: () => <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg" />
 });
 
-export default function Component() {
+interface SearchComponentProps {
+  searchQuery?: string
+  filters?: SearchFilters
+  onResultsUpdate?: (results: any[]) => void
+}
+
+export default function Component({ 
+  searchQuery = "", 
+  filters, 
+  onResultsUpdate 
+}: SearchComponentProps) {
   const searchParams = useSearchParams()
   const [listings, setListings] = useState<any[]>([])
+  const [filteredListings, setFilteredListings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<"list" | "map">("list")
   const [selectedProperty, setSelectedProperty] = useState<any | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
+  const [localSearchQuery, setLocalSearchQuery] = useState("")
   const [showFilters, setShowFilters] = useState(false)
   const [showPropertyDetails, setShowPropertyDetails] = useState(false)
   const [isClient, setIsClient] = useState(false)
@@ -51,6 +65,9 @@ export default function Component() {
     currentIndex: 0,
   })
 
+  // Use the searchQuery prop if provided, otherwise use local state
+  const effectiveSearchQuery = searchQuery || localSearchQuery
+
   useEffect(() => {
     setIsClient(true)
   }, [])
@@ -64,14 +81,15 @@ export default function Component() {
         
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
-          const { data: userData } = await supabase
+          // Check if liked_listings column exists, if not, skip
+          const { data: userData, error } = await supabase
             .from('users')
-            .select('liked_listings')
+            .select('*')
             .eq('id', user.id)
             .single()
           
-          if (userData?.liked_listings) {
-            setLikedListings(new Set(userData.liked_listings))
+          if (userData && (userData as any).liked_listings) {
+            setLikedListings(new Set((userData as any).liked_listings))
           }
         }
       } catch (error) {
@@ -82,6 +100,7 @@ export default function Component() {
     checkLikedListings()
   }, [])
 
+  // Fetch listings
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
@@ -91,6 +110,8 @@ export default function Component() {
         const response = await fetch('/api/listings')
         const result = await response.json()
         
+        console.log('API response:', result)
+        
         if (result.data && result.data.length > 0) {
           console.log('Found listings via API route:', result.data.length)
           setListings(result.data)
@@ -99,19 +120,19 @@ export default function Component() {
           const propertyId = searchParams.get('id')
           const viewModeParam = searchParams.get('view')
           
-                      if (propertyId) {
-              const property = result.data.find((listing: any) => listing.id === propertyId)
-              if (property) {
-                setSelectedProperty(property)
-                if (viewModeParam === 'detailed') {
-                  setViewMode('map')
-                }
-              } else {
-                setSelectedProperty(result.data[0] || null)
+          if (propertyId) {
+            const property = result.data.find((listing: any) => listing.id === propertyId)
+            if (property) {
+              setSelectedProperty(property)
+              if (viewModeParam === 'detailed') {
+                setViewMode('map')
               }
             } else {
               setSelectedProperty(result.data[0] || null)
             }
+          } else {
+            setSelectedProperty(result.data[0] || null)
+          }
         } else {
           console.log('No listings found via API route, trying client-side...')
           
@@ -154,6 +175,152 @@ export default function Component() {
     }
     fetchData()
   }, [searchParams])
+
+  // Apply filters and search
+  useEffect(() => {
+    if (!listings.length) {
+      console.log('No listings available for filtering')
+      return
+    }
+
+    let filtered = [...listings]
+    console.log('Applying filters:', { 
+      effectiveSearchQuery, 
+      filters, 
+      totalListings: listings.length,
+      sampleListing: listings[0] 
+    })
+
+    // Apply search query
+    if (effectiveSearchQuery) {
+      const query = effectiveSearchQuery.toLowerCase()
+      const beforeCount = filtered.length
+      filtered = filtered.filter(listing => 
+        listing.property_name?.toLowerCase().includes(query) ||
+        listing.address?.toLowerCase().includes(query) ||
+        listing.city?.toLowerCase().includes(query) ||
+        listing.area?.toLowerCase().includes(query) ||
+        listing.description?.toLowerCase().includes(query)
+      )
+      console.log(`Search filter: "${query}" - ${beforeCount} -> ${filtered.length} results`)
+    }
+
+    // Apply filters
+    if (filters) {
+      const beforeCount = filtered.length
+      
+      // Location filter
+      if (filters.location) {
+        const location = filters.location.toLowerCase()
+        filtered = filtered.filter(listing =>
+          listing.address?.toLowerCase().includes(location) ||
+          listing.city?.toLowerCase().includes(location) ||
+          listing.area?.toLowerCase().includes(location)
+        )
+      }
+
+      // County filter
+      if (filters.county) {
+        filtered = filtered.filter(listing => 
+          listing.county === filters.county
+        )
+      }
+
+      // Price filters
+      if (filters.minPrice > 0) {
+        filtered = filtered.filter(listing => 
+          listing.monthly_rent >= filters.minPrice
+        )
+      }
+
+      if (filters.maxPrice > 0) {
+        filtered = filtered.filter(listing => 
+          listing.monthly_rent <= filters.maxPrice
+        )
+      }
+
+      // Property type filter
+      if (filters.propertyType) {
+        filtered = filtered.filter(listing => 
+          listing.property_type === filters.propertyType
+        )
+      }
+
+      // Room type filter
+      if (filters.roomType) {
+        filtered = filtered.filter(listing => 
+          listing.room_type === filters.roomType
+        )
+      }
+
+      // Size filter
+      if (filters.size > 0) {
+        filtered = filtered.filter(listing => 
+          listing.size >= filters.size
+        )
+      }
+
+      // Special features
+      if (filters.ensuite) {
+        filtered = filtered.filter(listing => listing.ensuite === true)
+      }
+
+      if (filters.pets) {
+        filtered = filtered.filter(listing => listing.pets === true)
+      }
+
+      if (filters.ownerOccupied) {
+        filtered = filtered.filter(listing => listing.owner_occupied === true)
+      }
+
+      // Verification
+      if (filters.verifiedOnly) {
+        filtered = filtered.filter(listing => listing.verified === true)
+      }
+
+      // Availability
+      if (filters.availableFrom) {
+        filtered = filtered.filter(listing => {
+          if (!listing.available_from) return false
+          const availableDate = new Date(listing.available_from)
+          const filterDate = new Date(filters.availableFrom)
+          return availableDate <= filterDate
+        })
+      }
+
+      // Viewing times
+      if (filters.hasViewingTimes) {
+        filtered = filtered.filter(listing => 
+          listing.viewing_times && listing.viewing_times.length > 0
+        )
+      }
+
+      // Amenities filter
+      if (filters.amenities.length > 0) {
+        filtered = filtered.filter(listing => {
+          if (!listing.amenities || !Array.isArray(listing.amenities)) return false
+          return filters.amenities.every(amenity => 
+            listing.amenities.includes(amenity)
+          )
+        })
+      }
+      
+      console.log(`Filter applied: ${beforeCount} -> ${filtered.length} results`)
+    }
+
+    console.log('Final filtered results:', filtered.length)
+    setFilteredListings(filtered)
+    
+    // Update results count
+    if (onResultsUpdate) {
+      onResultsUpdate(filtered)
+    }
+
+    // Update selected property if current one is not in filtered results
+    if (selectedProperty && !filtered.find(l => l.id === selectedProperty.id)) {
+      setSelectedProperty(filtered[0] || null)
+    }
+  }, [listings, effectiveSearchQuery, filters, onResultsUpdate, selectedProperty])
 
   const handlePropertySelect = useCallback(async (property: any) => {
     setSelectedProperty(property)
@@ -262,14 +429,14 @@ export default function Component() {
 
   // Memoize the properties data for the map to prevent unnecessary re-renders
   const mapProperties = useMemo(() => 
-    listings
+    filteredListings
       .filter((p) => typeof p.lat === "number" && typeof p.lng === "number")
       .map((p) => ({
         id: p.id,
         lat: p.lat,
         lng: p.lng,
         monthly_rent: p.monthly_rent,
-      })), [listings]
+      })), [filteredListings]
   );
 
   // Memoize the selected property for the map
@@ -291,15 +458,15 @@ export default function Component() {
         <div className="px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search properties..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-10 text-sm"
-                />
-              </div>
+              <EnhancedSearchBar 
+                onSearch={(query: string, filters: Partial<SearchFilters>) => {
+                  console.log('Mobile search triggered:', query, filters)
+                  // Update the local search query for immediate filtering
+                  setLocalSearchQuery(query)
+                  // The parent component will handle the full search logic
+                }}
+                placeholder="Search properties..."
+              />
             </div>
             <Button
               variant="outline"
@@ -318,33 +485,16 @@ export default function Component() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <div className="flex-1 max-w-md">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search destinations..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <EnhancedSearchBar 
+                onSearch={(query: string, filters: Partial<SearchFilters>) => {
+                  console.log('Search triggered:', query, filters)
+                  // Update the local search query for immediate filtering
+                  setLocalSearchQuery(query)
+                  // The parent component will handle the full search logic
+                }}
+                placeholder="Search for properties..."
+              />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 bg-transparent">
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Filters
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuCheckboxItem>Entire place</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Private room</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Shared room</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>WiFi</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Kitchen</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Parking</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Pool</DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -380,7 +530,21 @@ export default function Component() {
           {/* Listings Section */}
           <div className={`space-y-4 overflow-y-auto pr-2 ${viewMode === "map" ? "hidden lg:block" : ""}`}>
             <div className="flex items-center justify-between px-4 lg:px-0 pt-4 lg:pt-0">
-              <h1 className="text-xl lg:text-2xl font-semibold">{listings.length} properties found</h1>
+              <h1 className="text-xl lg:text-2xl font-semibold">{filteredListings.length} properties found</h1>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  console.log('Test search - current state:', {
+                    listings: listings.length,
+                    filteredListings: filteredListings.length,
+                    searchQuery: effectiveSearchQuery,
+                    filters
+                  })
+                }}
+              >
+                Debug
+              </Button>
             </div>
 
             <div className="space-y-3 lg:space-y-4 px-4 lg:px-0 pb-20 lg:pb-0">
@@ -388,8 +552,17 @@ export default function Component() {
                 <div className="flex items-center justify-center py-12">
                   <div className="text-muted-foreground">Loading properties...</div>
                 </div>
+              ) : filteredListings.length === 0 ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="text-muted-foreground mb-2">No properties found</div>
+                    <div className="text-sm text-muted-foreground">
+                      Try adjusting your search criteria or filters
+                    </div>
+                  </div>
+                </div>
               ) : (
-                listings.map((property) => {
+                filteredListings.map((property) => {
                   const mediaUrls = getMediaUrls(property)
 
                   return (
@@ -501,9 +674,6 @@ export default function Component() {
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
-                                  {/* <Badge variant="secondary" className="text-sm">
-                                    {property.property_type?.charAt(0).toUpperCase() + property.property_type?.slice(1)}
-                                  </Badge> */}
                                   <Badge variant="outline" className="text-sm">
                                     {property.room_type?.charAt(0).toUpperCase() + property.room_type?.slice(1)}
                                   </Badge>
@@ -661,9 +831,6 @@ export default function Component() {
                             <div className="flex items-start justify-between">
                               <div>
                                 <div className="flex items-center gap-2 mb-2">
-                                  {/* <Badge variant="secondary">
-                                    {property.property_type?.charAt(0).toUpperCase() + property.property_type?.slice(1)}
-                                  </Badge> */}
                                   <Badge variant="outline">
                                     {property.room_type?.charAt(0).toUpperCase() + property.room_type?.slice(1)}
                                   </Badge>

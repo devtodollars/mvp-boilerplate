@@ -161,8 +161,10 @@ export default function NotificationBell() {
       }
     } else if (notification.type === 'message') {
       if (notification.data?.application_id) {
-        // Open chat for this application
-        router.push(`/chat/${notification.data.application_id}`)
+        // Open chat tab instead of navigating to separate page
+        window.dispatchEvent(new CustomEvent('openChat', {
+          detail: { applicationId: notification.data.application_id }
+        }))
       }
     }
 

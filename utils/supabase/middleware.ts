@@ -68,7 +68,19 @@ export const updateSession = async (request: NextRequest) => {
 
     // This will refresh session if expired - required for Server Components
     // https://supabase.com/docs/guides/auth/server-side/nextjs
-    await supabase.auth.getUser();
+    try {
+      await supabase.auth.getUser();
+    } catch (authError: any) {
+      // Handle refresh token errors gracefully
+      if (authError?.code === 'refresh_token_not_found' || 
+          authError?.message?.includes('Invalid Refresh Token')) {
+        // This is expected when there's no valid session, just continue
+        console.log('No valid session found, continuing without authentication');
+      } else {
+        // Re-throw other authentication errors
+        throw authError;
+      }
+    }
 
     return response;
   } catch (e) {

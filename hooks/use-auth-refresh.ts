@@ -1,15 +1,16 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
 
 export function useAuthRefresh() {
   const router = useRouter()
+  
+  // Create a stable Supabase client instance
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
-    const supabase = createClient()
-
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -25,5 +26,5 @@ export function useAuthRefresh() {
     )
 
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, supabase])
 } 

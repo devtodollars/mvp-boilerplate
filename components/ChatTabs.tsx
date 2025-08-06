@@ -23,6 +23,8 @@ interface ChatTab {
   isOpen: boolean
   isMinimized: boolean
   unreadCount: number
+  otherPartyName: string
+  propertyName: string
 }
 
 interface Message {
@@ -49,6 +51,7 @@ interface ChatRoom {
       id: string
       title: string
       address: string
+      property_name: string
     }
   }
   owner: {
@@ -80,17 +83,6 @@ export default function ChatTabs() {
     getUser()
   }, [supabase])
 
-  // Listen for open chat events
-  useEffect(() => {
-    const handleOpenChat = (event: CustomEvent) => {
-      const { applicationId } = event.detail
-      openChat(applicationId)
-    }
-
-    window.addEventListener('openChat' as any, handleOpenChat)
-    return () => window.removeEventListener('openChat' as any, handleOpenChat)
-  }, [])
-
   // Fetch user's active applications
   const fetchActiveApplications = useCallback(async () => {
     if (!currentUser) return
@@ -108,16 +100,20 @@ export default function ChatTabs() {
             property_name,
             address,
             user_id
-          )
+          ),
+          user:users(full_name, first_name, last_name)
         `)
         .eq('status', 'accepted')
 
       if (error) {
         console.error('Error fetching applications:', error)
-        return
+        // Don't return here, just log the error and continue
       }
 
-      if (!applications || applications.length === 0) return
+      if (!applications || applications.length === 0) {
+        console.log('No applications found')
+        return
+      }
 
       // Filter applications where user is either applicant or owner
       const userApplications = applications.filter(app => 
@@ -129,17 +125,20 @@ export default function ChatTabs() {
       // Create tabs for each application
       const newTabs: ChatTab[] = userApplications.map(app => {
         const isOwner = app.listing?.user_id === currentUser
-        const title = isOwner 
-          ? `Application #${app.id.slice(0, 8)} - ${app.listing?.property_name || 'Property'}`
-          : `${app.listing?.property_name || 'Property'}`
+        const otherPartyName = isOwner 
+          ? (app.user?.full_name || `${app.user?.first_name} ${app.user?.last_name}`.trim() || 'Applicant')
+          : (app.listing?.user_id ? 'Property Owner' : 'Owner')
+        const propertyName = app.listing?.property_name || 'Property'
 
         return {
           id: `tab-${app.id}`,
           applicationId: app.id,
-          title,
+          title: `${otherPartyName} - ${propertyName}`,
           isOpen: false,
           isMinimized: false,
-          unreadCount: 0
+          unreadCount: 0,
+          otherPartyName,
+          propertyName
         }
       })
 
@@ -182,7 +181,7 @@ export default function ChatTabs() {
   }, [])
 
   // Get or create chat room
-  const getChatRoom = useCallback(async (applicationId: string): Promise<string | null> => {
+  const getChatRoom = useCallback(async (applicationId: string): Promise<{ id: string, chatRoom: ChatRoom } | null> => {
     try {
       const response = await fetch(`/api/chat/rooms/${applicationId}`)
       const data = await response.json()
@@ -198,7 +197,7 @@ export default function ChatTabs() {
         [applicationId]: chatRoom
       }))
 
-      return chatRoom.id
+      return { id: chatRoom.id, chatRoom }
     } catch (error) {
       console.error('Error getting chat room:', error)
       return null
@@ -207,34 +206,94 @@ export default function ChatTabs() {
 
   // Open chat tab
   const openChat = useCallback(async (applicationId: string) => {
+    console.log('Opening chat for application:', applicationId)
+    
+    if (!currentUser) {
+      console.log('Current user not loaded yet, waiting...')
+      return
+    }
+    
+    // First, get or create the chat room to ensure we have the data
+    const result = await getChatRoom(applicationId)
+    if (!result) {
+      console.error('Failed to get chat room for application:', applicationId)
+      return
+    }
+
+    const { id: chatRoomId, chatRoom } = result
+    console.log('Chat room data:', chatRoom)
+
+    // Determine the other party's name
+    const isOwner = chatRoom.owner_id === currentUser
+    const otherPartyName = isOwner 
+      ? (chatRoom.applicant?.full_name || 'Applicant')
+      : (chatRoom.owner?.full_name || 'Property Owner')
+    const propertyName = chatRoom.application?.listing?.property_name || 'Property'
+
+    console.log('Chat title will be:', `${otherPartyName} - ${propertyName}`)
+
     setChatTabs(prev => {
       const existingTab = prev.find(tab => tab.applicationId === applicationId)
       
       if (existingTab) {
+        // Update existing tab with proper title and open it
         return prev.map(tab => 
           tab.applicationId === applicationId 
-            ? { ...tab, isOpen: true, isMinimized: false }
+            ? { 
+                ...tab, 
+                isOpen: true, 
+                isMinimized: false,
+                title: `${otherPartyName} - ${propertyName}`,
+                otherPartyName,
+                propertyName
+              }
             : tab
         )
       } else {
+        // Create new tab
         const newTab: ChatTab = {
           id: `tab-${applicationId}`,
           applicationId,
-          title: `Chat #${applicationId.slice(0, 8)}`,
+          title: `${otherPartyName} - ${propertyName}`,
           isOpen: true,
           isMinimized: false,
-          unreadCount: 0
+          unreadCount: 0,
+          otherPartyName,
+          propertyName
         }
         return [...prev, newTab]
       }
     })
 
-    // Get chat room and load messages
-    const chatRoomId = await getChatRoom(applicationId)
-    if (chatRoomId) {
-      await loadMessages(chatRoomId)
+    // Load messages
+    await loadMessages(chatRoomId)
+  }, [getChatRoom, currentUser, loadMessages])
+
+  // Listen for open chat events
+  useEffect(() => {
+    const handleOpenChat = (event: CustomEvent) => {
+      const { applicationId } = event.detail
+      console.log('Received openChat event for application:', applicationId)
+      
+      // If user isn't loaded yet, retry after a short delay
+      if (!currentUser) {
+        console.log('User not loaded, retrying in 1 second...')
+        setTimeout(() => {
+          if (currentUser) {
+            openChat(applicationId)
+          } else {
+            console.error('User still not loaded after retry')
+          }
+        }, 1000)
+        return
+      }
+      
+      openChat(applicationId)
     }
-  }, [getChatRoom, loadMessages])
+
+    window.addEventListener('openChat' as any, handleOpenChat)
+    return () => window.removeEventListener('openChat' as any, handleOpenChat)
+  }, [currentUser, openChat])
 
   // Send message
   const sendMessage = useCallback(async (applicationId: string) => {
@@ -282,15 +341,25 @@ export default function ChatTabs() {
     }
   }, [sendMessage])
 
-  // Toggle minimize
+  // Toggle minimize - FIXED: Now properly toggles between minimized and open states
   const toggleMinimize = useCallback((tabId: string) => {
-    setChatTabs(prev => 
-      prev.map(tab => 
-        tab.id === tabId 
-          ? { ...tab, isMinimized: !tab.isMinimized, isOpen: !tab.isMinimized }
-          : tab
-      )
-    )
+    console.log('Toggling minimize for tab:', tabId)
+    setChatTabs(prev => {
+      const updatedTabs = prev.map(tab => {
+        if (tab.id === tabId) {
+          const newMinimized = !tab.isMinimized
+          const newOpen = tab.isMinimized // When we toggle minimize, isOpen becomes the OLD minimized state
+          console.log(`Tab ${tabId}: isMinimized ${tab.isMinimized} -> ${newMinimized}, isOpen ${tab.isOpen} -> ${newOpen}`)
+          return { 
+            ...tab, 
+            isMinimized: newMinimized, 
+            isOpen: newOpen
+          }
+        }
+        return tab
+      })
+      return updatedTabs
+    })
   }, [])
 
   // Close chat
@@ -320,6 +389,20 @@ export default function ChatTabs() {
 
   const openTabs = chatTabs.filter(tab => tab.isOpen && !tab.isMinimized)
   const minimizedTabs = chatTabs.filter(tab => tab.isMinimized)
+
+  console.log('Chat tabs state:', {
+    total: chatTabs.length,
+    open: openTabs.length,
+    minimized: minimizedTabs.length,
+    tabs: chatTabs.map(tab => ({
+      id: tab.id,
+      title: tab.title,
+      isOpen: tab.isOpen,
+      isMinimized: tab.isMinimized,
+      wouldBeOpen: tab.isOpen && !tab.isMinimized,
+      wouldBeMinimized: tab.isMinimized
+    }))
+  })
 
   if (chatTabs.length === 0) return null
 
