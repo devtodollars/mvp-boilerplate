@@ -4,7 +4,8 @@ export enum AuthState {
   Signin = 'signin',
   ForgotPassword = 'forgot_password',
   Signup = 'signup',
-  UpdatePassword = 'update_password'
+  UpdatePassword = 'update_password',
+  ProfileSetup = 'profile_setup'
 }
 
 export type StateInfo = {
@@ -15,16 +16,4 @@ export type StateInfo = {
   hasEmailField: boolean;
   hasPasswordField: boolean;
   hasOAuth: boolean;
-};
-
-type Subscription = Tables<'subscriptions'>;
-type Price = Tables<'prices'>;
-type Product = Tables<'products'>;
-
-export type SubscriptionWithPriceAndProduct = Subscription & {
-  prices:
-    | (Price & {
-        products: Product | null;
-      })
-    | null;
 };

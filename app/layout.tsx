@@ -4,17 +4,21 @@ import { getURL } from '@/utils/helpers';
 import '@/styles/main.css';
 import { PHProvider } from './providers';
 import { ThemeProvider } from '@/components/landing/theme-provider';
-import dynamic from 'next/dynamic';
 import { Toaster } from '@/components/ui/toaster';
 import PostHogPageViewWrapper from '@/components/misc/PostHogPageViewWrapper';
-
+import { Navbar } from '@/components/landing/Navbar';
+import { Footer } from '@/components/landing/Footer';
+import { ScrollToTop } from '@/components/landing/ScrollToTop';
+import { AuthProvider } from '@/components/providers/AuthProvider';
+import { createClient } from '@/utils/supabase/server';
+import ChatTabs from '@/components/ChatTabs';
 
 const meta = {
-  title: 'Next.js Subscription Starter',
-  description: 'Brought to you by Vercel, Stripe, and Supabase.',
-  cardImage: '/og.png',
+  title: "GoLet.ie | Ireland's First Scam-Free Rental Platform",
+  description: "Ireland's first rental platform with Scam and Deposit protection, in-app messaging, tenant profiles, ID verification, and a fair queueing system.",
+  cardImage: '/og_cozy_studio.png',
   robots: 'follow, index',
-  favicon: '/favicon.ico',
+  favicon: '/golet-app.png',
   url: getURL()
 };
 
@@ -28,7 +32,10 @@ export async function generateMetadata(): Promise<Metadata> {
     creator: 'Vercel',
     publisher: 'Vercel',
     robots: meta.robots,
-    icons: { icon: meta.favicon },
+    icons: [
+      { rel: 'icon', url: '/golet-app.png', type: 'image/png' },
+      { rel: 'apple-touch-icon', url: '/golet-app.png' },
+    ],
     metadataBase: new URL(meta.url),
     openGraph: {
       url: meta.url,
@@ -55,14 +62,20 @@ export default async function RootLayout({ children }: PropsWithChildren) {
       <ThemeProvider>
         <PHProvider>
           <body>
-            <PostHogPageViewWrapper />
-            <main
-              id="skip"
-              className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"
-            >
-              {children}
-            </main>
-            <Toaster />
+            <AuthProvider>
+              <PostHogPageViewWrapper />
+              <Navbar />
+              <main
+                id="skip"
+                className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"
+              >
+                {children}
+              </main>
+              <Footer />
+              <ScrollToTop />
+              <ChatTabs />
+              <Toaster />
+            </AuthProvider>
           </body>
         </PHProvider>
       </ThemeProvider>

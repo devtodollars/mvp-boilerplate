@@ -18,11 +18,14 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
 import { ModeToggle } from './mode-toggle';
 import { LogoIcon } from './Icons';
-import { User } from '@supabase/supabase-js';
 import { createApiClient } from '@/utils/supabase/api';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
+import { usePathname } from 'next/navigation';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/components/providers/AuthProvider';
+import NotificationBell from '@/components/NotificationBell';
 
 interface RouteProps {
   href: string;
@@ -34,10 +37,10 @@ const routeList: RouteProps[] = [
     href: '/#features',
     label: 'Features'
   },
-  {
-    href: '/#testimonials',
-    label: 'Testimonials'
-  },
+  // {
+  //   href: '/#testimonials',
+  //   label: 'Testimonials'
+  // },
   {
     href: '/#pricing',
     label: 'Pricing'
@@ -48,16 +51,36 @@ const routeList: RouteProps[] = [
   }
 ];
 
-export const Navbar = ({ user }: { user: User | null }) => {
+export const Navbar = () => {
   const router = useRouter();
   const { toast } = useToast();
   const api = createApiClient(createClient());
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const pathname = usePathname();
+  const { user } = useAuth();
   const handleAuth = async () => {
     if (user) {
-      return router.push('/account');
+      return router.push('/dashboard');
     }
     return router.push('/auth');
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await api.signOut();
+      toast({
+        title: 'Signed out successfully!'
+      });
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast({
+        title: 'Error signing out',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
   return (
     <header className="sticky border-b-[1px] top-0 z-40 w-full bg-white dark:border-b-slate-700 dark:bg-background">
@@ -75,8 +98,9 @@ export const Navbar = ({ user }: { user: User | null }) => {
           </NavigationMenuItem>
 
           {/* mobile */}
-          <span className="flex md:hidden">
-            <ModeToggle />
+          {pathname === '/' && (
+          <span className="flex md:hidden"> 
+            {/* <ModeToggle /> */}
 
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger className="px-2" asChild>
@@ -88,7 +112,7 @@ export const Navbar = ({ user }: { user: User | null }) => {
               <SheetContent side={'left'}>
                 <SheetHeader>
                   <SheetTitle className="font-bold text-xl">
-                    Shadcn/React
+                    GoLet.ie
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col justify-center items-center gap-2 mt-4">
@@ -103,19 +127,38 @@ export const Navbar = ({ user }: { user: User | null }) => {
                       {label}
                     </a>
                   ))}
-                  <Button
-                    variant="secondary"
-                    onClick={handleAuth}
-                    className={`w-[110px] border`}
-                  >
-                    {user ? 'Account' : 'Sign In'}
-                  </Button>
+                  {user ? (
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        variant="ghost"
+                        onClick={handleAuth}
+                      >
+                        {user.email}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSignOut}
+                      >
+                        Sign Out
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      onClick={handleAuth}
+                    >
+                      Sign In
+                    </Button>
+                  )}
                 </nav>
               </SheetContent>
             </Sheet>
           </span>
+           )}
 
           {/* desktop */}
+          {pathname === '/' && (
           <nav className="hidden md:flex gap-2">
             {routeList.map((route: RouteProps, i) => (
               <a
@@ -130,16 +173,49 @@ export const Navbar = ({ user }: { user: User | null }) => {
               </a>
             ))}
           </nav>
+          )}
+
+
+          {/* {pathname === '/search' && (
+            <div className="flex w-full max-w-lg items-center gap-2 justify-center lg:justify-start">
+            <Input type="text" placeholder="room, address, etc." />
+            <Button type="button" variant="ghost" >
+              Search
+            </Button>
+
+            <Button type="button" variant="ghost">Filter</Button>
+
+          </div>
+          )} */}
+
 
           <div className="hidden md:flex gap-2">
-            <Button
-              onClick={handleAuth}
-              className={`border`}
-              variant="secondary"
-            >
-              {user ? 'Account' : 'Sign In'}
-            </Button>
-            <ModeToggle />
+            {user ? (
+              <div className="flex items-center gap-2">
+                <NotificationBell />
+                <Button
+                  onClick={handleAuth}
+                  variant="ghost"
+                >
+                  Hello {user.email?.split('@')[0]} 👋
+                </Button>
+                <Button
+                  onClick={handleSignOut}
+                  variant="outline"
+                  size="sm"
+                >
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleAuth}
+                variant="ghost"
+              >
+                Sign In
+              </Button>
+            )}
+            {/* <ModeToggle /> */}
           </div>
         </NavigationMenuList>
       </NavigationMenu>

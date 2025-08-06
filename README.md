@@ -31,3 +31,30 @@ npm run dev
 - Next.JS (App Router)
 - Typescript
 - Tailwind
+
+
+## TODO as Issues not configured yet...
+
+#### Currently working on  Account page, viewing active, non active, saved, applied for listings + QUEUES
+
+### Bugs
+* Fix adress search and latlng mapping (currently incorrect)
+* Verify acount deletion deletes also the objects from buckets
+* Privacy Policy and terms of conditions
+* Creating user with existing email and passowrd reset handling
+
+
+### MVP Features
+
+#### WIP - Dominik
+* Account page, viewing active, non active, saved, applied for listings + QUEUES
+* Application system
+* In app chat
+
+
+#### TODO
+* ID verification
+* Stripe set up 
+
+
+

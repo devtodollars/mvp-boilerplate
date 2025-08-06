@@ -1,0 +1,1077 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
+import { createApiClient } from '@/utils/supabase/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
+import { 
+  User, 
+  MapPin, 
+  Euro, 
+  Calendar, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  ArrowLeft,
+  Users,
+  Trash2,
+  AlertTriangle,
+  Heart,
+  Home,
+  Building2,
+  Eye,
+  Edit,
+  MoreHorizontal,
+  Plus,
+  Star,
+  BarChart3,
+  TrendingUp,
+  Award,
+  Loader2,
+  LayoutGrid,
+  FileSearch,
+  FileX,
+  Search
+} from 'lucide-react';
+import Image from 'next/image';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+export default function ApplicationsPage() {
+  const [applications, setApplications] = useState<any[]>([]);
+  const [ownedListings, setOwnedListings] = useState<any[]>([]);
+  const [likedListings, setLikedListings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [withdrawingApplicationId, setWithdrawingApplicationId] = useState<string | null>(null);
+  const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const router = useRouter();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        const supabase = createClient();
+        const api = createApiClient(supabase);
+
+        // Get current user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          const currentUrl = window.location.pathname + window.location.search;
+          router.push(`/auth/signin?redirect=${encodeURIComponent(currentUrl)}`);
+          return;
+        }
+        setUser(user);
+
+        // Get user profile
+        const { data: profile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        setUserProfile(profile);
+
+        // Fetch all data in parallel
+        const [applicationsResult, ownedResult, likedResult] = await Promise.allSettled([
+          api.getUserApplications().catch(error => {
+            console.error('Error fetching applications:', error);
+            return { success: false, applications: [] };
+          }),
+          fetchOwnedListings(supabase, user.id),
+          api.getUserLikedListings().catch(error => {
+            console.error('Error fetching liked listings:', error);
+            return { success: false, listings: [] };
+          })
+        ]);
+
+        // Handle results
+        if (applicationsResult.status === 'fulfilled' && applicationsResult.value.success) {
+          setApplications(applicationsResult.value.applications);
+        } else {
+          setApplications([]);
+        }
+
+        if (ownedResult.status === 'fulfilled' && ownedResult.value.success) {
+          setOwnedListings(ownedResult.value.listings);
+        } else {
+          setOwnedListings([]);
+        }
+
+        if (likedResult.status === 'fulfilled' && likedResult.value.success) {
+          setLikedListings(likedResult.value.listings);
+        } else {
+          setLikedListings([]);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load your dashboard data.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchOwnedListings = async (supabase: any, userId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('listings')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('active', true)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return { success: true, listings: data || [] };
+      } catch (error) {
+        console.error('Error fetching owned listings:', error);
+        return { success: false, listings: [] };
+      }
+    };
+
+    fetchAllData();
+  }, [router, toast]);
+
+  const handleWithdrawApplication = async (applicationId: string) => {
+    setWithdrawingApplicationId(applicationId);
+    try {
+      const supabase = createClient();
+      const api = createApiClient(supabase);
+      
+      await api.withdrawApplication(applicationId);
+
+      setApplications(prev => 
+        prev.map(app => 
+          app.id === applicationId 
+            ? { ...app, status: 'withdrawn' }
+            : app
+        )
+      );
+
+      toast({
+        title: 'Application Withdrawn',
+        description: 'Your application has been withdrawn successfully.',
+        variant: 'default',
+      });
+      
+      setShowWithdrawDialog(false);
+      setSelectedApplication(null);
+    } catch (error) {
+      console.error('Error withdrawing application:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to withdraw application.',
+        variant: 'destructive',
+      });
+    } finally {
+      setWithdrawingApplicationId(null);
+    }
+  };
+
+  const openWithdrawDialog = (application: any) => {
+    setSelectedApplication(application);
+    setShowWithdrawDialog(true);
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="h-4 w-4 text-amber-500" />;
+      case 'accepted':
+        return <CheckCircle className="h-4 w-4 text-emerald-500" />;
+      case 'rejected':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'withdrawn':
+        return <XCircle className="h-4 w-4 text-gray-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Under Review';
+      case 'accepted':
+        return 'Accepted';
+      case 'rejected':
+        return 'Not Selected';
+      case 'withdrawn':
+        return 'Withdrawn';
+      default:
+        return 'Unknown';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100';
+      case 'accepted':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100';
+      case 'rejected':
+        return 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100';
+      case 'withdrawn':
+        return 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100';
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100';
+    }
+  };
+
+  const getMediaUrls = (listing: any) => {
+    const media: Array<{ url: string; type: "image" | "video" }> = []
+
+    if (listing.images && Array.isArray(listing.images)) {
+      listing.images.forEach((img: string) => {
+        media.push({ url: img, type: "image" })
+      })
+    }
+
+    if (listing.videos && Array.isArray(listing.videos)) {
+      listing.videos.forEach((video: string) => {
+        media.push({ url: video, type: "video" })
+      })
+    }
+
+    return media
+  };
+
+  const getApplicationStats = () => {
+    const stats = {
+      total: applications.length,
+      pending: applications.filter(app => app.status === 'pending').length,
+      accepted: applications.filter(app => app.status === 'accepted').length,
+      rejected: applications.filter(app => app.status === 'rejected').length,
+      withdrawn: applications.filter(app => app.status === 'withdrawn').length,
+    };
+    return stats;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Your Dashboard</h3>
+              <p className="text-gray-600">Gathering your applications, listings, and favorites...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
+        {/* Header - Mobile Optimized */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+          <div className="flex items-start sm:items-center gap-2 sm:gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="flex items-center gap-1 sm:gap-2 hover:bg-white/80 transition-colors -ml-2 sm:-ml-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back</span>
+            </Button>
+            <div>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
+                Property Dashboard
+              </h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-0.5 sm:mt-1">
+                Manage your property portfolio and applications
+              </p>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-3">
+            <Badge variant="outline" className="bg-white/80 backdrop-blur-sm border-blue-200 text-blue-700">
+              <Star className="h-3 w-3 mr-1" />
+              {userProfile?.first_name || 'User'}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Stats Cards - Light Gradients */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+            <CardContent className="p-4 sm:p-5 md:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                <div className="space-y-1">
+                  <p className="text-blue-700 text-xs sm:text-sm font-medium">Total Applications</p>
+                  <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900">{getApplicationStats().total}</p>
+                  <p className="text-blue-600 text-[10px] sm:text-xs mt-0.5 sm:mt-1">Properties applied to</p>
+                </div>
+                <div className="bg-blue-500/10 p-2 sm:p-2.5 md:p-3 rounded-full self-end sm:self-auto">
+                  <User className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+            <CardContent className="p-4 sm:p-5 md:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                <div className="space-y-1">
+                  <p className="text-amber-700 text-xs sm:text-sm font-medium">Under Review</p>
+                  <p className="text-xl sm:text-2xl md:text-3xl font-bold text-amber-900">{getApplicationStats().pending}</p>
+                  <p className="text-amber-600 text-[10px] sm:text-xs mt-0.5 sm:mt-1">Awaiting response</p>
+                </div>
+                <div className="bg-amber-500/10 p-2 sm:p-2.5 md:p-3 rounded-full self-end sm:self-auto">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-amber-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+            <CardContent className="p-4 sm:p-5 md:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                <div className="space-y-1">
+                  <p className="text-emerald-700 text-xs sm:text-sm font-medium">Accepted</p>
+                  <p className="text-xl sm:text-2xl md:text-3xl font-bold text-emerald-900">{getApplicationStats().accepted}</p>
+                  <p className="text-emerald-600 text-[10px] sm:text-xs mt-0.5 sm:mt-1">Successful apps</p>
+                </div>
+                <div className="bg-emerald-500/10 p-2 sm:p-2.5 md:p-3 rounded-full self-end sm:self-auto">
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-emerald-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+            <CardContent className="p-4 sm:p-5 md:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                <div className="space-y-1">
+                  <p className="text-purple-700 text-xs sm:text-sm font-medium">My Listings</p>
+                  <p className="text-xl sm:text-2xl md:text-3xl font-bold text-purple-900">{ownedListings.length}</p>
+                  <p className="text-purple-600 text-[10px] sm:text-xs mt-0.5 sm:mt-1">Properties you own</p>
+                </div>
+                <div className="bg-purple-500/10 p-2 sm:p-2.5 md:p-3 rounded-full self-end sm:self-auto">
+                  <Building2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-purple-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Tabs - Mobile Optimized */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          <TabsList className="grid w-full grid-cols-4 h-auto p-1 bg-white/80 backdrop-blur-sm shadow-lg">
+            <TabsTrigger 
+              value="overview" 
+              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs sm:text-sm"
+            >
+              <LayoutGrid className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Overview</span>
+              <span className="sm:hidden">View</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="applications" 
+              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs sm:text-sm"
+            >
+              <FileSearch className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Applications</span>
+              <span className="sm:hidden">Apps</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="listings" 
+              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs sm:text-sm"
+            >
+              <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Listings</span>
+              <span className="sm:hidden">List</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="favorites" 
+              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs sm:text-sm"
+            >
+              <Heart className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Favorites</span>
+              <span className="sm:hidden">Faves</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-8">
+            {/* Quick Actions */}
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Award className="h-5 w-5 text-blue-600" />
+                  Quick Actions
+                </CardTitle>
+                <CardDescription>
+                  Common tasks and navigation shortcuts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button 
+                    onClick={() => router.push('/search')} 
+                    className="h-20 flex flex-col items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Home className="h-6 w-6" />
+                    <span>Browse Properties</span>
+                  </Button>
+                  <Button 
+                    onClick={() => router.push('/listroom')} 
+                    variant="outline"
+                    className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
+                  >
+                    <Plus className="h-6 w-6" />
+                    <span>List Property</span>
+                  </Button>
+                  <Button 
+                    onClick={() => router.push('/account')} 
+                    variant="outline"
+                    className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
+                  >
+                    <User className="h-6 w-6" />
+                    <span>Account Settings</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Recent Applications */}
+              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <User className="h-5 w-5 text-blue-600" />
+                    Recent Applications
+                  </CardTitle>
+                  <CardDescription>
+                    Your latest property applications
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {applications.length === 0 ? (
+                    <div className="text-center py-12 sm:py-16">
+                      <FileX className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-2">No applications yet</h3>
+                      <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6 px-4">Start browsing properties to find your perfect home</p>
+                      <Button onClick={() => router.push('/search')} className="bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 text-sm sm:text-base">
+                        <Search className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                        Browse Properties
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                      {applications.slice(0, 3).map((application) => (
+                        <Card key={application.id} className="border shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden">
+                          <div className="relative h-40 sm:h-48">
+                            {application.listing?.images && application.listing.images.length > 0 ? (
+                                <Image
+                                  src={application.listing.images[0]}
+                                  alt={application.listing.property_name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                  <Building2 className="h-8 w-8 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                          <CardContent className="p-3 sm:p-4">
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-base sm:text-lg truncate">
+                                  {application.listing?.property_name || 'Property Name'}
+                                </h3>
+                                <p className="text-xs sm:text-sm text-gray-600 truncate">
+                                  {application.listing?.property_address || 'Address not available'}
+                                </p>
+                              </div>
+                              <Badge className={`${getStatusColor(application.status)} shrink-0 text-xs`}>
+                                {getStatusIcon(application.status)}
+                                <span className="ml-1">{getStatusText(application.status)}</span>
+                              </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4 text-xs sm:text-sm">
+                              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-600">
+                                <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="truncate">Applied {new Date(application.created_at).toLocaleDateString()}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-600">
+                                <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="truncate">{new Date(application.created_at).toLocaleTimeString()}</span>
+                              </div>
+                            </div>
+
+                            {application.message && (
+                              <div className="mb-3 sm:mb-4">
+                                <p className="text-xs sm:text-sm text-gray-700 font-medium mb-1">Your Message:</p>
+                                <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{application.message}</p>
+                              </div>
+                            )}
+
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="flex-1 text-xs sm:text-sm"
+                                onClick={() => router.push(`/search?id=${application.listing?.id}`)}
+                              >
+                                View Property
+                              </Button>
+                              {application.status === 'pending' && (
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm"
+                                  className="flex-1 text-xs sm:text-sm"
+                                  onClick={() => handleWithdrawApplication(application.id)}
+                                >
+                                  Withdraw
+                                </Button>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      {applications.length > 3 && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setActiveTab('applications')}
+                          className="w-full"
+                        >
+                          View All Applications ({applications.length})
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Favorite Properties */}
+              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Heart className="h-5 w-5 text-red-600" />
+                    Favorite Properties
+                  </CardTitle>
+                  <CardDescription>
+                    Properties you've saved for later
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {likedListings.length === 0 ? (
+                    <div className="text-center py-16">
+                      <Heart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2 text-gray-900">No Favorites Yet</h3>
+                      <p className="text-gray-500 mb-4">Save properties you're interested in</p>
+                      <Button onClick={() => router.push('/search')} size="sm">
+                        Browse Properties
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {likedListings.slice(0, 3).map((listing) => {
+                        const mediaUrls = getMediaUrls(listing);
+                        const firstImage = mediaUrls.length > 0 ? mediaUrls[0].url : null;
+                        
+                        return (
+                          <div key={listing.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                              {firstImage ? (
+                                <Image
+                                  src={firstImage}
+                                  alt={listing.property_name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                  <Home className="h-6 w-6 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm truncate text-gray-900">
+                                {listing.property_name}
+                              </h4>
+                              <p className="text-xs text-gray-500 flex items-center gap-1">
+                                <Euro className="h-3 w-3" />
+                                €{listing.monthly_rent}
+                              </p>
+                            </div>
+                            <Heart className="h-4 w-4 text-red-500 fill-current" />
+                          </div>
+                        );
+                      })}
+                      {likedListings.length > 3 && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setActiveTab('favorites')}
+                          className="w-full"
+                        >
+                          View All Favorites ({likedListings.length})
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Applications Tab */}
+          <TabsContent value="applications" className="space-y-6">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <User className="h-5 w-5 text-blue-600" />
+                      All Applications
+                    </CardTitle>
+                    <CardDescription>
+                      Complete list of your property applications
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => router.push('/search')} className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Apply to Properties
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {applications.length === 0 ? (
+                  <div className="text-center py-16">
+                    <div className="bg-blue-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+                      <User className="h-10 w-10 text-blue-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3 text-gray-900">No Applications Yet</h3>
+                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                      Start your property search and apply to places you'd love to live in. 
+                      Your applications will appear here.
+                    </p>
+                    <Button onClick={() => router.push('/search')} size="lg">
+                      <Home className="h-5 w-5 mr-2" />
+                      Browse Properties
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {applications.map((application) => (
+                      <Card key={application.id} className="border shadow-md hover:shadow-lg transition-all duration-300">
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-4">
+                            {/* Property Image */}
+                            <div className="relative w-24 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                              {application.listing.images && application.listing.images.length > 0 ? (
+                                <Image
+                                  src={application.listing.images[0]}
+                                  alt={application.listing.property_name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                  <Building2 className="h-8 w-8 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Application Details */}
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <h4 className="font-semibold text-lg text-gray-900">
+                                    {application.listing.property_name}
+                                  </h4>
+                                  <p className="text-gray-600 flex items-center gap-2">
+                                    <MapPin className="h-4 w-4" />
+                                    {application.listing.address}, {application.listing.city}
+                                  </p>
+                                </div>
+                                <Badge className={`${getStatusColor(application.status)} flex items-center gap-1`}>
+                                  {getStatusIcon(application.status)}
+                                  {getStatusText(application.status)}
+                                </Badge>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <Euro className="h-4 w-4" />
+                                  <span>€{application.listing.monthly_rent}/month</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>Applied {new Date(application.applied_at).toLocaleDateString()}</span>
+                                </div>
+                                {application.status === 'pending' && (
+                                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <Users className="h-4 w-4" />
+                                    <span>Position #{application.position} in queue</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {application.notes && (
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                                  <p className="text-sm text-blue-800">
+                                    <strong>Your application notes:</strong> {application.notes}
+                                  </p>
+                                </div>
+                              )}
+
+                              <div className="flex gap-2">
+                                {application.status === 'pending' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openWithdrawDialog(application)}
+                                    className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    disabled={withdrawingApplicationId === application.id}
+                                  >
+                                    {withdrawingApplicationId === application.id ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Withdrawing...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Trash2 className="h-4 w-4" />
+                                        Withdraw
+                                      </>
+                                    )}
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => router.push(`/search?property=${application.listing.id}`)}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  View Property
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Listings Tab */}
+          <TabsContent value="listings" className="space-y-6">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <Building2 className="h-5 w-5 text-purple-600" />
+                      My Property Listings
+                    </CardTitle>
+                    <CardDescription>
+                      Properties you own and manage
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => router.push('/listroom')} className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add New Listing
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {ownedListings.length === 0 ? (
+                  <div className="text-center py-16">
+                    <div className="bg-purple-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+                      <Building2 className="h-10 w-10 text-purple-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3 text-gray-900">No Listings Yet</h3>
+                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                      Start earning by listing your property. Share your space with others and 
+                      manage everything from this dashboard.
+                    </p>
+                    <Button onClick={() => router.push('/listroom')} size="lg">
+                      <Plus className="h-5 w-5 mr-2" />
+                      List Your Property
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {ownedListings.map((listing) => {
+                      const mediaUrls = getMediaUrls(listing);
+                      const firstImage = mediaUrls.length > 0 ? mediaUrls[0].url : null;
+                      
+                      return (
+                        <Card key={listing.id} className="border shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden">
+                          <div className="relative h-48">
+                            {firstImage ? (
+                              <Image
+                                src={firstImage}
+                                alt={listing.property_name}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                <Building2 className="h-12 w-12 text-gray-400" />
+                              </div>
+                            )}
+                            <div className="absolute top-3 right-3">
+                              <Badge className="bg-white/95 text-gray-800 font-semibold shadow-lg">
+                                €{listing.monthly_rent}
+                              </Badge>
+                            </div>
+                            <div className="absolute top-3 left-3">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-white/90 hover:bg-white">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit Listing
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Public Page
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                          <CardContent className="p-4">
+                            <h4 className="font-semibold text-lg mb-2 line-clamp-1 text-gray-900">
+                              {listing.property_name}
+                            </h4>
+                            <p className="text-sm text-gray-600 flex items-center gap-2 mb-3">
+                              <MapPin className="h-4 w-4" />
+                              {listing.city}, {listing.county}
+                            </p>
+                            <div className="flex items-center justify-between">
+                              <Badge variant="outline" className="text-xs">
+                                {listing.room_type}
+                              </Badge>
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1 text-xs text-emerald-600">
+                                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                  Active
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="flex-1"
+                                onClick={() => router.push(`/search?id=${listing.id}`)}
+                              >
+                                View
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700"
+                                onClick={() => router.push(`/listroom?edit=${listing.id}`)}
+                              >
+                                Edit
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Favorites Tab */}
+          <TabsContent value="favorites" className="space-y-6">
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Heart className="h-5 w-5 text-red-600" />
+                  Favorite Properties
+                </CardTitle>
+                <CardDescription>
+                  Properties you've saved for future consideration
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {likedListings.length === 0 ? (
+                  <div className="text-center py-16">
+                    <div className="bg-red-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+                      <Heart className="h-10 w-10 text-red-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3 text-gray-900">No Favorites Yet</h3>
+                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                      Start browsing properties and save the ones you like. 
+                      They'll appear here for easy access later.
+                    </p>
+                    <Button onClick={() => router.push('/search')} size="lg">
+                      <Heart className="h-5 w-5 mr-2" />
+                      Browse Properties
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {likedListings.map((listing) => {
+                      const mediaUrls = getMediaUrls(listing);
+                      const firstImage = mediaUrls.length > 0 ? mediaUrls[0].url : null;
+                      
+                      return (
+                        <Card key={listing.id} className="border shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden">
+                          <div className="relative h-48">
+                            {firstImage ? (
+                              <Image
+                                src={firstImage}
+                                alt={listing.property_name}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                <Home className="h-12 w-12 text-gray-400" />
+                              </div>
+                            )}
+                            <div className="absolute top-3 right-3">
+                              <Badge className="bg-white/95 text-gray-800 font-semibold shadow-lg">
+                                €{listing.monthly_rent}
+                              </Badge>
+                            </div>
+                            <div className="absolute top-3 left-3">
+                              <Heart className="h-6 w-6 text-red-500 fill-current drop-shadow-lg" />
+                            </div>
+                            {!listing.active && (
+                              <div className="absolute bottom-3 left-3">
+                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                  No Longer Available
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                          <CardContent className="p-4">
+                            <h4 className="font-semibold text-lg mb-2 line-clamp-1 text-gray-900">
+                              {listing.property_name}
+                            </h4>
+                            <p className="text-sm text-gray-600 flex items-center gap-2 mb-3">
+                              <MapPin className="h-4 w-4" />
+                              {listing.city}, {listing.county}
+                            </p>
+                            <div className="flex items-center justify-between">
+                              <Badge variant="outline" className="text-xs">
+                                {listing.room_type}
+                              </Badge>
+                              <Button 
+                                size="sm" 
+                                className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 text-xs sm:text-sm"
+                                onClick={() => router.push(`/search?id=${listing.id}`)}
+                              >
+                                View Details
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Withdraw Confirmation Dialog */}
+        <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-700">
+                <AlertTriangle className="h-5 w-5" />
+                Withdraw Application
+              </DialogTitle>
+              <DialogDescription className="text-red-600">
+                Are you sure you want to withdraw your application? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedApplication && (
+              <div className="space-y-4">
+                <div className="bg-gray-50 border rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900">{selectedApplication.listing.property_name}</h4>
+                  <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                    <MapPin className="h-3 w-3" />
+                    {selectedApplication.listing.city}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Current position: #{selectedApplication.position} in queue
+                  </p>
+                </div>
+                
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <h4 className="font-medium text-red-800 mb-2">What happens when you withdraw:</h4>
+                  <ul className="text-sm text-red-700 space-y-1">
+                    <li>• Your application will be removed from the queue</li>
+                    <li>• You'll lose your current position</li>
+                    <li>• You can reapply, but you'll start at the end of the queue</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowWithdrawDialog(false);
+                  setSelectedApplication(null);
+                }}
+                disabled={withdrawingApplicationId === selectedApplication?.id}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => selectedApplication && handleWithdrawApplication(selectedApplication.id)}
+                disabled={withdrawingApplicationId === selectedApplication?.id}
+                className="flex items-center gap-2"
+              >
+                {withdrawingApplicationId === selectedApplication?.id ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Withdrawing...
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4" />
+                    Yes, Withdraw
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
+} 

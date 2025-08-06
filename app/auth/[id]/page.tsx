@@ -22,18 +22,15 @@ export default async function SignIn(
     data: { user }
   } = await supabase.auth.getUser();
 
-  if (user && currState !== 'update_password') {
+  if (user && currState !== AuthState.ProfileSetup) {
     return redirect('/');
-  } else if (!user && currState === 'update_password') {
+  } else if (!user && currState === AuthState.ProfileSetup) {
     return redirect('/auth');
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <Navbar user={user} />
-      <div className="flex grow justify-center items-center">
-        <AuthForm state={currState} />
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <AuthForm state={currState} />
     </div>
   );
 }
