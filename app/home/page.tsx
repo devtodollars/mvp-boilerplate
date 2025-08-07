@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 import ProfileNotification from '@/components/misc/ProfileNotification';
 import EnhancedSearchBar from '@/components/search/EnhancedSearchBar';
 import { SearchFilters } from '@/components/search/AdvancedSearchFilters';
-import { useRouter } from 'next/navigation';
+import HomeSearchWrapper from '@/components/HomeSearchWrapper';
 
 export default async function WelcomeCard() {
     const supabase = await createClient();
@@ -40,14 +40,7 @@ export default async function WelcomeCard() {
                             </p>
                         </div>
                         
-                        <EnhancedSearchBar 
-                            onSearch={(query, filters) => {
-                                // This will be handled by the client component
-                                console.log('Search:', query, filters)
-                            }}
-                            placeholder="e.g., 'cheap apartment in Dublin' or 'pet friendly under €1000'"
-                            className="w-full"
-                        />
+                        <HomeSearchWrapper />
                         
                         <div className="mt-4 text-xs text-muted-foreground text-center">
                             <p>💡 Try searching with natural language like:</p>

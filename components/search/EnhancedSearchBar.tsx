@@ -13,18 +13,25 @@ interface EnhancedSearchBarProps {
   onSearch: (query: string, filters: Partial<SearchFilters>) => void
   placeholder?: string
   className?: string
+  initialValue?: string
 }
 
 export default function EnhancedSearchBar({ 
   onSearch, 
   placeholder = "Search for properties...",
-  className = ""
+  className = "",
+  initialValue = ""
 }: EnhancedSearchBarProps) {
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialValue)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeFilters, setActiveFilters] = useState<Partial<SearchFilters>>({})
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Update query when initialValue changes
+  useEffect(() => {
+    setQuery(initialValue)
+  }, [initialValue])
 
   // Debounced search suggestions
   useEffect(() => {

@@ -65,8 +65,39 @@ export default function Component({
     currentIndex: 0,
   })
 
-  // Use the searchQuery prop if provided, otherwise use local state
-  const effectiveSearchQuery = searchQuery || localSearchQuery
+  // Use the searchQuery prop if provided, otherwise get from URL params, otherwise use local state
+  const urlSearchQuery = searchParams.get('q') || ''
+  const effectiveSearchQuery = useMemo(() => 
+    searchQuery || urlSearchQuery || localSearchQuery, 
+    [searchQuery, urlSearchQuery, localSearchQuery]
+  )
+
+  // Read filter parameters from URL and memoize them
+  const urlFilters = useMemo(() => {
+    const filters: Partial<SearchFilters> = {}
+    const urlCounty = searchParams.get('county')
+    const urlPropertyType = searchParams.get('propertyType')
+    const urlRoomType = searchParams.get('roomType')
+    const urlMinPrice = searchParams.get('minPrice')
+    const urlMaxPrice = searchParams.get('maxPrice')
+    const urlPets = searchParams.get('pets')
+    const urlEnsuite = searchParams.get('ensuite')
+    const urlVerifiedOnly = searchParams.get('verifiedOnly')
+    
+    if (urlCounty) filters.county = urlCounty
+    if (urlPropertyType) filters.propertyType = urlPropertyType
+    if (urlRoomType) filters.roomType = urlRoomType
+    if (urlMinPrice) filters.minPrice = parseInt(urlMinPrice)
+    if (urlMaxPrice) filters.maxPrice = parseInt(urlMaxPrice)
+    if (urlPets === 'true') filters.pets = true
+    if (urlEnsuite === 'true') filters.ensuite = true
+    if (urlVerifiedOnly === 'true') filters.verifiedOnly = true
+    
+    return filters
+  }, [searchParams])
+
+  // Use provided filters or URL filters
+  const effectiveFilters = useMemo(() => filters || urlFilters, [filters, urlFilters])
 
   useEffect(() => {
     setIsClient(true)
@@ -186,7 +217,7 @@ export default function Component({
     let filtered = [...listings]
     console.log('Applying filters:', { 
       effectiveSearchQuery, 
-      filters, 
+      effectiveFilters, 
       totalListings: listings.length,
       sampleListing: listings[0] 
     })
@@ -206,12 +237,12 @@ export default function Component({
     }
 
     // Apply filters
-    if (filters) {
+    if (effectiveFilters) {
       const beforeCount = filtered.length
       
       // Location filter
-      if (filters.location) {
-        const location = filters.location.toLowerCase()
+      if (effectiveFilters.location) {
+        const location = effectiveFilters.location.toLowerCase()
         filtered = filtered.filter(listing =>
           listing.address?.toLowerCase().includes(location) ||
           listing.city?.toLowerCase().includes(location) ||
@@ -220,86 +251,86 @@ export default function Component({
       }
 
       // County filter
-      if (filters.county) {
+      if (effectiveFilters.county) {
         filtered = filtered.filter(listing => 
-          listing.county === filters.county
+          listing.county === effectiveFilters.county
         )
       }
 
       // Price filters
-      if (filters.minPrice > 0) {
+      if (effectiveFilters.minPrice && effectiveFilters.minPrice > 0) {
         filtered = filtered.filter(listing => 
-          listing.monthly_rent >= filters.minPrice
+          listing.monthly_rent >= effectiveFilters.minPrice!
         )
       }
 
-      if (filters.maxPrice > 0) {
+      if (effectiveFilters.maxPrice && effectiveFilters.maxPrice > 0) {
         filtered = filtered.filter(listing => 
-          listing.monthly_rent <= filters.maxPrice
+          listing.monthly_rent <= effectiveFilters.maxPrice!
         )
       }
 
       // Property type filter
-      if (filters.propertyType) {
+      if (effectiveFilters.propertyType) {
         filtered = filtered.filter(listing => 
-          listing.property_type === filters.propertyType
+          listing.property_type === effectiveFilters.propertyType
         )
       }
 
       // Room type filter
-      if (filters.roomType) {
+      if (effectiveFilters.roomType) {
         filtered = filtered.filter(listing => 
-          listing.room_type === filters.roomType
+          listing.room_type === effectiveFilters.roomType
         )
       }
 
       // Size filter
-      if (filters.size > 0) {
+      if (effectiveFilters.size && effectiveFilters.size > 0) {
         filtered = filtered.filter(listing => 
-          listing.size >= filters.size
+          listing.size >= effectiveFilters.size!
         )
       }
 
       // Special features
-      if (filters.ensuite) {
+      if (effectiveFilters.ensuite) {
         filtered = filtered.filter(listing => listing.ensuite === true)
       }
 
-      if (filters.pets) {
+      if (effectiveFilters.pets) {
         filtered = filtered.filter(listing => listing.pets === true)
       }
 
-      if (filters.ownerOccupied) {
+      if (effectiveFilters.ownerOccupied) {
         filtered = filtered.filter(listing => listing.owner_occupied === true)
       }
 
       // Verification
-      if (filters.verifiedOnly) {
+      if (effectiveFilters.verifiedOnly) {
         filtered = filtered.filter(listing => listing.verified === true)
       }
 
       // Availability
-      if (filters.availableFrom) {
+      if (effectiveFilters.availableFrom) {
         filtered = filtered.filter(listing => {
           if (!listing.available_from) return false
           const availableDate = new Date(listing.available_from)
-          const filterDate = new Date(filters.availableFrom)
+          const filterDate = new Date(effectiveFilters.availableFrom!)
           return availableDate <= filterDate
         })
       }
 
       // Viewing times
-      if (filters.hasViewingTimes) {
+      if (effectiveFilters.hasViewingTimes) {
         filtered = filtered.filter(listing => 
           listing.viewing_times && listing.viewing_times.length > 0
         )
       }
 
       // Amenities filter
-      if (filters.amenities.length > 0) {
+      if (effectiveFilters.amenities && effectiveFilters.amenities.length > 0) {
         filtered = filtered.filter(listing => {
           if (!listing.amenities || !Array.isArray(listing.amenities)) return false
-          return filters.amenities.every(amenity => 
+          return effectiveFilters.amenities!.every(amenity => 
             listing.amenities.includes(amenity)
           )
         })
@@ -316,11 +347,21 @@ export default function Component({
       onResultsUpdate(filtered)
     }
 
-    // Update selected property if current one is not in filtered results
-    if (selectedProperty && !filtered.find(l => l.id === selectedProperty.id)) {
-      setSelectedProperty(filtered[0] || null)
+  }, [listings, effectiveSearchQuery, effectiveFilters, onResultsUpdate])
+
+  // Handle selected property updates separately to avoid infinite loops
+  useEffect(() => {
+    if (selectedProperty && !filteredListings.find(l => l.id === selectedProperty.id)) {
+      setSelectedProperty(filteredListings[0] || null)
     }
-  }, [listings, effectiveSearchQuery, filters, onResultsUpdate, selectedProperty])
+  }, [filteredListings, selectedProperty])
+
+  // Set initial search query when component mounts or searchQuery prop changes
+  useEffect(() => {
+    if (searchQuery && searchQuery !== localSearchQuery) {
+      setLocalSearchQuery(searchQuery)
+    }
+  }, [searchQuery, localSearchQuery])
 
   const handlePropertySelect = useCallback(async (property: any) => {
     setSelectedProperty(property)
@@ -466,6 +507,7 @@ export default function Component({
                   // The parent component will handle the full search logic
                 }}
                 placeholder="Search properties..."
+                initialValue={effectiveSearchQuery}
               />
             </div>
             <Button
@@ -493,6 +535,7 @@ export default function Component({
                   // The parent component will handle the full search logic
                 }}
                 placeholder="Search for properties..."
+                initialValue={effectiveSearchQuery}
               />
             </div>
           </div>

@@ -76,11 +76,11 @@ export default function ChatTabs() {
 
   // Get current user
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setCurrentUser(user?.id || null)
-    }
-    getUser()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setCurrentUser(session?.user?.id || null)
+    })
+
+    return () => subscription.unsubscribe()
   }, [supabase])
 
   // Fetch user's active applications
@@ -88,7 +88,7 @@ export default function ChatTabs() {
     if (!currentUser) return
 
     try {
-      // Get all accepted applications
+      // Get user's applications and applications for listings they own
       const { data: applications, error } = await supabase
         .from('applications')
         .select(`
@@ -101,32 +101,25 @@ export default function ChatTabs() {
             address,
             user_id
           ),
-          user:users(full_name, first_name, last_name)
+          user:users(full_name)
         `)
         .eq('status', 'accepted')
+        .or(`user_id.eq.${currentUser},listing.user_id.eq.${currentUser}`)
 
       if (error) {
         console.error('Error fetching applications:', error)
-        // Don't return here, just log the error and continue
-      }
-
-      if (!applications || applications.length === 0) {
-        console.log('No applications found')
         return
       }
 
-      // Filter applications where user is either applicant or owner
-      const userApplications = applications.filter(app => 
-        app.user_id === currentUser || app.listing?.user_id === currentUser
-      )
-
-      if (userApplications.length === 0) return
+      if (!applications || applications.length === 0) {
+        return
+      }
 
       // Create tabs for each application
-      const newTabs: ChatTab[] = userApplications.map(app => {
+      const newTabs: ChatTab[] = applications.map(app => {
         const isOwner = app.listing?.user_id === currentUser
         const otherPartyName = isOwner 
-          ? (app.user?.full_name || `${app.user?.first_name} ${app.user?.last_name}`.trim() || 'Applicant')
+          ? (app.user?.full_name || 'Applicant')
           : (app.listing?.user_id ? 'Property Owner' : 'Owner')
         const propertyName = app.listing?.property_name || 'Property'
 
@@ -159,6 +152,15 @@ export default function ChatTabs() {
       console.error('Error in fetchActiveApplications:', error)
     }
   }, [currentUser, supabase])
+
+  // Fetch applications when user changes
+  useEffect(() => {
+    if (currentUser) {
+      fetchActiveApplications()
+    } else {
+      setChatTabs([])
+    }
+  }, [currentUser, fetchActiveApplications])
 
   // Load messages for a chat room
   const loadMessages = useCallback(async (chatRoomId: string) => {
@@ -367,12 +369,7 @@ export default function ChatTabs() {
     setChatTabs(prev => prev.filter(tab => tab.id !== tabId))
   }, [])
 
-  // Fetch applications when user changes
-  useEffect(() => {
-    if (currentUser) {
-      fetchActiveApplications()
-    }
-  }, [currentUser, fetchActiveApplications])
+
 
   // Auto-refresh messages every 10 seconds
   useEffect(() => {
