@@ -34,24 +34,21 @@ const SEARCH_KEYWORDS = {
   
   // Property type keywords
   propertyType: {
-    'apartment': { propertyType: 'Apartment' },
-    'flat': { propertyType: 'Apartment' },
-    'house': { propertyType: 'House' },
-    'studio': { propertyType: 'Studio' },
-    'townhouse': { propertyType: 'Townhouse' },
-    'duplex': { propertyType: 'Duplex' },
-    'penthouse': { propertyType: 'Penthouse' }
+    'apartment': { propertyType: 'apartment' },
+    'flat': { propertyType: 'flat' },
+    'house': { propertyType: 'house' },
+    'studio': { propertyType: 'studio' },
+    'other': { propertyType: 'other' }
   },
   
   // Room type keywords
   roomType: {
-    'single': { roomType: 'Single' },
-    'double': { roomType: 'Double' },
-    'twin': { roomType: 'Twin' },
-    'triple': { roomType: 'Triple' },
-    'quad': { roomType: 'Quad' },
-    'shared': { roomType: 'Single' }, // Default to single for shared rooms
-    'private': { roomType: 'Single' }
+    'single': { roomType: 'single' },
+    'double': { roomType: 'double' },
+    'twin': { roomType: 'twin' },
+    'shared': { roomType: 'shared' },
+    'digs': { roomType: 'digs' },
+    'private': { roomType: 'single' }
   },
   
   // Price keywords
@@ -66,29 +63,41 @@ const SEARCH_KEYWORDS = {
   
   // Amenity keywords
   amenities: {
-    'wifi': { amenities: ['wifi'] },
-    'internet': { amenities: ['wifi'] },
-    'parking': { amenities: ['parking'] },
-    'car': { amenities: ['parking'] },
-    'kitchen': { amenities: ['kitchen'] },
-    'cooking': { amenities: ['kitchen'] },
-    'gym': { amenities: ['gym'] },
-    'fitness': { amenities: ['gym'] },
+    'wifi': { amenities: ['Wi-Fi'] },
+    'internet': { amenities: ['Wi-Fi'] },
+    'parking': { amenities: ['Parking'] },
+    'car': { amenities: ['Parking'] },
+    'garden': { amenities: ['Garden Access'] },
+    'balcony': { amenities: ['Balcony/Terrace'] },
+    'terrace': { amenities: ['Balcony/Terrace'] },
+    'washing': { amenities: ['Washing Machine'] },
+    'laundry': { amenities: ['Washing Machine'] },
+    'dryer': { amenities: ['Dryer'] },
+    'dishwasher': { amenities: ['Dishwasher'] },
+    'microwave': { amenities: ['Microwave'] },
+    'tv': { amenities: ['TV'] },
+    'television': { amenities: ['TV'] },
+    'heating': { amenities: ['Central Heating'] },
+    'central heating': { amenities: ['Central Heating'] },
+    'fireplace': { amenities: ['Fireplace'] },
+    'air conditioning': { amenities: ['Air Conditioning'] },
+    'ac': { amenities: ['Air Conditioning'] },
+    'gym': { amenities: ['Gym Access'] },
+    'fitness': { amenities: ['Gym Access'] },
+    'swimming': { amenities: ['Swimming Pool'] },
+    'pool': { amenities: ['Swimming Pool'] },
+    'storage': { amenities: ['Storage Space'] },
+    'bike': { amenities: ['Bike Storage'] },
+    'furnished': { amenities: ['Furnished'] },
+    'unfurnished': { amenities: ['Unfurnished'] },
     'pets': { pets: true },
     'pet': { pets: true },
     'dog': { pets: true },
     'cat': { pets: true },
+    'pet friendly': { pets: true },
     'ensuite': { ensuite: true },
     'bathroom': { ensuite: true },
-    'balcony': { amenities: ['balcony'] },
-    'garden': { amenities: ['garden'] },
-    'washing': { amenities: ['washing_machine'] },
-    'laundry': { amenities: ['washing_machine'] },
-    'dishwasher': { amenities: ['dishwasher'] },
-    'air conditioning': { amenities: ['air_conditioning'] },
-    'ac': { amenities: ['air_conditioning'] },
-    'heating': { amenities: ['heating'] },
-    'central heating': { amenities: ['heating'] }
+    'smoking': { amenities: ['Smoking Allowed'] }
   },
   
   // Special features
@@ -138,14 +147,48 @@ export function parseNaturalLanguageQuery(query: string): Partial<SearchFilters>
   const filters: Partial<SearchFilters> = {}
   const lowerQuery = query.toLowerCase()
   
-  // Extract location from query
-  const locationMatch = lowerQuery.match(/(?:in|at|near|around)\s+([a-zA-Z\s]+)/)
+  // Enhanced location extraction - try multiple patterns
+  let locationMatch = lowerQuery.match(/(?:in|at|near|around)\s+([a-zA-Z]+)(?:\s|$)/)
   if (locationMatch) {
-    filters.location = locationMatch[1].trim()
+    const location = locationMatch[1].trim()
+    
+    // Check if it's a known county first
+    const countyKeywords = Object.keys(SEARCH_KEYWORDS.location)
+    const matchedCounty = countyKeywords.find(county => location.includes(county))
+    if (matchedCounty) {
+      filters.location = location
+      filters.county = (SEARCH_KEYWORDS.location as any)[matchedCounty].county
+    } else {
+      // Only set location if it's not a room type word
+      const roomTypeWords = ['room', 'single', 'double', 'twin', 'shared', 'digs']
+      if (!roomTypeWords.includes(location)) {
+        filters.location = location
+      }
+    }
   }
   
-  // Process keyword matches
+  // Enhanced room type detection - prioritize full phrases
+  if (lowerQuery.includes('single room')) {
+    filters.roomType = 'single'
+  } else if (lowerQuery.includes('double room')) {
+    filters.roomType = 'double'
+  } else if (lowerQuery.includes('twin room')) {
+    filters.roomType = 'twin'
+  } else if (lowerQuery.includes('shared room')) {
+    filters.roomType = 'shared'
+  } else {
+    // Fallback to individual keyword matching
+    Object.entries(SEARCH_KEYWORDS.roomType).forEach(([keyword, filterUpdate]) => {
+      if (lowerQuery.includes(keyword) && !filters.roomType) {
+        Object.assign(filters, filterUpdate)
+      }
+    })
+  }
+  
+  // Process other keyword matches (excluding roomType which we handled above)
   Object.entries(SEARCH_KEYWORDS).forEach(([category, keywords]) => {
+    if (category === 'roomType') return // Skip since we handled this above
+    
     Object.entries(keywords).forEach(([keyword, filterUpdate]) => {
       if (lowerQuery.includes(keyword)) {
         Object.assign(filters, filterUpdate)

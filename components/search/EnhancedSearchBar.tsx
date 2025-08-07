@@ -115,15 +115,6 @@ export default function EnhancedSearchBar({
               <X className="h-3 w-3" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSearch}
-            className="h-6 px-2 text-xs"
-          >
-            <Sparkles className="h-3 w-3 mr-1" />
-            AI
-          </Button>
         </div>
       </div>
 
@@ -153,6 +144,10 @@ export default function EnhancedSearchBar({
                   onClick={() => {
                     setQuery(suggestion)
                     setShowSuggestions(false)
+                    // Trigger search immediately when suggestion is clicked
+                    const parsedFilters = parseNaturalLanguageQuery(suggestion)
+                    setActiveFilters(parsedFilters)
+                    onSearch(suggestion, parsedFilters)
                   }}
                 >
                   💡 {suggestion}
@@ -168,13 +163,31 @@ export default function EnhancedSearchBar({
         <div className="mt-2 text-xs text-muted-foreground">
           <div className="mb-1">Try: "cheap apartment in Dublin" or "pet friendly under €1000"</div>
           <div className="flex flex-wrap gap-1">
-            <Badge variant="outline" className="text-xs cursor-pointer hover:bg-primary/10" onClick={() => setQuery("cheap apartment in Dublin")}>
+            <Badge variant="outline" className="text-xs cursor-pointer hover:bg-primary/10" onClick={() => {
+              const query = "cheap apartment in Dublin"
+              setQuery(query)
+              const parsedFilters = parseNaturalLanguageQuery(query)
+              setActiveFilters(parsedFilters)
+              onSearch(query, parsedFilters)
+            }}>
               Cheap apartment in Dublin
             </Badge>
-            <Badge variant="outline" className="text-xs cursor-pointer hover:bg-primary/10" onClick={() => setQuery("pet friendly under €1000")}>
+            <Badge variant="outline" className="text-xs cursor-pointer hover:bg-primary/10" onClick={() => {
+              const query = "pet friendly under €1000"
+              setQuery(query)
+              const parsedFilters = parseNaturalLanguageQuery(query)
+              setActiveFilters(parsedFilters)
+              onSearch(query, parsedFilters)
+            }}>
               Pet friendly under €1000
             </Badge>
-            <Badge variant="outline" className="text-xs cursor-pointer hover:bg-primary/10" onClick={() => setQuery("ensuite room with parking")}>
+            <Badge variant="outline" className="text-xs cursor-pointer hover:bg-primary/10" onClick={() => {
+              const query = "ensuite room with parking"
+              setQuery(query)
+              const parsedFilters = parseNaturalLanguageQuery(query)
+              setActiveFilters(parsedFilters)
+              onSearch(query, parsedFilters)
+            }}>
               Ensuite room with parking
             </Badge>
           </div>

@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Search, SlidersHorizontal, Heart, MapPin, List, Map, X, ChevronLeft, ChevronRight, Play, ArrowLeft, Filter } from "lucide-react"
 import PropertyView from "./propertyView"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
@@ -22,8 +22,9 @@ import { fetchListings, debugListings, trackListingView } from "@/utils/supabase
 import { getListingImages } from "@/utils/supabase/storage"
 import { createClient } from "@/utils/supabase/client"
 import { createApiClient } from "@/utils/supabase/api"
-import { buildSupabaseQuery } from "./AISearchLogic"
+import { buildSupabaseQuery, parseNaturalLanguageQuery } from "./AISearchLogic"
 import { SearchFilters } from "./AdvancedSearchFilters"
+import AdvancedSearchFilters from "./AdvancedSearchFilters"
 import EnhancedSearchBar from "./EnhancedSearchBar"
 import dynamic from "next/dynamic";
 
@@ -55,6 +56,25 @@ export default function Component({
   const [isClient, setIsClient] = useState(false)
   const [likedListings, setLikedListings] = useState<Set<string>>(new Set())
   const [likingListing, setLikingListing] = useState<string | null>(null)
+  const [currentFilters, setCurrentFilters] = useState<SearchFilters>({
+    location: '',
+    county: '',
+    city: '',
+    minPrice: 0,
+    maxPrice: 0,
+    propertyType: '',
+    roomType: '',
+    size: 0,
+    currentOccupants: 0,
+    maxOccupants: 0,
+    amenities: [],
+    ensuite: false,
+    pets: false,
+    ownerOccupied: false,
+    availableFrom: '',
+    verifiedOnly: false,
+    hasViewingTimes: false
+  })
   const [mediaModal, setMediaModal] = useState<{
     isOpen: boolean
     media: Array<{ url: string; type: "image" | "video" }>
@@ -217,13 +237,25 @@ export default function Component({
     let filtered = [...listings]
     console.log('Applying filters:', { 
       effectiveSearchQuery, 
-      effectiveFilters, 
+      currentFilters, 
       totalListings: listings.length,
       sampleListing: listings[0] 
     })
 
-    // Apply search query
-    if (effectiveSearchQuery) {
+    // Apply search query - but don't apply text search if we parsed structured filters
+    const parsedFilters = parseNaturalLanguageQuery(effectiveSearchQuery)
+    const hasStructuredFilters = parsedFilters && (
+      parsedFilters.roomType || 
+      parsedFilters.propertyType || 
+      parsedFilters.county || 
+      parsedFilters.location ||
+      parsedFilters.amenities?.length ||
+      parsedFilters.pets ||
+      parsedFilters.ensuite
+    )
+    
+    if (effectiveSearchQuery && !hasStructuredFilters) {
+      // Only apply text search if we didn't extract structured filters
       const query = effectiveSearchQuery.toLowerCase()
       const beforeCount = filtered.length
       filtered = filtered.filter(listing => 
@@ -234,15 +266,17 @@ export default function Component({
         listing.description?.toLowerCase().includes(query)
       )
       console.log(`Search filter: "${query}" - ${beforeCount} -> ${filtered.length} results`)
+    } else if (hasStructuredFilters) {
+      console.log('Skipping text search because we have structured filters:', parsedFilters)
     }
 
     // Apply filters
-    if (effectiveFilters) {
+    if (currentFilters) {
       const beforeCount = filtered.length
       
       // Location filter
-      if (effectiveFilters.location) {
-        const location = effectiveFilters.location.toLowerCase()
+      if (currentFilters.location) {
+        const location = currentFilters.location.toLowerCase()
         filtered = filtered.filter(listing =>
           listing.address?.toLowerCase().includes(location) ||
           listing.city?.toLowerCase().includes(location) ||
@@ -251,86 +285,94 @@ export default function Component({
       }
 
       // County filter
-      if (effectiveFilters.county) {
-        filtered = filtered.filter(listing => 
-          listing.county === effectiveFilters.county
-        )
+      if (currentFilters.county) {
+        console.log(`Applying county filter: ${currentFilters.county}`)
+        const beforeCountyFilter = filtered.length
+        filtered = filtered.filter(listing => {
+          console.log(`Listing ${listing.id}: county = "${listing.county}", looking for "${currentFilters.county}"`)
+          return listing.county === currentFilters.county
+        })
+        console.log(`County filter: ${beforeCountyFilter} -> ${filtered.length} results`)
       }
 
       // Price filters
-      if (effectiveFilters.minPrice && effectiveFilters.minPrice > 0) {
+      if (currentFilters.minPrice > 0) {
         filtered = filtered.filter(listing => 
-          listing.monthly_rent >= effectiveFilters.minPrice!
+          listing.monthly_rent >= currentFilters.minPrice
         )
       }
 
-      if (effectiveFilters.maxPrice && effectiveFilters.maxPrice > 0) {
+      if (currentFilters.maxPrice > 0) {
         filtered = filtered.filter(listing => 
-          listing.monthly_rent <= effectiveFilters.maxPrice!
+          listing.monthly_rent <= currentFilters.maxPrice
         )
       }
 
       // Property type filter
-      if (effectiveFilters.propertyType) {
+      if (currentFilters.propertyType) {
         filtered = filtered.filter(listing => 
-          listing.property_type === effectiveFilters.propertyType
+          listing.property_type === currentFilters.propertyType
         )
       }
 
       // Room type filter
-      if (effectiveFilters.roomType) {
-        filtered = filtered.filter(listing => 
-          listing.room_type === effectiveFilters.roomType
-        )
+      if (currentFilters.roomType) {
+        console.log(`Applying room type filter: ${currentFilters.roomType}`)
+        const beforeRoomFilter = filtered.length
+        filtered = filtered.filter(listing => {
+          console.log(`Listing ${listing.id}: room_type = "${listing.room_type}", looking for "${currentFilters.roomType}"`)
+          return listing.room_type === currentFilters.roomType
+        })
+        console.log(`Room type filter: ${beforeRoomFilter} -> ${filtered.length} results`)
       }
 
       // Size filter
-      if (effectiveFilters.size && effectiveFilters.size > 0) {
+      if (currentFilters.size > 0) {
         filtered = filtered.filter(listing => 
-          listing.size >= effectiveFilters.size!
+          listing.size >= currentFilters.size
         )
       }
 
       // Special features
-      if (effectiveFilters.ensuite) {
+      if (currentFilters.ensuite) {
         filtered = filtered.filter(listing => listing.ensuite === true)
       }
 
-      if (effectiveFilters.pets) {
+      if (currentFilters.pets) {
         filtered = filtered.filter(listing => listing.pets === true)
       }
 
-      if (effectiveFilters.ownerOccupied) {
+      if (currentFilters.ownerOccupied) {
         filtered = filtered.filter(listing => listing.owner_occupied === true)
       }
 
       // Verification
-      if (effectiveFilters.verifiedOnly) {
+      if (currentFilters.verifiedOnly) {
         filtered = filtered.filter(listing => listing.verified === true)
       }
 
       // Availability
-      if (effectiveFilters.availableFrom) {
+      if (currentFilters.availableFrom) {
         filtered = filtered.filter(listing => {
           if (!listing.available_from) return false
           const availableDate = new Date(listing.available_from)
-          const filterDate = new Date(effectiveFilters.availableFrom!)
+          const filterDate = new Date(currentFilters.availableFrom)
           return availableDate <= filterDate
         })
       }
 
       // Viewing times
-      if (effectiveFilters.hasViewingTimes) {
+      if (currentFilters.hasViewingTimes) {
         filtered = filtered.filter(listing => 
           listing.viewing_times && listing.viewing_times.length > 0
         )
       }
 
       // Amenities filter
-      if (effectiveFilters.amenities && effectiveFilters.amenities.length > 0) {
+      if (currentFilters.amenities.length > 0) {
         filtered = filtered.filter(listing => {
           if (!listing.amenities || !Array.isArray(listing.amenities)) return false
-          return effectiveFilters.amenities!.every(amenity => 
+          return currentFilters.amenities.every(amenity => 
             listing.amenities.includes(amenity)
           )
         })
@@ -347,7 +389,7 @@ export default function Component({
       onResultsUpdate(filtered)
     }
 
-  }, [listings, effectiveSearchQuery, effectiveFilters, onResultsUpdate])
+  }, [listings, effectiveSearchQuery, currentFilters, onResultsUpdate])
 
   // Handle selected property updates separately to avoid infinite loops
   useEffect(() => {
@@ -362,6 +404,54 @@ export default function Component({
       setLocalSearchQuery(searchQuery)
     }
   }, [searchQuery, localSearchQuery])
+
+  // Initialize filters from URL parameters and parse search query
+  useEffect(() => {
+    if (filters) {
+      setCurrentFilters(prev => ({
+        ...prev,
+        ...filters
+      }))
+    }
+    
+    // Parse search query to extract additional filters
+    if (effectiveSearchQuery) {
+      const parsedFilters = parseNaturalLanguageQuery(effectiveSearchQuery)
+      console.log('Parsed filters from search query:', parsedFilters)
+      
+      setCurrentFilters(prev => ({
+        ...prev,
+        ...parsedFilters
+      }))
+    }
+  }, [filters, effectiveSearchQuery])
+
+  // Handle filter changes
+  const handleFiltersChange = (newFilters: SearchFilters) => {
+    setCurrentFilters(newFilters)
+  }
+
+  const handleClearFilters = () => {
+    setCurrentFilters({
+      location: '',
+      county: '',
+      city: '',
+      minPrice: 0,
+      maxPrice: 0,
+      propertyType: '',
+      roomType: '',
+      size: 0,
+      currentOccupants: 0,
+      maxOccupants: 0,
+      amenities: [],
+      ensuite: false,
+      pets: false,
+      ownerOccupied: false,
+      availableFrom: '',
+      verifiedOnly: false,
+      hasViewingTimes: false
+    })
+  }
 
   const handlePropertySelect = useCallback(async (property: any) => {
     setSelectedProperty(property)
@@ -504,7 +594,13 @@ export default function Component({
                   console.log('Mobile search triggered:', query, filters)
                   // Update the local search query for immediate filtering
                   setLocalSearchQuery(query)
-                  // The parent component will handle the full search logic
+                  // Apply parsed filters from the search query
+                  const parsedFilters = parseNaturalLanguageQuery(query)
+                  setCurrentFilters(prev => ({
+                    ...prev,
+                    ...parsedFilters,
+                    ...filters // Explicit filters from the search bar take precedence
+                  }))
                 }}
                 placeholder="Search properties..."
                 initialValue={effectiveSearchQuery}
@@ -529,14 +625,44 @@ export default function Component({
             <div className="flex-1 max-w-md">
               <EnhancedSearchBar 
                 onSearch={(query: string, filters: Partial<SearchFilters>) => {
-                  console.log('Search triggered:', query, filters)
+                  console.log('Desktop search triggered:', query, filters)
                   // Update the local search query for immediate filtering
                   setLocalSearchQuery(query)
-                  // The parent component will handle the full search logic
+                  // Apply parsed filters from the search query
+                  const parsedFilters = parseNaturalLanguageQuery(query)
+                  setCurrentFilters(prev => ({
+                    ...prev,
+                    ...parsedFilters,
+                    ...filters // Explicit filters from the search bar take precedence
+                  }))
                 }}
                 placeholder="Search for properties..."
                 initialValue={effectiveSearchQuery}
               />
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">{filteredListings.length} properties</span>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-10">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filters
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[400px] overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle>Search Filters</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-6 overflow-y-auto max-h-[calc(100vh-120px)] pb-6">
+                    <AdvancedSearchFilters
+                      filters={currentFilters}
+                      onFiltersChange={handleFiltersChange}
+                      onClearFilters={handleClearFilters}
+                      totalResults={filteredListings.length}
+                    />
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
         </div>
@@ -567,6 +693,8 @@ export default function Component({
       {/* Mobile Spacing */}
       <div className="lg:hidden h-4 bg-gray-50"></div>
 
+
+
       {/* Main Content */}
       <div className="lg:container lg:mx-auto lg:px-4 lg:py-6">
         <div className="grid lg:grid-cols-2 gap-6 h-[calc(100vh-140px)]">
@@ -574,20 +702,6 @@ export default function Component({
           <div className={`space-y-4 overflow-y-auto pr-2 ${viewMode === "map" ? "hidden lg:block" : ""}`}>
             <div className="flex items-center justify-between px-4 lg:px-0 pt-4 lg:pt-0">
               <h1 className="text-xl lg:text-2xl font-semibold">{filteredListings.length} properties found</h1>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  console.log('Test search - current state:', {
-                    listings: listings.length,
-                    filteredListings: filteredListings.length,
-                    searchQuery: effectiveSearchQuery,
-                    filters
-                  })
-                }}
-              >
-                Debug
-              </Button>
             </div>
 
             <div className="space-y-3 lg:space-y-4 px-4 lg:px-0 pb-20 lg:pb-0">
