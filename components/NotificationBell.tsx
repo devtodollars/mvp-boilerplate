@@ -13,12 +13,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { 
-  Bell, 
-  MessageSquare, 
-  FileText, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Bell,
+  MessageSquare,
+  FileText,
+  CheckCircle,
+  XCircle,
   Clock,
   ExternalLink
 } from "lucide-react"
@@ -26,26 +26,19 @@ import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
+import {
+  fetchNotifications,
+  getNotificationCount,
+  deleteAllNotifications,
+  handleNotificationClick
+} from "@/utils/supabase/notifications"
+import { Database } from "@/types_db"
 
-interface Notification {
-  id: string
-  type: 'application' | 'message' | 'application_status'
-  title: string
-  message: string
-  read: boolean
-  created_at: string
-  data?: {
-    application_id?: string
-    listing_id?: string
-    listing_name?: string
-    sender_name?: string
-    status?: string
-  }
-}
+type Notification = Database['public']['Tables']['notifications']['Row']
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [notificationCount, setNotificationCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const supabase = createClient()
@@ -53,90 +46,26 @@ export default function NotificationBell() {
   const router = useRouter()
 
   useEffect(() => {
-    fetchNotifications()
+    fetchNotificationsData()
     // Poll for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000)
+    const interval = setInterval(fetchNotificationsData, 30000)
     return () => clearInterval(interval)
   }, [])
 
-  const fetchNotifications = async () => {
+  const fetchNotificationsData = async () => {
     try {
       setLoading(true)
-      
+
       // Get current user
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Fetch applications for notifications
-      const { data: applications } = await supabase
-        .from('applications')
-        .select(`
-          id,
-          status,
-          created_at,
-          listing:listings(property_name, user_id),
-          user:users(full_name, first_name, last_name)
-        `)
-        .or(`user_id.eq.${user.id},listing.user_id.eq.${user.id}`)
-        .order('created_at', { ascending: false })
-        .limit(10)
+      // Fetch notifications from the database
+      const notificationsData = await fetchNotifications(user.id, 20)
+      const countData = await getNotificationCount(user.id)
 
-      // Fetch recent messages for notifications
-      const { data: messages } = await supabase
-        .from('messages')
-        .select(`
-          id,
-          content,
-          created_at,
-          sender:users(full_name, first_name, last_name),
-          chat_room:chat_rooms(
-            application:applications(id, listing:listings(property_name))
-          )
-        `)
-        .neq('sender_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      // Transform data into notifications
-      const appNotifications: Notification[] = (applications || []).map(app => ({
-        id: `app_${app.id}`,
-        type: 'application' as const,
-        title: app.listing.user_id === user.id 
-          ? `New application for ${app.listing.property_name}`
-          : `Application ${app.status} for ${app.listing.property_name}`,
-        message: app.listing.user_id === user.id
-          ? `${app.user.full_name || `${app.user.first_name} ${app.user.last_name}`.trim()} applied to your property`
-          : `Your application was ${app.status}`,
-        read: false,
-        created_at: app.created_at,
-        data: {
-          application_id: app.id,
-          listing_id: app.listing.id,
-          listing_name: app.listing.property_name,
-          status: app.status
-        }
-      }))
-
-      const messageNotifications: Notification[] = (messages || []).map(msg => ({
-        id: `msg_${msg.id}`,
-        type: 'message' as const,
-        title: `New message from ${msg.sender.full_name || `${msg.sender.first_name} ${msg.sender.last_name}`.trim()}`,
-        message: msg.content.length > 50 ? `${msg.content.substring(0, 50)}...` : msg.content,
-        read: false,
-        created_at: msg.created_at,
-        data: {
-          application_id: msg.chat_room.application.id,
-          listing_name: msg.chat_room.application.listing.property_name,
-          sender_name: msg.sender.full_name || `${msg.sender.first_name} ${msg.sender.last_name}`.trim()
-        }
-      }))
-
-      const allNotifications = [...appNotifications, ...messageNotifications]
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 20)
-
-      setNotifications(allNotifications)
-      setUnreadCount(allNotifications.filter(n => !n.read).length)
+      setNotifications(notificationsData)
+      setNotificationCount(countData)
 
     } catch (error) {
       console.error('Error fetching notifications:', error)
@@ -145,30 +74,57 @@ export default function NotificationBell() {
     }
   }
 
-  const markAsRead = async (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-    )
-    setUnreadCount(prev => Math.max(0, prev - 1))
+  const handleNotificationClickLocal = async (notification: Notification) => {
+    try {
+      // Handle navigation and deletion
+      const success = await handleNotificationClick(notification, router)
+      
+      if (success) {
+        // Remove notification from local state
+        setNotifications(prev => prev.filter(n => n.id !== notification.id))
+        setNotificationCount(prev => Math.max(0, prev - 1))
+        setOpen(false)
+      } else {
+        // Show error toast if navigation failed
+        toast({
+          title: "Navigation failed",
+          description: "Could not navigate to the notification content.",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error('Error handling notification click:', error)
+      toast({
+        title: "Error",
+        description: "Something went wrong while processing the notification.",
+        variant: "destructive"
+      })
+    }
   }
 
-  const handleNotificationClick = async (notification: Notification) => {
-    await markAsRead(notification.id)
+  const handleMarkAllAsRead = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-    if (notification.type === 'application') {
-      if (notification.data?.application_id) {
-        router.push(`/applications/${notification.data.application_id}`)
+      const deletedCount = await deleteAllNotifications(user.id)
+
+      if (deletedCount > 0) {
+        setNotifications([])
+        setNotificationCount(0)
+        toast({
+          title: "Notifications cleared",
+          description: `Cleared ${deletedCount} notification${deletedCount > 1 ? 's' : ''}.`
+        })
       }
-    } else if (notification.type === 'message') {
-      if (notification.data?.application_id) {
-        // Open chat tab instead of navigating to separate page
-        window.dispatchEvent(new CustomEvent('openChat', {
-          detail: { applicationId: notification.data.application_id }
-        }))
-      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error)
+      toast({
+        title: "Error",
+        description: "Failed to clear notifications.",
+        variant: "destructive"
+      })
     }
-
-    setOpen(false)
   }
 
   const getNotificationIcon = (type: string) => {
@@ -202,29 +158,29 @@ export default function NotificationBell() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="relative">
           <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <Badge 
-              variant="destructive" 
+          {notificationCount > 0 && (
+            <Badge
+              variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
             >
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {notificationCount > 9 ? '9+' : notificationCount}
             </Badge>
           )}
         </Button>
       </DropdownMenuTrigger>
-      
+
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Notifications</span>
-          {unreadCount > 0 && (
+          {notificationCount > 0 && (
             <Badge variant="secondary" className="text-xs">
-              {unreadCount} new
+              {notificationCount} new
             </Badge>
           )}
         </DropdownMenuLabel>
-        
+
         <DropdownMenuSeparator />
-        
+
         <ScrollArea className="h-80">
           {loading ? (
             <div className="flex items-center justify-center py-8">
@@ -243,15 +199,13 @@ export default function NotificationBell() {
               {notifications.map((notification) => (
                 <DropdownMenuItem
                   key={notification.id}
-                  className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-gray-50 ${
-                    !notification.read ? 'bg-blue-50' : ''
-                  }`}
-                  onClick={() => handleNotificationClick(notification)}
+                  className="flex items-start gap-3 p-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleNotificationClickLocal(notification)}
                 >
                   <div className={`mt-1 ${getNotificationColor(notification.type)}`}>
                     {getNotificationIcon(notification.type)}
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-medium text-gray-900 truncate">
@@ -264,29 +218,35 @@ export default function NotificationBell() {
                     <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                       {notification.message}
                     </p>
-                    {!notification.read && (
-                      <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                    )}
                   </div>
                 </DropdownMenuItem>
               ))}
             </div>
           )}
         </ScrollArea>
-        
+
         {notifications.length > 0 && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="flex items-center justify-center gap-2 text-sm text-gray-600"
-              onClick={() => {
-                router.push('/notifications')
-                setOpen(false)
-              }}
-            >
-              <ExternalLink className="h-4 w-4" />
-              View all notifications
-            </DropdownMenuItem>
+            <div className="flex flex-col gap-1 p-2">
+              <DropdownMenuItem
+                className="flex items-center justify-center gap-2 text-sm text-gray-600"
+                onClick={() => {
+                  router.push('/notifications')
+                  setOpen(false)
+                }}
+              >
+                <ExternalLink className="h-4 w-4" />
+                View all notifications
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex items-center justify-center gap-2 text-sm text-red-600"
+                onClick={handleMarkAllAsRead}
+              >
+                <CheckCircle className="h-4 w-4" />
+                Mark all as read
+              </DropdownMenuItem>
+            </div>
           </>
         )}
       </DropdownMenuContent>

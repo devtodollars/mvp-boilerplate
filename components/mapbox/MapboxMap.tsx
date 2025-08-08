@@ -25,28 +25,37 @@ export default function MapboxMap({ properties, selectedProperty, onSelect, onMa
   const routeLayerId = useRef<string | null>(null);
   const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
   const destinationMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const selectedPropertyRef = useRef<Property | null>(null);
+  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
     if (!mapRef.current) return;
     if (mapInstance.current) return;
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
+    
+    // Always start with Ireland center for stable map creation
     const map = new mapboxgl.Map({
       container: mapRef.current,
-      style: "mapbox://styles/golet/cmd7nb2nn00mz01sd0h1eg9he", // Replace with your actual GoLet style URL
-      center: properties[0] ? [properties[0].lng, properties[0].lat] : [-6.2603, 53.3498], // Dublin, Ireland coordinates
-      zoom: properties[0] ? 12 : 10, // Zoom out more for Dublin overview when no properties
+      style: "mapbox://styles/golet/cmd7nb2nn00mz01sd0h1eg9he",
+      center: [-7.5, 53.5], // Ireland center
+      zoom: 6,
       attributionControl: false,
     });
     mapInstance.current = map;
 
     map.on("click", async (e) => {
       // Only handle if not clicking on a marker
-      if (!selectedProperty) return;
+      if (!selectedPropertyRef.current) return;
       // Check if click is on a marker
       const features = map.queryRenderedFeatures(e.point, { layers: [] });
       if (features.length > 0) return;
+      
+      // Get the current selected property for route calculation
+      const currentSelectedProperty = selectedPropertyRef.current;
+      if (!currentSelectedProperty) return;
+      
       // Fetch route from selectedProperty to clicked location
-      const from = `${selectedProperty.lng},${selectedProperty.lat}`;
+      const from = `${currentSelectedProperty.lng},${currentSelectedProperty.lat}`;
       const to = `${e.lngLat.lng},${e.lngLat.lat}`;
       const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${from};${to}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
       const res = await fetch(url);
@@ -83,8 +92,19 @@ export default function MapboxMap({ properties, selectedProperty, onSelect, onMa
         });
         routeLayerId.current = id;
         setRouteInfo({ distance: route.distance, duration: route.duration });
-        // Center on selected property without animation
-        map.setCenter([selectedProperty.lng, selectedProperty.lat]);
+        
+        // Calculate bounds to fit both the selected property and the destination
+        const bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([currentSelectedProperty.lng, currentSelectedProperty.lat]); // Start point (selected property)
+        bounds.extend([e.lngLat.lng, e.lngLat.lat]); // End point (clicked location)
+        
+        // Fit the map to show the entire route with some padding
+        map.fitBounds(bounds, {
+          padding: 50, // Add padding around the bounds for better visibility
+          duration: 1500, // Smooth animation
+          maxZoom: 14 // Don't zoom in too much, keep route visible
+        });
+        
         // Add or move the flag marker at the destination
         if (destinationMarkerRef.current) {
           destinationMarkerRef.current.remove();
@@ -108,6 +128,48 @@ export default function MapboxMap({ properties, selectedProperty, onSelect, onMa
         destinationMarkerRef.current = null;
       }
     };
+  }, [properties]); // Removed selectedProperty from dependencies
+
+  // Update selected property ref whenever it changes
+  useEffect(() => {
+    selectedPropertyRef.current = selectedProperty;
+  }, [selectedProperty]);
+
+  // Handle map positioning (initial load and property selection)
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map) return;
+
+    // Calculate where to center based on available data
+    let targetCenter: [number, number];
+    let targetZoom: number;
+    
+    if (selectedProperty) {
+      // If there's a selected property, center on it
+      targetCenter = [selectedProperty.lng, selectedProperty.lat];
+      targetZoom = 12;
+    } else if (properties.length > 0) {
+      // If there are properties but none selected, center on the first one
+      targetCenter = [properties[0].lng, properties[0].lat];
+      targetZoom = 12;
+    } else {
+      // No properties, stay at Ireland center
+      return;
+    }
+
+    // Only animate if this isn't the initial load (to avoid double animation)
+    if (hasInitializedRef.current) {
+      map.easeTo({
+        center: targetCenter,
+        zoom: targetZoom,
+        duration: 1500
+      });
+    } else {
+      // Initial load - set position immediately
+      map.setCenter(targetCenter);
+      map.setZoom(targetZoom);
+      hasInitializedRef.current = true;
+    }
   }, [properties, selectedProperty]);
 
   // Add/Update markers
@@ -162,12 +224,7 @@ export default function MapboxMap({ properties, selectedProperty, onSelect, onMa
     });
   }, [properties, selectedProperty, onSelect]);
 
-  // Center on selected property
-  useEffect(() => {
-    const map = mapInstance.current;
-    if (!map || !selectedProperty) return;
-    map.setCenter([selectedProperty.lng, selectedProperty.lat]);
-  }, [selectedProperty]);
+
 
   return (
     <div className="w-full h-full rounded-lg relative" style={{ minHeight: 400 }}>
