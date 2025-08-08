@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Search, Sparkles, X, MapPin, Euro, Home, Users } from "lucide-react"
-import { parseNaturalLanguageQuery, getSearchSuggestions } from "./AISearchLogic"
+import { parseNaturalLanguageQuery } from "./AISearchLogic"
 import { SearchFilters } from "./AdvancedSearchFilters"
 
 interface EnhancedSearchBarProps {
@@ -23,8 +23,6 @@ export default function EnhancedSearchBar({
   initialValue = ""
 }: EnhancedSearchBarProps) {
   const [query, setQuery] = useState(initialValue)
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeFilters, setActiveFilters] = useState<Partial<SearchFilters>>({})
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -33,28 +31,11 @@ export default function EnhancedSearchBar({
     setQuery(initialValue)
   }, [initialValue])
 
-  // Debounced search suggestions
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (query.length > 2) {
-        const newSuggestions = getSearchSuggestions(query)
-        setSuggestions(newSuggestions)
-        setShowSuggestions(true)
-      } else {
-        setSuggestions([])
-        setShowSuggestions(false)
-      }
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [query])
-
   const handleSearch = () => {
     if (query.trim()) {
       const parsedFilters = parseNaturalLanguageQuery(query)
       setActiveFilters(parsedFilters)
       onSearch(query, parsedFilters)
-      setShowSuggestions(false)
     }
   }
 
@@ -67,8 +48,6 @@ export default function EnhancedSearchBar({
   const clearSearch = () => {
     setQuery("")
     setActiveFilters({})
-    setSuggestions([])
-    setShowSuggestions(false)
     onSearch("", {})
     inputRef.current?.focus()
   }
@@ -101,7 +80,6 @@ export default function EnhancedSearchBar({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyPress={handleKeyPress}
-          onFocus={() => setShowSuggestions(true)}
           className="pl-10 pr-20"
         />
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
@@ -127,35 +105,6 @@ export default function EnhancedSearchBar({
             </Badge>
           ))}
         </div>
-      )}
-
-      {/* Search Suggestions */}
-      {showSuggestions && suggestions.length > 0 && (
-        <Card className="absolute top-full left-0 right-0 mt-1 z-50 shadow-lg">
-          <CardContent className="p-3">
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-muted-foreground mb-2">
-                Search Tips:
-              </div>
-              {suggestions.map((suggestion, index) => (
-                <div
-                  key={index}
-                  className="text-sm text-muted-foreground cursor-pointer hover:text-foreground p-1 rounded"
-                  onClick={() => {
-                    setQuery(suggestion)
-                    setShowSuggestions(false)
-                    // Trigger search immediately when suggestion is clicked
-                    const parsedFilters = parseNaturalLanguageQuery(suggestion)
-                    setActiveFilters(parsedFilters)
-                    onSearch(suggestion, parsedFilters)
-                  }}
-                >
-                  💡 {suggestion}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       )}
 
       {/* Example Queries */}

@@ -165,6 +165,31 @@ export function parseNaturalLanguageQuery(query: string): Partial<SearchFilters>
         filters.location = location
       }
     }
+  } else {
+    // If no "in/at/near" pattern found, check if the entire query is a location
+    const countyKeywords = Object.keys(SEARCH_KEYWORDS.location)
+    const matchedCounty = countyKeywords.find(county => lowerQuery.includes(county))
+    if (matchedCounty) {
+      filters.location = lowerQuery.trim()
+      filters.county = (SEARCH_KEYWORDS.location as any)[matchedCounty].county
+    } else {
+      // Check if it's a simple location search (not a room type or other keyword)
+      const roomTypeWords = ['room', 'single', 'double', 'twin', 'shared', 'digs']
+      const otherKeywords = [
+        'cheap', 'expensive', 'budget', 'luxury', 'pet', 'ensuite', 'wifi', 'parking',
+        'garden', 'balcony', 'terrace', 'washing', 'laundry', 'dryer', 'dishwasher',
+        'microwave', 'tv', 'television', 'heating', 'fireplace', 'gym', 'fitness',
+        'swimming', 'pool', 'storage', 'bike', 'furnished', 'unfurnished', 'smoking'
+      ]
+      
+      const isLocationSearch = !roomTypeWords.some(word => lowerQuery.includes(word)) &&
+                              !otherKeywords.some(word => lowerQuery.includes(word)) &&
+                              lowerQuery.trim().length > 0
+      
+      if (isLocationSearch) {
+        filters.location = lowerQuery.trim()
+      }
+    }
   }
   
   // Enhanced room type detection - prioritize full phrases
@@ -318,39 +343,4 @@ export function buildSupabaseQuery(filters: SearchFilters) {
   query += ' ORDER BY verified DESC, monthly_rent ASC'
   
   return { query, params }
-}
-
-export function getSearchSuggestions(query: string): string[] {
-  const suggestions: string[] = []
-  const lowerQuery = query.toLowerCase()
-  
-  // Location suggestions
-  if (lowerQuery.includes('dublin') || lowerQuery.includes('cork') || lowerQuery.includes('galway')) {
-    suggestions.push('Try searching for specific areas within these cities')
-  }
-  
-  // Price suggestions
-  if (lowerQuery.includes('cheap') || lowerQuery.includes('budget')) {
-    suggestions.push('Consider properties under €800 for budget options')
-  }
-  
-  if (lowerQuery.includes('expensive') || lowerQuery.includes('luxury')) {
-    suggestions.push('Try properties over €1500 for premium options')
-  }
-  
-  // Amenity suggestions
-  if (lowerQuery.includes('pet')) {
-    suggestions.push('Filter by "Pet Friendly" to see all pet-friendly properties')
-  }
-  
-  if (lowerQuery.includes('parking')) {
-    suggestions.push('Use the "Parking" filter to find properties with parking')
-  }
-  
-  // General suggestions
-  if (query.length < 3) {
-    suggestions.push('Try searching for a city, area, or specific features')
-  }
-  
-  return suggestions
 } 

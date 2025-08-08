@@ -6,7 +6,8 @@ import { SearchFilters } from './AdvancedSearchFilters'
 
 export default function SearchPageWrapper() {
   const searchParams = useSearchParams()
-  const searchQuery = searchParams.get('q') || ''
+  // Don't pass URL searchQuery to let SearchComponent handle its own search state
+  const searchQuery = '' // We'll let SearchComponent handle search via localSearchQuery
   
   // Extract all filter parameters from URL
   const filters: Partial<SearchFilters> = {}
