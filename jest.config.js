@@ -17,9 +17,7 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: {
-        types: ['node', 'jest'],
-      },
+      tsconfig: 'tsconfig.test.json',
     }],
   },
 };

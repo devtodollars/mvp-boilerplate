@@ -26,9 +26,19 @@ export interface CreatePaymentData {
 
 // Get payment information for a listing
 export const getListingPaymentInfo = async (listingId: string): Promise<PaymentInfo | null> => {
-  const supabase = createClient();
-  
+  if (!listingId || typeof listingId !== 'string') {
+    console.warn('Invalid listing ID provided to getListingPaymentInfo:', listingId);
+    return null;
+  }
+
   try {
+    const supabase = createClient();
+    
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return null;
+    }
+
     const { data, error } = await supabase.rpc('get_listing_payment_info', {
       listing_uuid: listingId
     });
@@ -47,9 +57,24 @@ export const getListingPaymentInfo = async (listingId: string): Promise<PaymentI
 
 // Extend listing payment (for when payment is made)
 export const extendListingPayment = async (listingId: string, days: number = 30): Promise<boolean> => {
-  const supabase = createClient();
-  
+  if (!listingId || typeof listingId !== 'string') {
+    console.warn('Invalid listing ID provided to extendListingPayment:', listingId);
+    return false;
+  }
+
+  if (!days || typeof days !== 'number' || days <= 0) {
+    console.warn('Invalid days parameter provided to extendListingPayment:', days);
+    days = 30;
+  }
+
   try {
+    const supabase = createClient();
+    
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return false;
+    }
+
     const { data, error } = await supabase.rpc('extend_listing_payment', {
       listing_uuid: listingId,
       days_to_add: days
@@ -69,9 +94,34 @@ export const extendListingPayment = async (listingId: string, days: number = 30)
 
 // Create a payment record
 export const createPaymentRecord = async (paymentData: CreatePaymentData) => {
-  const supabase = createClient();
-  
+  if (!paymentData) {
+    console.warn('Payment data is required');
+    return { data: null, error: new Error('Payment data is required') };
+  }
+
+  if (!paymentData.listing_id || typeof paymentData.listing_id !== 'string') {
+    console.warn('Valid listing ID is required');
+    return { data: null, error: new Error('Valid listing ID is required') };
+  }
+
+  if (!paymentData.user_id || typeof paymentData.user_id !== 'string') {
+    console.warn('Valid user ID is required');
+    return { data: null, error: new Error('Valid user ID is required') };
+  }
+
+  if (!paymentData.amount || typeof paymentData.amount !== 'number' || paymentData.amount <= 0) {
+    console.warn('Valid amount is required');
+    return { data: null, error: new Error('Valid amount is required') };
+  }
+
   try {
+    const supabase = createClient();
+    
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return { data: null, error: new Error('Failed to create Supabase client') };
+    }
+
     const { data, error } = await supabase
       .from('payments')
       .insert([{
@@ -106,9 +156,30 @@ export const updatePaymentStatus = async (
   status: 'pending' | 'completed' | 'failed' | 'refunded' | 'cancelled',
   stripePaymentIntentId?: string
 ) => {
-  const supabase = createClient();
-  
+  if (!paymentId || typeof paymentId !== 'string') {
+    console.warn('Valid payment ID is required');
+    return { data: null, error: new Error('Valid payment ID is required') };
+  }
+
+  if (!status || typeof status !== 'string') {
+    console.warn('Valid status is required');
+    return { data: null, error: new Error('Valid status is required') };
+  }
+
+  const validStatuses = ['pending', 'completed', 'failed', 'refunded', 'cancelled'];
+  if (!validStatuses.includes(status)) {
+    console.warn('Invalid payment status:', status);
+    return { data: null, error: new Error('Invalid payment status') };
+  }
+
   try {
+    const supabase = createClient();
+    
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return { data: null, error: new Error('Failed to create Supabase client') };
+    }
+
     const updateData: any = {
       status,
       updated_at: new Date().toISOString()
@@ -118,7 +189,7 @@ export const updatePaymentStatus = async (
       updateData.completed_at = new Date().toISOString();
     }
 
-    if (stripePaymentIntentId) {
+    if (stripePaymentIntentId && typeof stripePaymentIntentId === 'string') {
       updateData.stripe_payment_intent_id = stripePaymentIntentId;
     }
 
@@ -143,9 +214,19 @@ export const updatePaymentStatus = async (
 
 // Get user's payment history
 export const getUserPayments = async (userId: string) => {
-  const supabase = createClient();
-  
+  if (!userId || typeof userId !== 'string') {
+    console.warn('Valid user ID is required');
+    return { data: null, error: new Error('Valid user ID is required') };
+  }
+
   try {
+    const supabase = createClient();
+    
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return { data: null, error: new Error('Failed to create Supabase client') };
+    }
+
     const { data, error } = await supabase
       .from('payments')
       .select(`
@@ -175,9 +256,19 @@ export const getUserPayments = async (userId: string) => {
 
 // Get payments for a specific listing
 export const getListingPayments = async (listingId: string) => {
-  const supabase = createClient();
-  
+  if (!listingId || typeof listingId !== 'string') {
+    console.warn('Valid listing ID is required');
+    return { data: null, error: new Error('Valid listing ID is required') };
+  }
+
   try {
+    const supabase = createClient();
+    
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return { data: null, error: new Error('Failed to create Supabase client') };
+    }
+
     const { data, error } = await supabase
       .from('payments')
       .select('*')
@@ -202,49 +293,72 @@ export const checkListingPaymentNeeded = async (listingId: string): Promise<{
   paymentInfo: PaymentInfo | null;
   reason: string;
 }> => {
-  const paymentInfo = await getListingPaymentInfo(listingId);
-  
-  if (!paymentInfo) {
+  if (!listingId || typeof listingId !== 'string') {
+    console.warn('Valid listing ID is required');
     return {
       needsPayment: true,
       paymentInfo: null,
-      reason: 'Payment information not found'
+      reason: 'Invalid listing ID provided'
     };
   }
 
-  if (paymentInfo.payment_status === 'unpaid') {
+  try {
+    const paymentInfo = await getListingPaymentInfo(listingId);
+    
+    if (!paymentInfo) {
+      return {
+        needsPayment: true,
+        paymentInfo: null,
+        reason: 'Payment information not found'
+      };
+    }
+
+    if (paymentInfo.payment_status === 'unpaid') {
+      return {
+        needsPayment: true,
+        paymentInfo,
+        reason: 'Listing has not been paid for'
+      };
+    }
+
+    if (paymentInfo.payment_status === 'expired') {
+      return {
+        needsPayment: true,
+        paymentInfo,
+        reason: 'Payment has expired'
+      };
+    }
+
+    if (paymentInfo.payment_status === 'paid' && paymentInfo.days_remaining !== null && paymentInfo.days_remaining <= 7) {
+      return {
+        needsPayment: true,
+        paymentInfo,
+        reason: `Payment expires in ${paymentInfo.days_remaining} days`
+      };
+    }
+
+    return {
+      needsPayment: false,
+      paymentInfo,
+      reason: 'Payment is current'
+    };
+  } catch (error) {
+    console.error('Error in checkListingPaymentNeeded:', error);
     return {
       needsPayment: true,
-      paymentInfo,
-      reason: 'Listing has not been paid for'
+      paymentInfo: null,
+      reason: 'Error checking payment status'
     };
   }
-
-  if (paymentInfo.payment_status === 'expired') {
-    return {
-      needsPayment: true,
-      paymentInfo,
-      reason: 'Payment has expired'
-    };
-  }
-
-  if (paymentInfo.payment_status === 'paid' && paymentInfo.days_remaining !== null && paymentInfo.days_remaining <= 7) {
-    return {
-      needsPayment: true,
-      paymentInfo,
-      reason: `Payment expires in ${paymentInfo.days_remaining} days`
-    };
-  }
-
-  return {
-    needsPayment: false,
-    paymentInfo,
-    reason: 'Payment is current'
-  };
 };
 
 // Simulate payment completion (for testing before Stripe integration)
 export const simulatePaymentCompletion = async (listingId: string): Promise<boolean> => {
+  if (!listingId || typeof listingId !== 'string') {
+    console.warn('Valid listing ID is required for payment simulation');
+    return false;
+  }
+
   try {
     const response = await fetch('/api/payments/simulate', {
       method: 'POST',
@@ -269,9 +383,19 @@ export const simulatePaymentCompletion = async (listingId: string): Promise<bool
 
 // Get payment statistics for dashboard
 export const getPaymentStats = async (userId: string) => {
-  const supabase = createClient();
-  
+  if (!userId || typeof userId !== 'string') {
+    console.warn('Valid user ID is required');
+    return { data: null, error: new Error('Valid user ID is required') };
+  }
+
   try {
+    const supabase = createClient();
+    
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return { data: null, error: new Error('Failed to create Supabase client') };
+    }
+
     const { data, error } = await supabase
       .from('payments')
       .select('status, amount, created_at')
@@ -282,17 +406,30 @@ export const getPaymentStats = async (userId: string) => {
       return { data: null, error };
     }
 
+    if (!data || !Array.isArray(data)) {
+      console.warn('Invalid payment data received');
+      return { data: null, error: new Error('Invalid payment data received') };
+    }
+
     const stats = {
       totalPayments: data.length,
-      totalAmount: data.reduce((sum, payment) => sum + Number(payment.amount), 0),
+      totalAmount: data.reduce((sum, payment) => {
+        const amount = Number(payment.amount) || 0;
+        return sum + amount;
+      }, 0),
       completedPayments: data.filter(p => p.status === 'completed').length,
       pendingPayments: data.filter(p => p.status === 'pending').length,
       failedPayments: data.filter(p => p.status === 'failed').length,
       thisMonth: data.filter(p => {
-        const paymentDate = new Date(p.created_at);
-        const now = new Date();
-        return paymentDate.getMonth() === now.getMonth() && 
-               paymentDate.getFullYear() === now.getFullYear();
+        try {
+          const paymentDate = new Date(p.created_at);
+          const now = new Date();
+          return paymentDate.getMonth() === now.getMonth() && 
+                 paymentDate.getFullYear() === now.getFullYear();
+        } catch (error) {
+          console.warn('Invalid payment date:', p.created_at);
+          return false;
+        }
       }).length
     };
 

@@ -9,169 +9,319 @@ import { getURL } from '@/utils/helpers';
 import { UserForm } from '@/schemas/user';
 
 export const createApiClient = (supabase: SupabaseClient<Database>) => {
+  if (!supabase) {
+    throw new Error('Supabase client is required');
+  }
+
   const passwordSignup = async (creds: SignUpWithPasswordCredentials) => {
+    if (!creds) {
+      throw new Error('Credentials are required for signup');
+    }
+
     const email = 'email' in creds ? creds.email : undefined;
     const password = creds.password;
     
-    if (!email) {
-      throw new Error('Email is required for signup');
+    if (!email || typeof email !== 'string') {
+      throw new Error('Valid email is required for signup');
+    }
+
+    if (!password || typeof password !== 'string') {
+      throw new Error('Valid password is required for signup');
+    }
+
+    if (password.length < 6) {
+      throw new Error('Password must be at least 6 characters long');
     }
     
-    // Try to sign up the user
-    const res = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: getURL('/api/auth_callback')
+    try {
+      // Try to sign up the user
+      const res = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: getURL('/api/auth_callback')
+        }
+      });
+      
+      if (res.error) {
+        // Handle specific error cases with better messages
+        if (res.error.message.includes('User already registered')) {
+          throw new Error('An account with this email already exists. Please sign in instead.');
+        } else if (res.error.message.includes('Email not confirmed')) {
+          throw new Error('Please check your email and click the confirmation link to complete your registration.');
+        } else if (res.error.message.includes('Signup disabled')) {
+          throw new Error('Signup is currently disabled. Please contact support.');
+        } else if (res.error.message.includes('Invalid email')) {
+          throw new Error('Please enter a valid email address.');
+        } else {
+          throw res.error;
+        }
       }
-    });
-    
-    if (res.error) {
-      // Handle specific error cases with better messages
-      if (res.error.message.includes('User already registered')) {
-        throw new Error('An account with this email already exists. Please sign in instead.');
-      } else if (res.error.message.includes('Email not confirmed')) {
-        throw new Error('Please check your email and click the confirmation link to complete your registration.');
-      } else if (res.error.message.includes('Signup disabled')) {
-        throw new Error('Signup is currently disabled. Please contact support.');
-      } else {
-        throw res.error;
-      }
+      
+      return res.data;
+    } catch (error) {
+      console.error('Error in passwordSignup:', error);
+      throw error;
     }
-    
-    return res.data;
   };
   
   const verifyOtp = async (email: string, token: string) => {
-    const res = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: 'email'
-    });
-    
-    if (res.error) {
-      // Handle specific error cases with better messages
-      if (res.error.message.includes('Invalid OTP')) {
-        throw new Error('Invalid verification code. Please check your email and try again.');
-      } else if (res.error.message.includes('Token expired')) {
-        throw new Error('Verification code has expired. Please request a new one.');
-      } else {
-        throw res.error;
-      }
+    if (!email || typeof email !== 'string') {
+      throw new Error('Valid email is required for OTP verification');
     }
-    
-    return res.data;
-  };
-  const passwordSignin = async (creds: SignInWithPasswordCredentials) => {
-    const res = await supabase.auth.signInWithPassword(creds);
-    if (res.error) throw res.error;
-    return res.data;
-  };
-  const passwordReset = async (email: string) => {
-    const res = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: getURL('/api/reset_password')
-    });
-    console.log(res);
-    if (res.error) throw res.error;
-    return res.data;
-  };
-  const passwordUpdate = async (password: string) => {
-    const res = await supabase.auth.updateUser({ password });
-    if (res.error) throw res.error;
-    return res.data;
-  };
-  const oauthSignin = async (provider: Provider) => {
-    const res = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: getURL('/api/auth_callback')
+
+    if (!token || typeof token !== 'string') {
+      throw new Error('Valid token is required for OTP verification');
+    }
+
+    try {
+      const res = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email'
+      });
+      
+      if (res.error) {
+        // Handle specific error cases with better messages
+        if (res.error.message.includes('Invalid OTP')) {
+          throw new Error('Invalid verification code. Please check your email and try again.');
+        } else if (res.error.message.includes('Token expired')) {
+          throw new Error('Verification code has expired. Please request a new one.');
+        } else if (res.error.message.includes('Email not confirmed')) {
+          throw new Error('Email not confirmed. Please check your email and click the confirmation link.');
+        } else {
+          throw res.error;
+        }
       }
-    });
-    if (res.error) throw res.error;
-    return res.data;
+      
+      return res.data;
+    } catch (error) {
+      console.error('Error in verifyOtp:', error);
+      throw error;
+    }
   };
+
+  const passwordSignin = async (creds: SignInWithPasswordCredentials) => {
+    if (!creds) {
+      throw new Error('Credentials are required for signin');
+    }
+
+    const { email, password } = creds;
+
+    if (!email || typeof email !== 'string') {
+      throw new Error('Valid email is required for signin');
+    }
+
+    if (!password || typeof password !== 'string') {
+      throw new Error('Valid password is required for signin');
+    }
+
+    try {
+      const res = await supabase.auth.signInWithPassword(creds);
+      if (res.error) {
+        // Handle specific error cases with better messages
+        if (res.error.message.includes('Invalid login credentials')) {
+          throw new Error('Invalid email or password. Please try again.');
+        } else if (res.error.message.includes('Email not confirmed')) {
+          throw new Error('Please check your email and click the confirmation link to complete your registration.');
+        } else {
+          throw res.error;
+        }
+      }
+      return res.data;
+    } catch (error) {
+      console.error('Error in passwordSignin:', error);
+      throw error;
+    }
+  };
+
+  const passwordReset = async (email: string) => {
+    if (!email || typeof email !== 'string') {
+      throw new Error('Valid email is required for password reset');
+    }
+
+    try {
+      const res = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: getURL('/api/reset_password')
+      });
+      console.log(res);
+      if (res.error) {
+        if (res.error.message.includes('User not found')) {
+          throw new Error('No account found with this email address.');
+        } else {
+          throw res.error;
+        }
+      }
+      return res.data;
+    } catch (error) {
+      console.error('Error in passwordReset:', error);
+      throw error;
+    }
+  };
+
+  const passwordUpdate = async (password: string) => {
+    if (!password || typeof password !== 'string') {
+      throw new Error('Valid password is required for password update');
+    }
+
+    if (password.length < 6) {
+      throw new Error('Password must be at least 6 characters long');
+    }
+
+    try {
+      const res = await supabase.auth.updateUser({ password });
+      if (res.error) {
+        if (res.error.message.includes('Password should be at least')) {
+          throw new Error('Password must be at least 6 characters long.');
+        } else {
+          throw res.error;
+        }
+      }
+      return res.data;
+    } catch (error) {
+      console.error('Error in passwordUpdate:', error);
+      throw error;
+    }
+  };
+
+  const oauthSignin = async (provider: Provider) => {
+    if (!provider || typeof provider !== 'string') {
+      throw new Error('Valid provider is required for OAuth signin');
+    }
+
+    const validProviders = ['google', 'github', 'facebook', 'twitter'];
+    if (!validProviders.includes(provider)) {
+      throw new Error(`Invalid provider. Supported providers: ${validProviders.join(', ')}`);
+    }
+
+    try {
+      const res = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: getURL('/api/auth_callback')
+        }
+      });
+      if (res.error) throw res.error;
+      return res.data;
+    } catch (error) {
+      console.error('Error in oauthSignin:', error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
-    const res = await supabase.auth.signOut();
-    if (res.error) throw res.error;
-    return res;
+    try {
+      const res = await supabase.auth.signOut();
+      if (res.error) throw res.error;
+      return res;
+    } catch (error) {
+      console.error('Error in signOut:', error);
+      throw error;
+    }
   };
+
   const createUserProfile = async (userData: UserForm & { email: string }) => {
+    if (!userData) {
+      throw new Error('User data is required');
+    }
+
+    if (!userData.email || typeof userData.email !== 'string') {
+      throw new Error('Valid email is required');
+    }
+
+    if (!userData.first_name || typeof userData.first_name !== 'string') {
+      throw new Error('First name is required');
+    }
+
+    if (!userData.last_name || typeof userData.last_name !== 'string') {
+      throw new Error('Last name is required');
+    }
+
     console.log('createUserProfile called with:', userData);
     
-    const { data: { user } } = await supabase.auth.getUser();
-    console.log('Current user:', user);
-    
-    if (!user) throw new Error('User not authenticated');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Current user:', user);
+      
+      if (!user) throw new Error('User not authenticated');
 
-    // Check if profile already exists
-    const { data: existingProfile } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .eq('id', user.id)
-      .single();
+      // Check if profile already exists
+      const { data: existingProfile } = await supabase
+        .from('users')
+        .select('id, first_name, last_name')
+        .eq('id', user.id)
+        .single();
 
-    if (existingProfile) {
-      console.log('Profile already exists, updating:', existingProfile);
-    } else {
-      console.log('Creating new profile for user:', user.id);
+      if (existingProfile) {
+        console.log('Profile already exists, updating:', existingProfile);
+      } else {
+        console.log('Creating new profile for user:', user.id);
+      }
+
+      // Convert DD/MM/YYYY to YYYY-MM-DD for database
+      let formattedDateOfBirth = null;
+      if (userData.date_of_birth) {
+        try {
+          const [day, month, year] = userData.date_of_birth.split('/');
+          if (day && month && year) {
+            formattedDateOfBirth = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          }
+        } catch (error) {
+          console.warn('Invalid date format, using null:', userData.date_of_birth);
+        }
+      }
+
+      const profileData = {
+        id: user.id,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        full_name: `${userData.first_name} ${userData.last_name}`,
+        phone: userData.phone || null,
+        bio: userData.bio || null,
+        avatar_id: userData.avatar_id || null,
+        date_of_birth: formattedDateOfBirth,
+        occupation: userData.occupation || null,
+        marital_status: userData.marital_status || null,
+        gender: userData.gender || null,
+        smoker: userData.smoker || false,
+        pets: userData.pets || false,
+        verified: false,
+        successful_applications: [],
+        rejected_applications: [],
+        pending_applications: [],
+        owned_listings: [],
+        liked_listings: [],
+        uploaded_documents: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log('Profile data to insert:', profileData);
+
+      const { data, error } = await supabase
+        .from('users')
+        .upsert(profileData)
+        .select();
+
+      console.log('Upsert result:', { data, error });
+
+      if (error) {
+        console.error('Database error:', error);
+        throw new Error(`Failed to create user profile: ${error.message}`);
+      }
+      
+      if (!data || data.length === 0) {
+        console.error('No data returned from upsert');
+        throw new Error('Failed to create user profile: No data returned');
+      }
+      
+      console.log('Profile created successfully:', data);
+      return { success: true, data: data[0] };
+    } catch (error) {
+      console.error('Error in createUserProfile:', error);
+      throw error;
     }
-
-    // Convert DD/MM/YYYY to YYYY-MM-DD for database
-    let formattedDateOfBirth = null;
-    if (userData.date_of_birth) {
-      const [day, month, year] = userData.date_of_birth.split('/');
-      formattedDateOfBirth = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    }
-
-    const profileData = {
-      id: user.id,
-      first_name: userData.first_name,
-      last_name: userData.last_name,
-      full_name: `${userData.first_name} ${userData.last_name}`,
-      phone: userData.phone,
-      bio: userData.bio,
-      avatar_id: userData.avatar_id,
-      date_of_birth: formattedDateOfBirth,
-      occupation: userData.occupation,
-      marital_status: userData.marital_status,
-      gender: userData.gender,
-      smoker: userData.smoker,
-      pets: userData.pets,
-      verified: false,
-      successful_applications: [],
-      rejected_applications: [],
-      pending_applications: [],
-      owned_listings: [],
-      liked_listings: [],
-      uploaded_documents: [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    console.log('Profile data to insert:', profileData);
-
-    const { data, error } = await supabase
-      .from('users')
-      .upsert(profileData)
-      .select();
-
-    console.log('Upsert result:', { data, error });
-
-    if (error) {
-      console.error('Database error:', error);
-      throw new Error(`Failed to create user profile: ${error.message}`);
-    }
-    
-    if (!data || data.length === 0) {
-      console.error('No data returned from upsert');
-      throw new Error('Failed to create user profile: No data returned');
-    }
-    
-    console.log('Profile created successfully:', data);
-    return { success: true, data: data[0] };
   };
-
-
 
   const checkProfileCompletion = async (): Promise<{ completed: boolean; profile?: any }> => {
     try {
@@ -217,6 +367,10 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
 
   // Application functions
   const applyToProperty = async (listingId: string, notes?: string) => {
+    if (!listingId || typeof listingId !== 'string') {
+      throw new Error('Valid listing ID is required');
+    }
+
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
@@ -290,6 +444,10 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
   };
 
   const getListingApplications = async (listingId: string) => {
+    if (!listingId || typeof listingId !== 'string') {
+      throw new Error('Valid listing ID is required');
+    }
+
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
@@ -337,6 +495,14 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
   };
 
   const updateApplicationStatus = async (applicationId: string, status: 'accepted' | 'rejected' | 'withdrawn', notes?: string) => {
+    if (!applicationId || typeof applicationId !== 'string') {
+      throw new Error('Valid application ID is required');
+    }
+
+    if (!status || !['accepted', 'rejected', 'withdrawn'].includes(status)) {
+      throw new Error('Valid status is required: accepted, rejected, or withdrawn');
+    }
+
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
@@ -360,10 +526,18 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
   };
 
   const withdrawApplication = async (applicationId: string) => {
+    if (!applicationId || typeof applicationId !== 'string') {
+      throw new Error('Valid application ID is required');
+    }
+
     return updateApplicationStatus(applicationId, 'withdrawn');
   };
 
   const checkUserApplication = async (listingId: string) => {
+    if (!listingId || typeof listingId !== 'string') {
+      throw new Error('Valid listing ID is required');
+    }
+
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
@@ -393,6 +567,10 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
 
   // Like/Unlike functions
   const toggleLikeListing = async (listingId: string) => {
+    if (!listingId || typeof listingId !== 'string') {
+      throw new Error('Valid listing ID is required');
+    }
+
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
@@ -512,6 +690,10 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
   };
 
   const checkIfListingLiked = async (listingId: string) => {
+    if (!listingId || typeof listingId !== 'string') {
+      throw new Error('Valid listing ID is required');
+    }
+
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
