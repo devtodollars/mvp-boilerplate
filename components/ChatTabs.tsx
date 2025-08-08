@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -34,8 +34,8 @@ interface Message {
   created_at: string
   sender?: {
     id: string
-    full_name: string
-    avatar_url?: string
+    full_name?: string
+    avatar_url?: string | null
   }
 }
 
@@ -73,6 +73,10 @@ export default function ChatTabs() {
   const [chatRooms, setChatRooms] = useState<Record<string, ChatRoom>>({})
   const [currentUser, setCurrentUser] = useState<string | null>(null)
   const supabase = createClient()
+  // Keep realtime channels per chat_room_id
+  const roomChannelsRef = useRef<Record<string, any>>({})
+  // Keep bottom sentinels per chat_room_id for autoscroll
+  const messageEndRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   // Get current user
   useEffect(() => {
@@ -269,6 +273,9 @@ export default function ChatTabs() {
 
     // Load messages
     await loadMessages(chatRoomId)
+
+    // Subscribe to realtime for this room
+    subscribeToRoom(chatRoomId)
   }, [getChatRoom, currentUser, loadMessages])
 
   // Listen for open chat events
@@ -366,23 +373,103 @@ export default function ChatTabs() {
 
   // Close chat
   const closeChat = useCallback((tabId: string) => {
+    // Unsubscribe if we know the room
     setChatTabs(prev => prev.filter(tab => tab.id !== tabId))
+    // Try to find applicationId for this tab and unsubscribe its room channel
+    const tab = chatTabs.find(t => t.id === tabId)
+    if (tab) {
+      const chatRoom = chatRooms[tab.applicationId]
+      if (chatRoom && roomChannelsRef.current[chatRoom.id]) {
+        try {
+          supabase.removeChannel(roomChannelsRef.current[chatRoom.id])
+        } catch (e) {
+          console.warn('Failed to remove channel for room', chatRoom.id, e)
+        }
+        delete roomChannelsRef.current[chatRoom.id]
+      }
+    }
   }, [])
 
+  // Subscribe helper
+  const subscribeToRoom = useCallback((roomId: string) => {
+    if (!roomId) return
+    if (roomChannelsRef.current[roomId]) return
 
+    const channel = supabase
+      .channel(`messages-room:${roomId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_room_id=eq.${roomId}` },
+        async (payload) => {
+          const newMessage = payload.new as any
+          // Append immediately for instant UI update
+          setMessages(prev => {
+            const existing = prev[roomId] || []
+            if (existing.some(m => m.id === newMessage.id)) return prev
+            return {
+              ...prev,
+              [roomId]: [...existing, { ...newMessage }]
+            }
+          })
 
-  // Auto-refresh messages every 10 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      Object.values(chatRooms).forEach(chatRoom => {
-        if (chatRoom) {
-          loadMessages(chatRoom.id)
+          // Try to enrich sender but don't block UI
+          try {
+            const { data: sender } = await supabase
+              .from('users')
+              .select('id, full_name, avatar_url')
+              .eq('id', newMessage.sender_id)
+              .single()
+            if (sender) {
+              setMessages(prev => {
+                const existing = prev[roomId] || []
+                return {
+                  ...prev,
+                  [roomId]: existing.map(m => m.id === newMessage.id ? { ...m, sender: { id: sender.id, full_name: sender.full_name ?? undefined, avatar_url: sender.avatar_url ?? undefined } } : m)
+                }
+              })
+            }
+          } catch (e) {
+            // ignore enrichment errors
+          }
         }
-      })
-    }, 10000)
+      )
+      .subscribe()
 
-    return () => clearInterval(interval)
-  }, [chatRooms, loadMessages])
+    roomChannelsRef.current[roomId] = channel
+  }, [supabase])
+
+  // When chatRooms map changes, ensure subscriptions exist for rooms with open tabs
+  useEffect(() => {
+    chatTabs.forEach(tab => {
+      const room = chatRooms[tab.applicationId]
+      if (room) {
+        subscribeToRoom(room.id)
+      }
+    })
+  }, [chatRooms, chatTabs, subscribeToRoom])
+
+  // Cleanup all subscriptions on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(roomChannelsRef.current).forEach(channel => {
+        try { supabase.removeChannel(channel) } catch {}
+      })
+      roomChannelsRef.current = { }
+    }
+  }, [supabase])
+
+  // Auto-scroll to bottom when messages update for a room
+  useEffect(() => {
+    // Only scroll open, non-minimized tabs
+    openTabs.forEach(tab => {
+      const room = chatRooms[tab.applicationId]
+      if (!room) return
+      const endRef = messageEndRefs.current[room.id]
+      if (endRef) {
+        endRef.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      }
+    })
+  }, [messages, chatRooms])
 
   const openTabs = chatTabs.filter(tab => tab.isOpen && !tab.isMinimized)
   const minimizedTabs = chatTabs.filter(tab => tab.isMinimized)
@@ -471,10 +558,10 @@ export default function ChatTabs() {
                     </div>
                   </CardHeader>
 
-                  <CardContent className="p-3 pt-0 flex-1 flex flex-col">
+                  <CardContent className="p-3 pt-0 flex-1 flex flex-col min-h-0">
                     {/* Messages */}
-                    <ScrollArea className="flex-1 mb-3">
-                      <div className="space-y-2">
+                    <ScrollArea className="flex-1">
+                       <div className="space-y-2 pr-2">
                         {chatMessages.map((message: Message) => (
                           <MessageBubble 
                             key={message.id} 
@@ -488,6 +575,10 @@ export default function ChatTabs() {
                             No messages yet
                           </div>
                         )}
+                         <div ref={(el) => {
+                           const room = chatRooms[tab.applicationId]
+                           if (room) messageEndRefs.current[room.id] = el
+                         }} />
                       </div>
                     </ScrollArea>
 
