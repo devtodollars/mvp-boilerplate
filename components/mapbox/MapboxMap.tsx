@@ -92,12 +92,19 @@ export default function MapboxMap({ properties, selectedProperty, onSelect, onMa
         });
         routeLayerId.current = id;
         setRouteInfo({ distance: route.distance, duration: route.duration });
-        // Center on selected property without animation
-        map.easeTo({ 
-          center: [currentSelectedProperty.lng, currentSelectedProperty.lat], 
-          zoom: 12,
-          duration: 1500
+        
+        // Calculate bounds to fit both the selected property and the destination
+        const bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([currentSelectedProperty.lng, currentSelectedProperty.lat]); // Start point (selected property)
+        bounds.extend([e.lngLat.lng, e.lngLat.lat]); // End point (clicked location)
+        
+        // Fit the map to show the entire route with some padding
+        map.fitBounds(bounds, {
+          padding: 50, // Add padding around the bounds for better visibility
+          duration: 1500, // Smooth animation
+          maxZoom: 14 // Don't zoom in too much, keep route visible
         });
+        
         // Add or move the flag marker at the destination
         if (destinationMarkerRef.current) {
           destinationMarkerRef.current.remove();
