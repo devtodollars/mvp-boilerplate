@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { MapPin, Euro, Home, Upload, X, CalendarIcon, Clock, Plus, Trash2, AlertCircle } from "lucide-react"
-import { useState } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
@@ -31,6 +31,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { format, isBefore, startOfDay } from "date-fns";
 import { cn } from "@/utils/cn";
 import { AddressAutocomplete } from "@/components/mapbox/AddressAutocomplete";
+import AddressMap from "@/components/mapbox/AddressMap";
 
 const IRISH_COUNTIES = [
   "Antrim",
@@ -206,7 +207,19 @@ export default function PostRoomPage() {
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([])
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
   const [uploadedVideos, setUploadedVideos] = useState<File[]>([])
+  const [mapCoordinates, setMapCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const { toast } = useToast();
+
+  // Memoize map props to prevent unnecessary re-renders
+  const mapProps = useMemo(() => ({
+    height: "300px" as const,
+    center: mapCoordinates || { lat: 53.5, lng: -7.5 }, // Use map coordinates or Ireland center
+    showMarker: !!mapCoordinates,
+    markerPosition: mapCoordinates || undefined,
+    onMapClick: useCallback((lng: number, lat: number) => {
+      setMapCoordinates({ lat, lng });
+    }, [])
+  }), [mapCoordinates]);
 
   const {
     register,
@@ -334,19 +347,22 @@ export default function PostRoomPage() {
         toast({ title: 'Error', description: 'You must be signed in to post a listing.', variant: 'destructive' });
         return;
       }
-      // Geocode address/eircode for lat/lng
-      const coords = await geocodeAddress(data.address, data.eircode);
+      // Geocode address/eircode for lat/lng, or use map coordinates if available
+      let coords = mapCoordinates;
       if (!coords) {
-        toast({
-          title: 'Geocoding Error',
-          description: `Could not determine location from address: "${data.address}" or eircode: "${data.eircode}". Please check the address and eircode are correct. You can also try adding "Ireland" to the address or check the console for debugging information.`,
-          variant: 'destructive'
-        });
-        return;
+        coords = await geocodeAddress(data.address, data.eircode);
+        if (!coords) {
+          toast({
+            title: 'Location Required',
+            description: `Could not determine location from address: "${data.address}" or eircode: "${data.eircode}". Please search for your address or click on the map to set the location.`,
+            variant: 'destructive'
+          });
+          return;
+        }
       }
       // property_name is required by DB, use address for now
       const { size, ...dataWithoutSize } = data;
-      const listingData = {
+      const listingData: any = {
         ...dataWithoutSize,
         property_name: data.address,
         user_id: user.id,
@@ -413,62 +429,69 @@ export default function PostRoomPage() {
               <CardDescription>Provide the complete address and location information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Single Address Search */}
+              <div className="space-y-2">
+                <Label htmlFor="address">Search Address or Eircode *</Label>
+                <Controller
+                  name="address"
+                  control={control}
+                  render={({ field }) => (
+                    <AddressAutocomplete
+                      value={field.value}
+                      onChange={field.onChange}
+                      onSelect={(val, data) => {
+                        // Helper to extract context values
+                        const getContext = (type: string) =>
+                          data.context?.find((c: any) => c.id.startsWith(type))?.text || '';
+
+                        // Street address (first part of place_name or text)
+                        const street = data.text || val.split(',')[0] || '';
+                        // Area (neighborhood or locality)
+                        const area =
+                          getContext('neighborhood') ||
+                          getContext('locality') ||
+                          '';
+                        // City (place)
+                        const city =
+                          data.place_type?.includes('place')
+                            ? data.text
+                            : getContext('place') || '';
+                        // County (region)
+                        const county = getContext('region');
+                        // Eircode (postcode)
+                        const eircode = getContext('postcode');
+
+                        field.onChange(val);
+                        setValue('address', street);
+                        setValue('area', area);
+                        setValue('city', city);
+                        setValue('county', county);
+                        setValue('eircode', eircode);
+
+                        // Update map coordinates if available
+                        if (data.center && data.center.length === 2) {
+                          const [lng, lat] = data.center;
+                          setMapCoordinates({ lat, lng });
+                        }
+                      }}
+                    />
+                  )}
+                />
+                {errors.address && <span className="text-red-500 text-xs">{errors.address.message}</span>}
+              </div>
+
+              {/* Map */}
+              <div className="space-y-2">
+                <Label>Location Map</Label>
+                <AddressMap {...mapProps} />
+              </div>
+
+              {/* Additional Address Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="address">Street Address *</Label>
-                  {/* Replace Input with AddressAutocomplete */}
-                  <Controller
-                    name="address"
-                    control={control}
-                    render={({ field }) => (
-                      <AddressAutocomplete
-                        value={field.value}
-                        onChange={field.onChange}
-                        onSelect={(val, data) => {
-                          // Helper to extract context values
-                          const getContext = (type: string) =>
-                            data.context?.find((c: any) => c.id.startsWith(type))?.text || '';
-
-                          // Street address (first part of place_name or text)
-                          const street = data.text || val.split(',')[0] || '';
-                          // Area (neighborhood or locality)
-                          const area =
-                            getContext('neighborhood') ||
-                            getContext('locality') ||
-                            '';
-                          // City (place)
-                          const city =
-                            data.place_type?.includes('place')
-                              ? data.text
-                              : getContext('place') || '';
-                          // County (region)
-                          const county = getContext('region');
-                          // Eircode (postcode)
-                          const eircode = getContext('postcode');
-
-                          field.onChange(val);
-                          setValue('address', street);
-                          setValue('area', area);
-                          setValue('city', city);
-                          setValue('county', county);
-                          setValue('eircode', eircode);
-                        }}
-                      />
-                    )}
-                  />
-                  {errors.address && <span className="text-red-500 text-xs">{errors.address.message}</span>}
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="apartment_number">Apartment Number</Label>
                   <Input id="apartment_number" placeholder="e.g., Apt 4B, Unit 12" {...register("apartment_number")} />
                   {errors.apartment_number && <span className="text-red-500 text-xs">{errors.apartment_number.message}</span>}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="area">Area</Label>
-                  <Input id="area" placeholder="e.g., Dublin 1, City Centre" {...register("area")} />
-                  {errors.area && <span className="text-red-500 text-xs">{errors.area.message}</span>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="property_type">Property Type *</Label>
