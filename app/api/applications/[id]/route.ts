@@ -3,12 +3,12 @@ import { createClient } from '@/utils/supabase/server';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
     const { status, notes } = await request.json();
-    const applicationId = params.id;
+    const { id: applicationId } = await params;
 
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -76,11 +76,11 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
-    const applicationId = params.id;
+    const { id: applicationId } = await params;
 
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();

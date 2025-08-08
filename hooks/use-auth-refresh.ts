@@ -27,4 +27,11 @@ export function useAuthRefresh() {
 
     return () => subscription.unsubscribe()
   }, [router, supabase])
+}
+
+// DEPRECATED: This hook is no longer needed as AuthProvider handles auth state changes
+// Keeping for backward compatibility but it's not being used
+export function useAuthRefreshDeprecated() {
+  // This function is deprecated and does nothing
+  console.warn('useAuthRefresh is deprecated. AuthProvider handles auth state changes.');
 } 

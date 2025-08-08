@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
 
@@ -16,19 +16,28 @@ const AuthContext = createContext<{
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const initializedRef = useRef(false);
   
   // Create a stable Supabase client instance
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
+    // Prevent multiple initializations
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    let mounted = true;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      
       console.log('Auth state change:', event, session?.user?.email);
       
       if (event === 'SIGNED_OUT') {
         // Clear user state immediately on sign out
         setUser(null);
         setIsLoading(false);
-      } else {
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setUser(session?.user ?? null);
         setIsLoading(false);
       }
@@ -36,6 +45,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Check initial session with error handling
     supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (!mounted) return;
+      
       if (error) {
         // Handle refresh token errors gracefully
         if (error.code === 'refresh_token_not_found' || 
@@ -52,9 +63,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, []); // Remove the dependency array entirely since supabase is now stable
+  }, [supabase]);
 
   const signOut = async () => {
     try {

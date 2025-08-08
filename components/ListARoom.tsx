@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { MapPin, Euro, Home, Upload, X, CalendarIcon, Clock, Plus, Trash2, AlertCircle } from "lucide-react"
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
@@ -202,27 +202,113 @@ async function geocodeAddress(address: string, eircode: string): Promise<{ lat: 
   return null;
 }
 
+// Helper to geocode city/county combination for map focusing
+async function geocodeCityCounty(city: string, county: string): Promise<{ lat: number; lng: number } | null> {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  if (!token) {
+    console.error('Mapbox token not found');
+    return null;
+  }
+
+  if (!city && !county) {
+    return null;
+  }
+
+  console.log('Geocoding city/county:', { city, county });
+
+  // Try multiple strategies for city/county geocoding
+  const strategies = [];
+
+  // Strategy 1: City only with specific types (most specific - prioritize city over county)
+  if (city) {
+    const cityQuery = `${city}, Ireland`;
+    strategies.push({
+      name: 'City only (place)',
+      url: `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cityQuery)}.json?country=IE&types=place&access_token=${token}`
+    });
+    
+    // Also try with locality type for smaller towns
+    strategies.push({
+      name: 'City only (locality)',
+      url: `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cityQuery)}.json?country=IE&types=locality&access_token=${token}`
+    });
+  }
+
+  // Strategy 2: City and County together (if both provided)
+  if (city && county) {
+    const cityCountyQuery = `${city}, ${county}, Ireland`;
+    strategies.push({
+      name: 'City and County',
+      url: `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cityCountyQuery)}.json?country=IE&types=place&access_token=${token}`
+    });
+  }
+
+  // Strategy 3: County only (fallback - broader area)
+  if (county && !city) {
+    const countyQuery = `${county}, Ireland`;
+    strategies.push({
+      name: 'County only',
+      url: `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(countyQuery)}.json?country=IE&types=region&access_token=${token}`
+    });
+  }
+
+  // Try each strategy in order
+  for (const strategy of strategies) {
+    try {
+      console.log(`Trying city/county strategy: ${strategy.name}`);
+      const response = await fetch(strategy.url);
+      const data = await response.json();
+
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center;
+        const result = { lat, lng };
+
+        console.log(`✅ Success with ${strategy.name}:`, {
+          query: strategy.url.split('?')[0].split('/').pop(),
+          result,
+          place_name: data.features[0].place_name,
+          relevance: data.features[0].relevance,
+          type: data.features[0].place_type
+        });
+
+        return result;
+      } else {
+        console.log(`❌ No results for ${strategy.name}`);
+      }
+    } catch (error) {
+      console.error(`Error with ${strategy.name}:`, error);
+    }
+  }
+
+  console.error('❌ All city/county geocoding strategies failed');
+  return null;
+}
+
 export default function PostRoomPage() {
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([])
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
   const [uploadedVideos, setUploadedVideos] = useState<File[]>([])
   const [mapCoordinates, setMapCoordinates] = useState<{ lat: number; lng: number } | null>(null)
+  const [focusedArea, setFocusedArea] = useState<{ lat: number; lng: number } | null>(null)
   const { toast } = useToast();
 
   // Memoize the onMapClick callback
   const onMapClick = useCallback((lng: number, lat: number) => {
     setMapCoordinates({ lat, lng });
+    // Clear focused area when user clicks to set exact location
+    setFocusedArea(null);
   }, []);
 
   // Memoize map props to prevent unnecessary re-renders
   const mapProps = useMemo(() => ({
     height: "300px" as const,
-    center: mapCoordinates || { lat: 53.5, lng: -7.5 }, // Use map coordinates or Ireland center
+    center: mapCoordinates || focusedArea || { lat: 53.5, lng: -7.5 }, // Use map coordinates, focused area, or Ireland center
     showMarker: !!mapCoordinates,
     markerPosition: mapCoordinates || undefined,
-    onMapClick
-  }), [mapCoordinates, onMapClick]);
+    onMapClick,
+    satelliteMode: true // Enable satellite mode for this page
+  }), [mapCoordinates, focusedArea, onMapClick]);
 
   const {
     register,
@@ -266,6 +352,38 @@ export default function PostRoomPage() {
       viewing_times: [],
     },
   });
+
+  // Watch city and county fields for map focusing
+  const watchedCity = watch("city");
+  const watchedCounty = watch("county");
+
+  // Effect to focus map on city/county when manually entered
+  useEffect(() => {
+    const focusMapOnCityCounty = async () => {
+      // Only focus if we have city or county but no map coordinates (manual entry)
+      if ((watchedCity || watchedCounty) && !mapCoordinates) {
+        console.log('🎯 Focusing map on city/county:', { city: watchedCity, county: watchedCounty });
+        
+        const coords = await geocodeCityCounty(watchedCity || '', watchedCounty || '');
+        if (coords) {
+          // Update focused area to center the map on the city/county
+          setFocusedArea(coords);
+          console.log('✅ Map focused on city/county area:', coords);
+        } else {
+          console.log('❌ Failed to geocode city/county');
+          setFocusedArea(null);
+        }
+      } else if (!watchedCity && !watchedCounty) {
+        // Clear focused area if both city and county are empty
+        setFocusedArea(null);
+        console.log('🧹 Cleared focused area - no city/county entered');
+      }
+    };
+
+    // Reduce debounce time for more responsive focusing
+    const timeoutId = setTimeout(focusMapOnCityCounty, 500);
+    return () => clearTimeout(timeoutId);
+  }, [watchedCity, watchedCounty, mapCoordinates]);
 
   // Local state for viewing times
   interface ViewingTime { date: string; time: string; id: string; }
@@ -350,29 +468,35 @@ export default function PostRoomPage() {
         toast({ title: 'Error', description: 'You must be signed in to post a listing.', variant: 'destructive' });
         return;
       }
-      // Geocode address/eircode for lat/lng, or use map coordinates if available
-      let coords = mapCoordinates;
-      if (!coords) {
-        coords = await geocodeAddress(data.address, data.eircode);
-        if (!coords) {
-          toast({
-            title: 'Location Required',
-            description: `Could not determine location from address: "${data.address}" or eircode: "${data.eircode}". Please search for your address or click on the map to set the location.`,
-            variant: 'destructive'
-          });
-          return;
-        }
+
+      // Require user to click on map to set location
+      if (!mapCoordinates) {
+        toast({
+          title: 'Location Required',
+          description: 'Please click on the map to set the exact location of your property. This is required to help tenants find your listing.',
+          variant: 'destructive'
+        });
+        return;
       }
+
+      // Use the coordinates from the map click
+      const coords = mapCoordinates;
+      console.log('Using map coordinates:', coords);
+
       // property_name is required by DB, use address for now
       const { size, ...dataWithoutSize } = data;
       const listingData: any = {
         ...dataWithoutSize,
-        property_name: data.address,
+        property_name: data.address || `${data.city || 'Property'}, ${data.county || 'Ireland'}`,
         user_id: user.id,
         viewing_times: viewingTimes.map(vt => `${vt.date}T${vt.time}:00.000Z`),
         lat: coords.lat,
         lng: coords.lng,
       };
+
+      console.log('Listing data being sent to database:', listingData);
+      console.log('Latitude:', listingData.lat);
+      console.log('Longitude:', listingData.lng);
 
       // Only include size if it has a valid number value
       if (size && typeof size === 'number' && size > 0) {
@@ -400,6 +524,8 @@ export default function PostRoomPage() {
         setUploadedImages([]);
         setUploadedVideos([]);
         setViewingTimes([]);
+        setMapCoordinates(null);
+        setFocusedArea(null);
       }
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : String(err) || 'Failed to create listing', variant: 'destructive' });
@@ -434,7 +560,7 @@ export default function PostRoomPage() {
             <CardContent className="space-y-4">
               {/* Single Address Search */}
               <div className="space-y-2">
-                <Label htmlFor="address">Search Address or Eircode *</Label>
+                <Label htmlFor="address">Search Address or Eircode (Optional)</Label>
                 <Controller
                   name="address"
                   control={control}
@@ -460,16 +586,16 @@ export default function PostRoomPage() {
                             ? data.text
                             : getContext('place') || '';
                         // County (region)
-                        const county = getContext('region');
+                        const county = getContext('region') || '';
                         // Eircode (postcode)
-                        const eircode = getContext('postcode');
+                        const eircode = getContext('postcode') || '';
 
                         field.onChange(val);
-                        setValue('address', street);
-                        setValue('area', area);
-                        setValue('city', city);
-                        setValue('county', county);
-                        setValue('eircode', eircode);
+                        setValue('address', street || '');
+                        setValue('area', area || '');
+                        setValue('city', city || '');
+                        setValue('county', county || '');
+                        setValue('eircode', eircode || '');
 
                         // Update map coordinates if available
                         if (data.center && data.center.length === 2) {
@@ -485,8 +611,45 @@ export default function PostRoomPage() {
 
               {/* Map */}
               <div className="space-y-2">
-                <Label>Location Map</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Location Map *</Label>
+                  {mapCoordinates && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setMapCoordinates(null);
+                        setFocusedArea(null);
+                      }}
+                      className="text-xs"
+                    >
+                      Clear Location
+                    </Button>
+                  )}
+                </div>
                 <AddressMap {...mapProps} />
+                {mapCoordinates && (
+                  <div className="text-sm text-green-600 bg-green-50 p-2 rounded-md border border-green-200">
+                    ✅ Location set: {mapCoordinates.lat.toFixed(6)}, {mapCoordinates.lng.toFixed(6)}
+                  </div>
+                )}
+                {focusedArea && !mapCoordinates && (
+                  <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded-md border border-blue-200">
+                    📍 Map focused on <strong>{watchedCity && watchedCounty ? `${watchedCity}, ${watchedCounty}` : watchedCity || watchedCounty}</strong>. 
+                    Click on the map to set the exact location of your property.
+                  </div>
+                )}
+                {!focusedArea && !mapCoordinates && (watchedCity || watchedCounty) && (
+                  <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded-md border border-amber-200">
+                    🔍 Searching for <strong>{watchedCity && watchedCounty ? `${watchedCity}, ${watchedCounty}` : watchedCity || watchedCounty}</strong>...
+                  </div>
+                )}
+                {!mapCoordinates && (
+                  <div className="text-sm text-red-600 bg-red-50 p-2 rounded-md border border-red-200">
+                    ⚠️ Please click on the map to set the exact location of your property. This is required.
+                  </div>
+                )}
               </div>
 
               {/* Additional Address Fields */}
@@ -519,12 +682,12 @@ export default function PostRoomPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="city">City/Town *</Label>
+                  <Label htmlFor="city">City/Town</Label>
                   <Input id="city" placeholder="Dublin" {...register("city")} />
                   {errors.city && <span className="text-red-500 text-xs">{errors.city.message}</span>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="county">County *</Label>
+                  <Label htmlFor="county">County</Label>
                   <Controller
                     name="county"
                     control={control}

@@ -361,7 +361,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Application Management</h1>
+              <h1 className="text-3xl font-bold  bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">Application Management</h1>
               <p className="text-gray-600">{listing.property_name}</p>
             </div>
           </div>

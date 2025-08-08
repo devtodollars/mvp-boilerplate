@@ -1,4 +1,9 @@
-// Utility to get a public URL for a file in Supabase Storage
+// Cache for image URLs to reduce repeated API calls
+const imageUrlCache = new Map<string, string>();
+const cacheExpiry = new Map<string, number>();
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+// Utility to get a cached image URL with proper caching headers
 export function getSupabaseImageUrl(
   path: string,
   bucket: string = 'listing-images'
@@ -13,21 +18,37 @@ export function getSupabaseImageUrl(
     bucket = 'listing-images';
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!supabaseUrl) {
-    console.warn('NEXT_PUBLIC_SUPABASE_URL not found, returning placeholder');
-    return '/placeholder.svg';
+  const cacheKey = `${bucket}:${path}`;
+  const now = Date.now();
+  
+  // Check cache first
+  if (imageUrlCache.has(cacheKey)) {
+    const expiry = cacheExpiry.get(cacheKey) || 0;
+    if (now < expiry) {
+      return imageUrlCache.get(cacheKey)!;
+    } else {
+      // Cache expired, remove it
+      imageUrlCache.delete(cacheKey);
+      cacheExpiry.delete(cacheKey);
+    }
   }
 
   try {
-    return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+    // Use the cached API route instead of direct Supabase URL
+    const imageUrl = `/api/images/${encodeURIComponent(path)}?bucket=${encodeURIComponent(bucket)}`;
+    
+    // Cache the URL
+    imageUrlCache.set(cacheKey, imageUrl);
+    cacheExpiry.set(cacheKey, now + CACHE_DURATION);
+    
+    return imageUrl;
   } catch (error) {
-    console.error('Error constructing Supabase image URL:', error);
+    console.error('Error constructing cached image URL:', error);
     return '/placeholder.svg';
   }
 }
 
-// Helper to get listing images with fallback to default
+// Helper to get listing images with fallback to default and caching
 export function getListingImages(images: string[] | null | undefined): string[] {
   if (!images) {
     return [getSupabaseImageUrl('bedroom.PNG')];
@@ -54,6 +75,21 @@ export function getListingImages(images: string[] | null | undefined): string[] 
     console.error('Error processing listing images:', error);
     return [getSupabaseImageUrl('bedroom.PNG')];
   }
+}
+
+// Clear the image cache (useful for testing or manual cache invalidation)
+export function clearImageCache(): void {
+  imageUrlCache.clear();
+  cacheExpiry.clear();
+  console.log('Image cache cleared');
+}
+
+// Get cache statistics
+export function getCacheStats(): { size: number; keys: string[] } {
+  return {
+    size: imageUrlCache.size,
+    keys: Array.from(imageUrlCache.keys())
+  };
 }
 
 // Extract file path from Supabase storage URL

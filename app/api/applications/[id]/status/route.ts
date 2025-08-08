@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -27,7 +27,7 @@ export async function PATCH(
         *,
         listing:listings(user_id)
       `)
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .single();
 
     if (appError || !application) {
@@ -47,7 +47,7 @@ export async function PATCH(
         reviewed_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id);
+      .eq('id', (await params).id);
 
     if (updateError) {
       console.error('Error updating application:', updateError);
@@ -65,7 +65,7 @@ export async function PATCH(
         })
         .eq('listing_id', application.listing_id)
         .eq('status', 'pending')
-        .neq('id', params.id);
+        .neq('id', (await params).id);
 
       if (rejectOthersError) {
         console.error('Error rejecting other applications:', rejectOthersError);

@@ -9,21 +9,9 @@ import HomeSearchWrapper from '@/components/HomeSearchWrapper';
 export default async function WelcomeCard() {
     const supabase = await createClient();
     
-    let user = null;
-    try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        user = authUser;
-    } catch (error: any) {
-        // Handle refresh token errors gracefully
-        if (error?.code === 'refresh_token_not_found' || 
-            error?.message?.includes('Invalid Refresh Token')) {
-            console.log('No valid session found on home page');
-            user = null;
-        } else {
-            console.error('Authentication error on home page:', error);
-            user = null;
-        }
-    }
+    // Skip auth check for now to reduce requests
+    // The client-side AuthProvider will handle user state
+    const user = null;
 
     const { data: listings } = await supabase.from('listings').select('*');
 

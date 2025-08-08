@@ -45,12 +45,12 @@ export const listingSchema = z.object({
   ensuite: z.boolean().default(false),
   
   // Location
-  address: z.string().min(1, 'Street address is required'), // Street address
+  address: z.string().optional().default(''), // Street address (optional - can use map click)
   apartment_number: z.string().nullable().default(null),
   area: z.string().default(''),
-  city: z.string().min(1, 'City is required'),
-  county: z.string().min(1, 'County is required'),
-  eircode: z.string().min(1, 'Eircode is required'),
+  city: z.string().optional().default(''), // Make city optional too
+  county: z.string().optional().default(''), // Make county optional too
+  eircode: z.string().optional().default(''), // Make eircode optional too
   
   // Pricing & Terms
   monthly_rent: z.number().positive('Monthly rent must be positive'),

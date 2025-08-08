@@ -63,128 +63,128 @@ export default function ApplicationsPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        const supabase = createClient();
-        const api = createApiClient(supabase);
+  const fetchAllData = async () => {
+    try {
+      const supabase = createClient();
+      const api = createApiClient(supabase);
 
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          const currentUrl = window.location.pathname + window.location.search;
-          router.push(`/auth/signin?redirect=${encodeURIComponent(currentUrl)}`);
-          return;
-        }
-        setUser(user);
-
-        // Get user profile
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        setUserProfile(profile);
-
-        // Fetch all data in parallel
-        const [applicationsResult, ownedResult, likedResult] = await Promise.allSettled([
-          api.getUserApplications().catch(error => {
-            console.error('Error fetching applications:', error);
-            return { success: false, applications: [] };
-          }),
-          fetchOwnedListings(supabase, user.id),
-          api.getUserLikedListings().catch(error => {
-            console.error('Error fetching liked listings:', error);
-            return { success: false, listings: [] };
-          })
-        ]);
-
-        // Handle results
-        if (applicationsResult.status === 'fulfilled' && applicationsResult.value.success) {
-          setApplications(applicationsResult.value.applications);
-        } else {
-          setApplications([]);
-        }
-
-        if (ownedResult.status === 'fulfilled' && ownedResult.value.success) {
-          setOwnedListings(ownedResult.value.listings);
-        } else {
-          setOwnedListings([]);
-        }
-
-        if (likedResult.status === 'fulfilled' && likedResult.value.success) {
-          setLikedListings(likedResult.value.listings);
-        } else {
-          setLikedListings([]);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load your dashboard data.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        const currentUrl = window.location.pathname + window.location.search;
+        router.push(`/auth/signin?redirect=${encodeURIComponent(currentUrl)}`);
+        return;
       }
-    };
+      setUser(user);
 
-    const fetchOwnedListings = async (supabase: any, userId: string) => {
-      try {
-        // First, fetch the listings
-        const { data: listings, error: listingsError } = await supabase
-          .from('listings')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+      // Get user profile
+      const { data: profile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      setUserProfile(profile);
 
-        if (listingsError) throw listingsError;
+      // Fetch all data in parallel
+      const [applicationsResult, ownedResult, likedResult] = await Promise.allSettled([
+        api.getUserApplications().catch(error => {
+          console.error('Error fetching applications:', error);
+          return { success: false, applications: [] };
+        }),
+        fetchOwnedListings(supabase, user.id),
+        api.getUserLikedListings().catch(error => {
+          console.error('Error fetching liked listings:', error);
+          return { success: false, listings: [] };
+        })
+      ]);
 
-        // Then, for each listing, get the applicant count using the new function
-        const listingsWithApplicants = await Promise.all(
-          (listings || []).map(async (listing: any) => {
-            try {
-              const { data: statsData, error: statsError } = await supabase.rpc('get_listing_stats', {
-                listing_uuid: listing.id
-              });
+      // Handle results
+      if (applicationsResult.status === 'fulfilled' && applicationsResult.value.success) {
+        setApplications(applicationsResult.value.applications);
+      } else {
+        setApplications([]);
+      }
 
-              if (statsError) {
-                console.error(`Error getting stats for listing ${listing.id}:`, statsError);
-                return {
-                  ...listing,
-                  applicants: { count: 0 },
-                  views_count: listing.views_count || 0
-                };
-              }
+      if (ownedResult.status === 'fulfilled' && ownedResult.value.success) {
+        setOwnedListings(ownedResult.value.listings);
+      } else {
+        setOwnedListings([]);
+      }
 
-              const stats = statsData && statsData.length > 0 ? statsData[0] : null;
-              return {
-                ...listing,
-                applicants: { 
-                  count: stats?.applicant_count || 0 
-                },
-                views_count: stats?.views_count || listing.views_count || 0
-              };
-            } catch (error) {
-              console.error(`Error processing listing ${listing.id}:`, error);
+      if (likedResult.status === 'fulfilled' && likedResult.value.success) {
+        setLikedListings(likedResult.value.listings);
+      } else {
+        setLikedListings([]);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load your dashboard data.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const fetchOwnedListings = async (supabase: any, userId: string) => {
+    try {
+      // First, fetch the listings
+      const { data: listings, error: listingsError } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (listingsError) throw listingsError;
+
+      // Then, for each listing, get the applicant count using the new function
+      const listingsWithApplicants = await Promise.all(
+        (listings || []).map(async (listing: any) => {
+          try {
+            const { data: statsData, error: statsError } = await supabase.rpc('get_listing_stats', {
+              listing_uuid: listing.id
+            });
+
+            if (statsError) {
+              console.error(`Error getting stats for listing ${listing.id}:`, statsError);
               return {
                 ...listing,
                 applicants: { count: 0 },
                 views_count: listing.views_count || 0
               };
             }
-          })
-        );
 
-        return { success: true, listings: listingsWithApplicants };
-      } catch (error) {
-        console.error('Error fetching owned listings:', error);
-        return { success: false, listings: [] };
-      }
-    };
+            const stats = statsData && statsData.length > 0 ? statsData[0] : null;
+            return {
+              ...listing,
+              applicants: { 
+                count: stats?.applicant_count || 0 
+              },
+              views_count: stats?.views_count || listing.views_count || 0
+            };
+          } catch (error) {
+            console.error(`Error processing listing ${listing.id}:`, error);
+            return {
+              ...listing,
+              applicants: { count: 0 },
+              views_count: listing.views_count || 0
+            };
+          }
+        })
+      );
 
-    fetchAllData();
-  }, [router, toast]);
+      return { success: true, listings: listingsWithApplicants };
+    } catch (error) {
+      console.error('Error fetching owned listings:', error);
+      return { success: false, listings: [] };
+    }
+  };
 
   const handleWithdrawApplication = async (applicationId: string) => {
     setWithdrawingApplicationId(applicationId);
@@ -1213,6 +1213,10 @@ export default function ApplicationsPage() {
             onClose={() => {
               setShowDeleteDialog(false);
               setSelectedListingForDelete(null);
+            }}
+            onDelete={() => {
+              // Refetch the listings data after deletion
+              fetchAllData();
             }}
             listing={selectedListingForDelete}
           />

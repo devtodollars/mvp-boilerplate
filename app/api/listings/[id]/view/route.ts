@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
     
-    // Get the listing ID from params
-    const listingId = params.id;
+    // Get the listing ID from params (await params first)
+    const { id: listingId } = await params;
     
     if (!listingId) {
       return NextResponse.json(

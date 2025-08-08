@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation"
 interface DeleteListingDialogProps {
   isOpen: boolean
   onClose: () => void
+  onDelete?: () => void
   listing: {
     id: string
     property_name: string
@@ -29,7 +30,7 @@ interface DeleteListingDialogProps {
   }
 }
 
-export function DeleteListingDialog({ isOpen, onClose, listing }: DeleteListingDialogProps) {
+export function DeleteListingDialog({ isOpen, onClose, onDelete, listing }: DeleteListingDialogProps) {
   const [confirmationText, setConfirmationText] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
@@ -64,6 +65,7 @@ export function DeleteListingDialog({ isOpen, onClose, listing }: DeleteListingD
       onClose()
       router.push('/dashboard')
       router.refresh()
+      onDelete?.()
     } catch (error) {
       console.error('Error deleting listing:', error)
       toast({
