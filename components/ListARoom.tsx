@@ -210,16 +210,19 @@ export default function PostRoomPage() {
   const [mapCoordinates, setMapCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const { toast } = useToast();
 
+  // Memoize the onMapClick callback
+  const onMapClick = useCallback((lng: number, lat: number) => {
+    setMapCoordinates({ lat, lng });
+  }, []);
+
   // Memoize map props to prevent unnecessary re-renders
   const mapProps = useMemo(() => ({
     height: "300px" as const,
     center: mapCoordinates || { lat: 53.5, lng: -7.5 }, // Use map coordinates or Ireland center
     showMarker: !!mapCoordinates,
     markerPosition: mapCoordinates || undefined,
-    onMapClick: useCallback((lng: number, lat: number) => {
-      setMapCoordinates({ lat, lng });
-    }, [])
-  }), [mapCoordinates]);
+    onMapClick
+  }), [mapCoordinates, onMapClick]);
 
   const {
     register,
