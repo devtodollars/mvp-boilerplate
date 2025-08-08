@@ -1,20 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { User, X, ArrowRight } from "lucide-react"
+import { useEffect, useState, useMemo } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { createApiClient } from "@/utils/supabase/api"
 import { useRouter, usePathname } from "next/navigation"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { User, X, ArrowRight } from "lucide-react"
 
 export default function ProfileNotification() {
   const [showNotification, setShowNotification] = useState(false)
@@ -22,10 +15,12 @@ export default function ProfileNotification() {
   const [user, setUser] = useState<any>(null)
   const router = useRouter()
   const pathname = usePathname()
+  
+  // Create a stable Supabase client instance
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const checkProfile = async () => {
-      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) return
@@ -78,7 +73,7 @@ export default function ProfileNotification() {
     }
 
     checkProfile()
-  }, [pathname])
+  }, [pathname, supabase])
 
   const handleCompleteProfile = () => {
     setShowDialog(false)

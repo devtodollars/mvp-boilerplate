@@ -30,10 +30,8 @@ interface Message {
   read_at: string | null
   sender?: {
     id: string
-    full_name: string
-    first_name: string
-    last_name: string
-    avatar_url: string
+    full_name?: string
+    avatar_url?: string
   }
 }
 
@@ -53,6 +51,8 @@ export default function ChatRoom({ applicationId, listingName, applicantName, on
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+  // Keep a reference to the realtime channel so we can clean it up
+  const realtimeChannelRef = useRef<any>(null)
   const { toast } = useToast()
 
   // Scroll to bottom when new messages arrive
@@ -83,11 +83,8 @@ export default function ChatRoom({ applicationId, listingName, applicantName, on
       const { chatRoom } = await response.json()
       setChatRoomId(chatRoom.id)
 
-      // Load messages
+      // Load messages once during init
       await loadMessages(chatRoom.id)
-
-      // Set up real-time subscription (when available)
-      setupRealtimeSubscription(chatRoom.id)
 
     } catch (error) {
       console.error('Error initializing chat:', error)
@@ -117,21 +114,79 @@ export default function ChatRoom({ applicationId, listingName, applicantName, on
     }
   }
 
+  // Set up Supabase Realtime subscription for this chat room
   const setupRealtimeSubscription = (roomId: string) => {
-    // This will be enabled once you have Realtime access
-    // For now, we'll poll for new messages
-    const interval = setInterval(async () => {
-      if (roomId) {
-        try {
-          await loadMessages(roomId)
-        } catch (error) {
-          console.error('Error polling messages:', error)
-        }
+    // Clean up any existing channel first to avoid duplicate subscriptions
+    if (realtimeChannelRef.current) {
+      try {
+        supabase.removeChannel(realtimeChannelRef.current)
+      } catch (e) {
+        console.warn('Failed to remove previous realtime channel, continuing...', e)
       }
-    }, 3000) // Poll every 3 seconds
+      realtimeChannelRef.current = null
+    }
 
-    return () => clearInterval(interval)
+    // Subscribe to new message inserts for this room
+    const channel = supabase
+      .channel(`messages-room:${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_room_id=eq.${roomId}`
+        },
+        async (payload) => {
+          const newMessage = payload.new as any
+          // Append immediately to avoid missing updates if enrichment fails
+          setMessages(prev => {
+            const alreadyExists = prev.some(m => m.id === newMessage.id)
+            if (alreadyExists) return prev
+            return [...prev, { ...newMessage } as Message]
+          })
+          scrollToBottom()
+
+          // Best-effort enrichment of sender details
+          try {
+            const { data: sender } = await supabase
+              .from('users')
+              .select('id, full_name, avatar_url')
+              .eq('id', newMessage.sender_id)
+              .single()
+
+            if (sender) {
+              setMessages(prev => prev.map(m => m.id === newMessage.id ? { ...m, sender: { id: sender.id, full_name: sender.full_name ?? undefined, avatar_url: sender.avatar_url ?? undefined } } : m))
+            }
+          } catch (e) {
+            // Non-fatal: keep the message without sender details
+          }
+        }
+      )
+      .subscribe()
+
+    realtimeChannelRef.current = channel
+
+    // Return cleanup function
+    return () => {
+      try {
+        if (realtimeChannelRef.current) {
+          supabase.removeChannel(realtimeChannelRef.current)
+          realtimeChannelRef.current = null
+        }
+      } catch (e) {
+        console.warn('Failed to clean up realtime channel', e)
+      }
+    }
   }
+
+  // Manage subscription lifecycle when chatRoomId becomes available
+  useEffect(() => {
+    if (!chatRoomId) return
+    const cleanup = setupRealtimeSubscription(chatRoomId)
+    return cleanup
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatRoomId])
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !chatRoomId || sending) return
@@ -246,9 +301,9 @@ export default function ChatRoom({ applicationId, listingName, applicantName, on
       </CardHeader>
 
       {/* Messages */}
-      <CardContent className="flex-1 p-0">
-        <ScrollArea className="h-full p-4">
-          <div className="space-y-4">
+      <CardContent className="flex-1 p-0 min-h-0 flex flex-col">
+        <ScrollArea className="flex-1 p-4">
+          <div className="space-y-4 pr-2">
             {messages.length === 0 ? (
               <div className="text-center py-8">
                 <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -320,9 +375,7 @@ function MessageBubble({ message }: { message: Message }) {
   }, [message.sender_id, supabase])
 
   const isOwnMessage = currentUser === message.sender_id
-  const senderName = senderProfile?.full_name || message.sender?.full_name || 
-    `${message.sender?.first_name || ''} ${message.sender?.last_name || ''}`.trim() || 
-    `User ${message.sender_id.slice(0, 8)}`
+  const senderName = senderProfile?.full_name || message.sender?.full_name || `User ${message.sender_id.slice(0, 8)}`
   const avatarUrl = senderProfile?.avatar_url || message.sender?.avatar_url || '/defaultAvatar.png'
 
   return (

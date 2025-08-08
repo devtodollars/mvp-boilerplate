@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
 
@@ -16,7 +16,9 @@ const AuthContext = createContext<{
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
+  
+  // Create a stable Supabase client instance
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -32,16 +34,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check initial session with error handling
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        // Handle refresh token errors gracefully
+        if (error.code === 'refresh_token_not_found' || 
+            error.message?.includes('Invalid Refresh Token')) {
+          console.log('No valid session found on initial load');
+          setUser(null);
+        } else {
+          console.error('Session error:', error);
+        }
+      } else {
         setUser(session?.user ?? null);
-        setIsLoading(false);
+      }
+      setIsLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase.auth]);
+  }, []); // Remove the dependency array entirely since supabase is now stable
 
   const signOut = async () => {
     try {

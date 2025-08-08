@@ -1,25 +1,30 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { Navbar } from '@/components/landing/Navbar';
 import { createClient } from '@/utils/supabase/server';
-import { Search } from "lucide-react"
-import { Label } from "@/components/ui/label"
-import { Input } from '@/components/ui/input';
-import SearchComponent from '@/components/search/searchComponent';
-import { Footer } from '@/components/landing/Footer';
 import ProfileNotification from '@/components/misc/ProfileNotification';
+import SearchPageWrapper from '@/components/search/SearchPageWrapper';
 
-export default async function WelcomeCard() {
+export default async function SearchPage() {
     const supabase = await createClient();
-    const {
-        data: { user }
-    } = await supabase.auth.getUser();
-
-    const { data: listings } = await supabase.from('listings').select('*');
+    
+    let user = null;
+    try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        user = authUser;
+    } catch (error: any) {
+        // Handle refresh token errors gracefully
+        if (error?.code === 'refresh_token_not_found' || 
+            error?.message?.includes('Invalid Refresh Token')) {
+            console.log('No valid session found on search page');
+            user = null;
+        } else {
+            console.error('Authentication error on search page:', error);
+            user = null;
+        }
+    }
 
     return (
         <>
             <ProfileNotification />
-            <SearchComponent />
+            <SearchPageWrapper />
         </>
     );
 }
