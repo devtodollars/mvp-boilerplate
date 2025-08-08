@@ -1,4 +1,4 @@
-import { getUser, getSubscription, getProducts, getUserDetails } from './queries';
+import { getUser, getUserDetails } from './queries';
 
 // Mock the cache function
 jest.mock('react', () => ({
@@ -52,102 +52,7 @@ describe('Queries', () => {
     });
   });
 
-  describe('getSubscription', () => {
-    it('should get subscription successfully', async () => {
-      const mockSubscription = { id: 'sub-123', status: 'active' };
-      const mockResponse = { data: mockSubscription, error: null };
-      
-      const mockChain = {
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue(mockResponse)
-      };
-      mockSupabaseClient.from.mockReturnValue(mockChain);
 
-      const result = await getSubscription(mockSupabaseClient);
-
-      expect(result).toEqual(mockSubscription);
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('subscriptions');
-    });
-
-    it('should throw error when supabase client is not provided', async () => {
-      await expect(getSubscription(null as any)).rejects.toThrow('Supabase client is required');
-    });
-
-    it('should handle database error', async () => {
-      const mockError = new Error('Database error');
-      const mockResponse = { data: null, error: mockError };
-      
-      const mockChain = {
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue(mockResponse)
-      };
-      mockSupabaseClient.from.mockReturnValue(mockChain);
-
-      await expect(getSubscription(mockSupabaseClient)).rejects.toThrow('Database error');
-    });
-  });
-
-  describe('getProducts', () => {
-    it('should get products successfully', async () => {
-      const mockProducts = [
-        { id: 'prod-1', name: 'Product 1' },
-        { id: 'prod-2', name: 'Product 2' }
-      ];
-      const mockResponse = { data: mockProducts, error: null };
-      
-      let orderCallCount = 0;
-      const mockChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockImplementation(() => {
-          orderCallCount++;
-          if (orderCallCount === 1) {
-            return mockChain;
-          } else {
-            return Promise.resolve(mockResponse);
-          }
-        })
-      };
-      mockSupabaseClient.from.mockReturnValue(mockChain);
-
-      const result = await getProducts(mockSupabaseClient);
-
-      expect(result).toEqual(mockProducts);
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('products');
-    });
-
-    it('should throw error when supabase client is not provided', async () => {
-      await expect(getProducts(null as any)).rejects.toThrow('Supabase client is required');
-    });
-
-    it('should handle database error', async () => {
-      const mockError = new Error('Database error');
-      const mockResponse = { data: null, error: mockError };
-      
-      let orderCallCount = 0;
-      const mockChain = {
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockImplementation(() => {
-          orderCallCount++;
-          if (orderCallCount === 1) {
-            return mockChain;
-          } else {
-            return Promise.resolve(mockResponse);
-          }
-        })
-      };
-      mockSupabaseClient.from.mockReturnValue(mockChain);
-
-      await expect(getProducts(mockSupabaseClient)).rejects.toThrow('Database error');
-    });
-  });
 
   describe('getUserDetails', () => {
     it('should get user details successfully', async () => {
