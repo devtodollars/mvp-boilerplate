@@ -11,17 +11,17 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { 
-  ArrowLeft, 
-  Users, 
-  Search, 
-  Filter, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  User, 
-  Mail, 
-  Phone, 
+import {
+  ArrowLeft,
+  Users,
+  Search,
+  Filter,
+  CheckCircle,
+  XCircle,
+  Clock,
+  User,
+  Mail,
+  Phone,
   Calendar,
   MapPin,
   Building2,
@@ -97,7 +97,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
   const [processingAction, setProcessingAction] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
 
-  
+
   const router = useRouter()
   const { toast } = useToast()
 
@@ -196,7 +196,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
 
     // Filter by search term
     if (searchTerm) {
-      filtered = filtered.filter(app => 
+      filtered = filtered.filter(app =>
         app.user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         app.user.occupation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -242,8 +242,8 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          status: actionType === 'accept' ? 'accepted' : 'rejected' 
+        body: JSON.stringify({
+          status: actionType === 'accept' ? 'accepted' : 'rejected'
         }),
       })
 
@@ -255,9 +255,9 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
       const result = await response.json()
 
       // Update local state
-      setApplications(prev => 
-        prev.map(app => 
-          app.id === selectedApplication.id 
+      setApplications(prev =>
+        prev.map(app =>
+          app.id === selectedApplication.id
             ? { ...app, status: actionType === 'accept' ? 'accepted' : 'rejected' }
             : app
         )
@@ -479,8 +479,8 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
               </div>
 
               <div className="flex items-end">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setSearchTerm("")
                     setStatusFilter("all")
@@ -505,8 +505,8 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
             <TabsTrigger value="rejected">Rejected ({getApplicationStats().rejected})</TabsTrigger>
           </TabsList>
 
-                    <TabsContent value="all" className="space-y-4">
-            <ApplicationsList 
+          <TabsContent value="all" className="space-y-4">
+            <ApplicationsList
               applications={filteredApplications}
               onAction={handleAction}
               getStatusInfo={getStatusInfo}
@@ -524,7 +524,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
           </TabsContent>
 
           <TabsContent value="pending" className="space-y-4">
-            <ApplicationsList 
+            <ApplicationsList
               applications={filteredApplications.filter(app => app.status === 'pending')}
               onAction={handleAction}
               getStatusInfo={getStatusInfo}
@@ -542,7 +542,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
           </TabsContent>
 
           <TabsContent value="accepted" className="space-y-4">
-            <ApplicationsList 
+            <ApplicationsList
               applications={filteredApplications.filter(app => app.status === 'accepted')}
               onAction={handleAction}
               getStatusInfo={getStatusInfo}
@@ -560,7 +560,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
           </TabsContent>
 
           <TabsContent value="rejected" className="space-y-4">
-            <ApplicationsList 
+            <ApplicationsList
               applications={filteredApplications.filter(app => app.status === 'rejected')}
               onAction={handleAction}
               getStatusInfo={getStatusInfo}
@@ -580,7 +580,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
 
         {/* Action Confirmation Dialog */}
         <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="w-[92vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto overflow-x-hidden">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 {actionType ? (
@@ -596,7 +596,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
                 )}
               </DialogTitle>
               <DialogDescription>
-                {actionType ? 
+                {actionType ?
                   `Are you sure you want to ${actionType} this application? This action cannot be undone.` :
                   'View detailed information about this application.'
                 }
@@ -606,11 +606,11 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
             {selectedApplication && (
               <div className="space-y-6">
                 {/* Applicant Information */}
-                <div className="bg-gray-50 border rounded-lg p-6">
+                <div className="bg-gray-50 border rounded-lg p-6 overflow-hidden">
                   <div className="flex items-center gap-4 mb-4">
                     <Avatar className="h-16 w-16">
-                      <AvatarImage 
-                        src={selectedApplication.user.avatar_url || '/defaultAvatar.png'} 
+                      <AvatarImage
+                        src={selectedApplication.user.avatar_url || '/defaultAvatar.png'}
                         alt={selectedApplication.user.full_name}
                       />
                       <AvatarFallback className="bg-gray-100 text-gray-600 text-lg">
@@ -667,7 +667,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
                   {selectedApplication.user.bio && (
                     <div className="mt-4">
                       <h5 className="font-medium text-gray-900 mb-2">Bio</h5>
-                      <p className="text-sm text-gray-600">{selectedApplication.user.bio}</p>
+                      <p className="text-sm text-gray-600 break-words">{selectedApplication.user.bio}</p>
                     </div>
                   )}
                 </div>
@@ -679,7 +679,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
                       <MessageSquare className="h-4 w-4" />
                       Application Message
                     </h4>
-                    <p className="text-sm text-blue-800 leading-relaxed">
+                    <p className="text-sm text-blue-800 leading-relaxed break-words">
                       {selectedApplication.message}
                     </p>
                   </div>
@@ -754,13 +754,13 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
 }
 
 // Applications List Component
-function ApplicationsList({ 
-  applications, 
-  onAction, 
+function ApplicationsList({
+  applications,
+  onAction,
   getStatusInfo,
   onViewDetails,
   onChat
-}: { 
+}: {
   applications: Application[]
   onAction: (app: Application, action: 'accept' | 'reject') => void
   getStatusInfo: (status: string) => any
@@ -781,44 +781,45 @@ function ApplicationsList({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {applications.map((application) => {
         const statusInfo = getStatusInfo(application.status)
-        
-                 return (
-           <ApplicationCard 
-             key={application.id}
-             application={application}
-             statusInfo={statusInfo}
-             onAction={onAction}
-             onViewDetails={onViewDetails}
-             onChat={onChat}
-           />
-         )
+
+        return (
+          <ApplicationCard
+            key={application.id}
+            application={application}
+            statusInfo={statusInfo}
+            onAction={onAction}
+            onViewDetails={onViewDetails}
+            onChat={onChat}
+          />
+        )
       })}
     </div>
   )
 }
 
 // Individual Application Card Component
-function ApplicationCard({ 
-  application, 
-  statusInfo, 
+function ApplicationCard({
+  application,
+  statusInfo,
   onAction,
   onViewDetails,
   onChat
-}: { 
+}: {
   application: Application
   statusInfo: any
   onAction: (app: Application, action: 'accept' | 'reject') => void
   onViewDetails: (app: Application) => void
   onChat: (app: Application) => void
 }) {
+  const [showFullMessage, setShowFullMessage] = useState(false)
   return (
     <Card className="border shadow-md hover:shadow-lg transition-all duration-300">
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage 
-                src={application.user.avatar_url || '/defaultAvatar.png'} 
+              <AvatarImage
+                src={application.user.avatar_url || '/defaultAvatar.png'}
                 alt={application.user.full_name}
               />
               <AvatarFallback className="bg-gray-100 text-gray-600 text-lg">
@@ -853,7 +854,7 @@ function ApplicationCard({
             <Calendar className="h-4 w-4" />
             <span>Applied {new Date(application.created_at).toLocaleDateString()}</span>
           </div>
-        
+
         </div>
 
         {/* Application Message */}
@@ -863,9 +864,20 @@ function ApplicationCard({
               <MessageSquare className="h-4 w-4" />
               Application Message
             </h4>
-            <p className="text-sm text-gray-700 leading-relaxed">
+            <div className={`text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words ${showFullMessage ? '' : 'max-h-24 overflow-hidden'}`}>
               {application.message}
-            </p>
+            </div>
+            {application.message.length > 180 && (
+              <div className="mt-2">
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-blue-600"
+                  onClick={() => setShowFullMessage(v => !v)}
+                >
+                  {showFullMessage ? 'Show less' : 'Show more'}
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -886,7 +898,7 @@ function ApplicationCard({
         {/* Action Buttons */}
         {application.status === 'pending' && (
           <div className="flex gap-2 pt-2">
-            <Button 
+            <Button
               onClick={() => onAction(application, 'accept')}
               className="flex-1"
               size="sm"
@@ -894,7 +906,7 @@ function ApplicationCard({
               <CheckCircle className="h-4 w-4 mr-2" />
               Accept
             </Button>
-            <Button 
+            <Button
               onClick={() => onAction(application, 'reject')}
               variant="destructive"
               className="flex-1"
@@ -908,7 +920,7 @@ function ApplicationCard({
 
         {application.status === 'accepted' && (
           <div className="flex gap-2 pt-2">
-            <Button 
+            <Button
               variant="outline"
               className="flex-1"
               size="sm"
@@ -917,7 +929,7 @@ function ApplicationCard({
               <Eye className="h-4 w-4 mr-2" />
               View Details
             </Button>
-            <Button 
+            <Button
               variant="outline"
               className="flex-1"
               size="sm"
@@ -926,7 +938,7 @@ function ApplicationCard({
               <MessageSquare className="h-4 w-4 mr-2" />
               Chat
             </Button>
-            <Button 
+            <Button
               onClick={() => onAction(application, 'reject')}
               variant="destructive"
               className="flex-1"
@@ -940,7 +952,7 @@ function ApplicationCard({
 
         {(application.status === 'rejected' || application.status === 'withdrawn') && (
           <div className="pt-2">
-            <Button 
+            <Button
               variant="outline"
               className="w-full"
               size="sm"
