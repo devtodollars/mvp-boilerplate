@@ -38,7 +38,7 @@ npm run dev
 #### Currently working on  Account page, viewing active, non active, saved, applied for listings + QUEUES
 
 ### Bugs
-* Fix address search and latlng mapping (currently incorrect) when creatign listing
+
 * Verify acount deletion deletes also the objects from buckets
 * Privacy Policy and terms of conditions
 * Creating user with existing email and passowrd reset handling
@@ -47,10 +47,7 @@ npm run dev
 ### MVP Features
 
 #### WIP - Dominik
-* Account page, viewing active, non active, saved, applied for listings + QUEUES
-* Application system
-* In app chat
-* Search
+
 TODO
 * Notifications
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,9 +11,10 @@ import { Badge } from '@/components/ui/badge'
 import {
   MessageSquare,
   X,
-  Minimize2,
-  Maximize2,
-  Send
+  Send,
+  Search,
+  User,
+  Building2
 } from 'lucide-react'
 
 interface ChatTab {
@@ -21,10 +22,13 @@ interface ChatTab {
   applicationId: string
   title: string
   isOpen: boolean
-  isMinimized: boolean
   unreadCount: number
   otherPartyName: string
   propertyName: string
+  role: 'applicant' | 'owner' // Whether user is applicant or property owner
+  applicationStatus: string // Current application status
+  lastMessage?: string // Last message content
+  lastMessageTime?: string // Last message timestamp
 }
 
 interface Message {
@@ -49,9 +53,8 @@ interface ChatRoom {
     status: string
     listing: {
       id: string
-      title: string
-      address: string
       property_name: string
+      address: string
     }
   }
   owner: {
@@ -76,7 +79,9 @@ export default function ChatTabs() {
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
   // Controls visibility of the unified chat panel
   const [isPanelOpen, setIsPanelOpen] = useState(false)
-  const supabase = createClient()
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState('')
+  const supabase = useMemo(() => createClient(), [])
   // Keep realtime channels per chat_room_id
   const roomChannelsRef = useRef<Record<string, any>>({})
   // Keep bottom sentinels per chat_room_id for autoscroll
@@ -91,17 +96,17 @@ export default function ChatTabs() {
     return () => subscription.unsubscribe()
   }, [supabase])
 
-  // Fetch user's active applications
+  // Fetch user's active applications and chat rooms
   const fetchActiveApplications = useCallback(async (): Promise<ChatTab[]> => {
     if (!currentUser) return []
 
     try {
-      // Step 1: applicant-side applications (no joins to avoid RLS/filters issues)
+      // Step 1: applicant-side applications (include all statuses for ongoing conversations)
       const [{ data: applicantApps, error: applicantError }, { data: ownedListings, error: listingsError }] = await Promise.all([
         supabase
           .from('applications')
           .select('id,status,user_id,listing_id')
-          .eq('status', 'accepted')
+          .in('status', ['pending', 'accepted', 'rejected', 'withdrawn'])
           .eq('user_id', currentUser),
         supabase
           .from('listings')
@@ -116,14 +121,14 @@ export default function ChatTabs() {
         console.error('Error fetching owned listings:', listingsError)
       }
 
-      // Step 2: owner-side applications for owned listing ids
+      // Step 2: owner-side applications for owned listing ids (include all statuses)
       let ownerApps: any[] = []
       const ownedListingIds = (ownedListings || []).map((l: any) => l.id)
       if (ownedListingIds.length > 0) {
         const { data: ownerAppsData, error: ownerError } = await supabase
           .from('applications')
           .select('id,status,user_id,listing_id')
-          .eq('status', 'accepted')
+          .in('status', ['pending', 'accepted', 'rejected', 'withdrawn'])
           .in('listing_id', ownedListingIds)
 
         if (ownerError) {
@@ -135,43 +140,61 @@ export default function ChatTabs() {
       const allApps: any[] = [...(applicantApps || []), ...ownerApps]
       if (allApps.length === 0) return []
 
-      // Step 3: fetch listing details for involved listing_ids (for property name and owner id)
-      const allListingIds = Array.from(new Set(allApps.map(a => a.listing_id)))
-      const { data: listingDetails, error: listingDetailsError } = await supabase
-        .from('listings')
-        .select('id, user_id, property_name, address')
-        .in('id', allListingIds)
+      // Step 3: Get chat room data for each application (this already has user names!)
+      const chatRoomPromises = allApps.map(async (app) => {
+        try {
+          const response = await fetch(`/api/chat/rooms/${app.id}`)
+          const data = await response.json()
+          if (data.error) {
+            console.error('Error getting chat room for app:', app.id, data.error)
+            return null
+          }
+          return { applicationId: app.id, chatRoom: data.chatRoom }
+        } catch (error) {
+          console.error('Error fetching chat room for app:', app.id, error)
+          return null
+        }
+      })
 
-      if (listingDetailsError) {
-        console.error('Error fetching listing details:', listingDetailsError)
-      }
+      const chatRoomResults = await Promise.all(chatRoomPromises)
+      const validChatRooms = chatRoomResults.filter(result => result !== null)
 
-      const listingMap: Record<string, any> = {}
-        ; (listingDetails || []).forEach((l: any) => { listingMap[l.id] = l })
+      console.log('Chat room results:', validChatRooms)
 
-      // Attach listing info to apps
-      const applications = allApps.map(app => ({
-        ...app,
-        listing: listingMap[app.listing_id] || null,
-      }))
+      // Create tabs for each application using chat room data
+      const newTabs: ChatTab[] = validChatRooms.map(({ applicationId, chatRoom }) => {
+        const isOwner = chatRoom.owner_id === currentUser
+        
+        // Get the actual name of the other party from chat room data
+        let otherPartyName = ''
+        if (isOwner) {
+          // User is property owner, so other party is applicant
+          otherPartyName = chatRoom.applicant?.full_name || 'New Applicant'
+        } else {
+          // User is applicant, so other party is property owner
+          otherPartyName = chatRoom.owner?.full_name || 'Property Owner'
+        }
+        
+        const propertyName = chatRoom.application?.listing?.property_name || 'Property'
 
-      // Create tabs for each application
-      const newTabs: ChatTab[] = applications.map(app => {
-        const isOwner = app.listing?.user_id === currentUser
-        const otherPartyName = isOwner
-          ? 'Applicant'
-          : (app.listing?.user_id ? 'Property Owner' : 'Owner')
-        const propertyName = app.listing?.property_name || 'Property'
+        console.log(`Creating tab for app ${applicationId}:`, {
+          isOwner,
+          otherPartyName,
+          propertyName,
+          applicant: chatRoom.applicant,
+          owner: chatRoom.owner
+        })
 
         return {
-          id: `tab-${app.id}`,
-          applicationId: app.id,
+          id: `tab-${applicationId}`,
+          applicationId,
           title: `${otherPartyName} - ${propertyName}`,
           isOpen: false,
-          isMinimized: false,
           unreadCount: 0,
           otherPartyName,
-          propertyName
+          propertyName,
+          role: isOwner ? 'owner' : 'applicant',
+          applicationStatus: chatRoom.application?.status || 'pending'
         }
       })
 
@@ -187,6 +210,12 @@ export default function ChatTabs() {
             ...existingTabs.get(tab.id)
           }))
 
+        console.log('Setting chat tabs:', mergedTabs.map(t => ({ 
+          id: t.id, 
+          otherPartyName: t.otherPartyName, 
+          propertyName: t.propertyName 
+        })))
+
         return mergedTabs
       })
 
@@ -195,12 +224,19 @@ export default function ChatTabs() {
       console.error('Error in fetchActiveApplications:', error)
       return []
     }
-  }, [currentUser, supabase])
+  }, [currentUser])
 
   // Fetch applications when user changes
   useEffect(() => {
     if (currentUser) {
-      fetchActiveApplications()
+      console.log('User loaded, fetching active applications...')
+      fetchActiveApplications().then(tabs => {
+        console.log('Fetched tabs with names:', tabs.map(t => ({ 
+          id: t.id, 
+          otherPartyName: t.otherPartyName, 
+          propertyName: t.propertyName 
+        })))
+      })
     } else {
       setChatTabs([])
     }
@@ -221,10 +257,38 @@ export default function ChatTabs() {
         ...prev,
         [chatRoomId]: data.messages || []
       }))
+
+      // Update the last message for this conversation
+      if (data.messages && data.messages.length > 0) {
+        const lastMessage = data.messages[data.messages.length - 1]
+        setChatTabs(prev => prev.map(tab => {
+          const chatRoom = chatRooms[tab.applicationId]
+          if (chatRoom && chatRoom.id === chatRoomId) {
+            return {
+              ...tab,
+              lastMessage: lastMessage.content,
+              lastMessageTime: lastMessage.created_at
+            }
+          }
+          return tab
+        }))
+      }
     } catch (error) {
       console.error('Error loading messages:', error)
     }
-  }, [])
+  }, [chatRooms])
+
+  // Load recent messages for all conversations to populate last message data
+  useEffect(() => {
+    if (chatTabs.length > 0 && Object.keys(chatRooms).length > 0) {
+      chatTabs.forEach(tab => {
+        const chatRoom = chatRooms[tab.applicationId]
+        if (chatRoom && !tab.lastMessage) {
+          loadMessages(chatRoom.id)
+        }
+      })
+    }
+  }, [chatTabs, chatRooms, loadMessages])
 
   // Get or create chat room
   const getChatRoom = useCallback(async (applicationId: string): Promise<{ id: string, chatRoom: ChatRoom } | null> => {
@@ -269,12 +333,41 @@ export default function ChatTabs() {
     const { id: chatRoomId, chatRoom } = result
     console.log('Chat room data:', chatRoom)
 
-    // Determine the other party's name
+    // Find the corresponding chat tab to get the correct names
+    const existingTab = chatTabs.find(tab => tab.applicationId === applicationId)
+    if (existingTab) {
+      // Use the existing tab data which has the correct names
+      const otherPartyName = existingTab.otherPartyName
+      const propertyName = existingTab.propertyName
+      const role = existingTab.role
+      const applicationStatus = existingTab.applicationStatus
+
+      console.log('Using existing tab data:', { otherPartyName, propertyName, role, applicationStatus })
+
+      // Ensure panel is visible and mark selected
+      setIsPanelOpen(true)
+      setSelectedApplicationId(applicationId)
+      setChatTabs(prev => prev.map(tab =>
+        tab.applicationId === applicationId
+          ? { ...tab, isOpen: true }
+          : { ...tab, isOpen: false }
+      ))
+
+      // Load messages
+      await loadMessages(chatRoomId)
+
+      // Subscribe to realtime for this room
+      subscribeToRoom(chatRoomId)
+      return
+    }
+
+    // If no existing tab, determine the other party's name from application data
+    // This should only happen for new chats
     const isOwner = chatRoom.owner_id === currentUser
     const otherPartyName = isOwner
-      ? (chatRoom.applicant?.full_name || 'Applicant')
-      : (chatRoom.owner?.full_name || 'Property Owner')
-    const propertyName = chatRoom.application?.listing?.property_name || 'Property'
+      ? (chatRoom.applicant?.full_name || 'Unknown Applicant')
+      : (chatRoom.owner?.full_name || 'Unknown Property Owner')
+    const propertyName = chatRoom.application?.listing?.property_name || 'Unknown Property'
 
     console.log('Chat title will be:', `${otherPartyName} - ${propertyName}`)
 
@@ -282,33 +375,18 @@ export default function ChatTabs() {
     setIsPanelOpen(true)
     setSelectedApplicationId(applicationId)
     setChatTabs(prev => {
-      const existingTab = prev.find(tab => tab.applicationId === applicationId)
-      if (existingTab) {
-        return prev.map(tab =>
-          tab.applicationId === applicationId
-            ? {
-                ...tab,
-                isOpen: true,
-                isMinimized: false,
-                title: `${otherPartyName} - ${propertyName}`,
-                otherPartyName,
-                propertyName,
-              }
-            : { ...tab, isOpen: false }
-        )
-      } else {
-        const newTab: ChatTab = {
-          id: `tab-${applicationId}`,
-          applicationId,
-          title: `${otherPartyName} - ${propertyName}`,
-          isOpen: true,
-          isMinimized: false,
-          unreadCount: 0,
-          otherPartyName,
-          propertyName,
-        }
-        return prev.map(t => ({ ...t, isOpen: false })).concat(newTab)
+      const newTab: ChatTab = {
+        id: `tab-${applicationId}`,
+        applicationId,
+        title: `${otherPartyName} - ${propertyName}`,
+        isOpen: true,
+        unreadCount: 0,
+        otherPartyName,
+        propertyName,
+        role: isOwner ? 'owner' : 'applicant',
+        applicationStatus: 'pending' // Default status for new chats
       }
+      return prev.map(t => ({ ...t, isOpen: false })).concat(newTab)
     })
 
     // Load messages
@@ -316,33 +394,44 @@ export default function ChatTabs() {
 
     // Subscribe to realtime for this room
     subscribeToRoom(chatRoomId)
-  }, [getChatRoom, currentUser, loadMessages])
+  }, [getChatRoom, currentUser, loadMessages, chatTabs])
 
   // Listen for open chat events
   useEffect(() => {
     const handleOpenChat = (event: CustomEvent) => {
-      const { applicationId } = event.detail
-      console.log('Received openChat event for application:', applicationId)
+      const { applicationId, showPanel } = event.detail
+      console.log('Received openChat event:', { applicationId, showPanel })
 
-      // If user isn't loaded yet, retry after a short delay
-      if (!currentUser) {
-        console.log('User not loaded, retrying in 1 second...')
-        setTimeout(() => {
-          if (currentUser) {
-            openChat(applicationId)
-          } else {
-            console.error('User still not loaded after retry')
-          }
-        }, 1000)
-        return
+      // Always open the panel first
+      setIsPanelOpen(true)
+
+      // If specific application is provided, open it
+      if (applicationId) {
+        console.log('Opening specific chat for application:', applicationId)
+        // If user isn't loaded yet, retry after a short delay
+        if (!currentUser) {
+          console.log('User not loaded, retrying in 1 second...')
+          setTimeout(() => {
+            if (currentUser) {
+              openChat(applicationId)
+            } else {
+              console.error('User still not loaded after retry')
+            }
+          }, 1000)
+          return
+        }
+        openChat(applicationId)
+      } else if (showPanel && chatTabs.length > 0 && !selectedApplicationId) {
+        // If just opening panel and no chat selected, select the first available one
+        console.log('Selecting first available chat...')
+        setSelectedApplicationId(chatTabs[0].applicationId)
+        openChat(chatTabs[0].applicationId)
       }
-
-      openChat(applicationId)
     }
 
     window.addEventListener('openChat' as any, handleOpenChat)
     return () => window.removeEventListener('openChat' as any, handleOpenChat)
-  }, [currentUser, openChat])
+  }, [currentUser, openChat, chatTabs.length, selectedApplicationId])
 
   // Send message
   const sendMessage = useCallback(async (applicationId: string) => {
@@ -389,27 +478,6 @@ export default function ChatTabs() {
       sendMessage(applicationId)
     }
   }, [sendMessage])
-
-  // Toggle minimize - FIXED: Now properly toggles between minimized and open states
-  const toggleMinimize = useCallback((tabId: string) => {
-    console.log('Toggling minimize for tab:', tabId)
-    setChatTabs(prev => {
-      const updatedTabs = prev.map(tab => {
-        if (tab.id === tabId) {
-          const newMinimized = !tab.isMinimized
-          const newOpen = tab.isMinimized // When we toggle minimize, isOpen becomes the OLD minimized state
-          console.log(`Tab ${tabId}: isMinimized ${tab.isMinimized} -> ${newMinimized}, isOpen ${tab.isOpen} -> ${newOpen}`)
-          return {
-            ...tab,
-            isMinimized: newMinimized,
-            isOpen: newOpen
-          }
-        }
-        return tab
-      })
-      return updatedTabs
-    })
-  }, [])
 
   // Close chat
   const closeChat = useCallback((tabId: string) => {
@@ -519,8 +587,22 @@ export default function ChatTabs() {
     })
   }, [messages, chatRooms])
 
-  const openTabs = chatTabs.filter(tab => tab.isOpen && !tab.isMinimized)
-  const minimizedTabs = chatTabs.filter(tab => tab.isMinimized)
+  // Filter conversations based on search query
+  const filteredChatTabs = chatTabs.filter(tab => 
+    searchQuery === '' || 
+    tab.otherPartyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    tab.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    tab.applicationStatus.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  console.log('Filtered chat tabs:', filteredChatTabs.map(tab => ({
+    id: tab.id,
+    otherPartyName: tab.otherPartyName,
+    propertyName: tab.propertyName,
+    role: tab.role
+  })))
+
+  const openTabs = chatTabs.filter(tab => tab.isOpen)
   const selectedTab = selectedApplicationId
     ? chatTabs.find(t => t.applicationId === selectedApplicationId)
     : openTabs[0]
@@ -528,38 +610,44 @@ export default function ChatTabs() {
   console.log('Chat tabs state:', {
     total: chatTabs.length,
     open: openTabs.length,
-    minimized: minimizedTabs.length,
     tabs: chatTabs.map(tab => ({
       id: tab.id,
       title: tab.title,
-      isOpen: tab.isOpen,
-      isMinimized: tab.isMinimized,
-      wouldBeOpen: tab.isOpen && !tab.isMinimized,
-      wouldBeMinimized: tab.isMinimized
+      isOpen: tab.isOpen
     }))
   })
 
   // Floating launcher click: ensure there is at least one visible chat
   const handleLauncherClick = useCallback(async () => {
-    // Open the unified panel
+    console.log('Chat launcher clicked!')
+    
+    // Always open the panel first
     setIsPanelOpen(true)
-    if (selectedApplicationId || openTabs.length > 0) return
-    if (minimizedTabs.length > 0) {
-      const firstMin = minimizedTabs[0]
-      await openChat(firstMin.applicationId)
-      return
+    
+    // If no tabs yet, fetch them
+    if (chatTabs.length === 0) {
+      console.log('No chat tabs, fetching applications...')
+      const tabs = await fetchActiveApplications()
+      console.log('Fetched tabs:', tabs)
+      if (tabs && tabs.length > 0) {
+        // Select the first available chat
+        setSelectedApplicationId(tabs[0].applicationId)
+        // Open the chat room for this application
+        await openChat(tabs[0].applicationId)
+      }
+    } else if (!selectedApplicationId && chatTabs.length > 0) {
+      console.log('Selecting first available chat...')
+      // Select the first available chat if none is selected
+      setSelectedApplicationId(chatTabs[0].applicationId)
+      await openChat(chatTabs[0].applicationId)
+    } else {
+      console.log('Panel opened with existing selection')
     }
-    // No tabs yet – fetch and open the first available chat
-    const tabs = await fetchActiveApplications()
-    const first = tabs && tabs[0]
-    if (first) {
-      await openChat(first.applicationId)
-    }
-  }, [openTabs.length, minimizedTabs, selectedApplicationId, fetchActiveApplications, openChat])
+  }, [chatTabs.length, selectedApplicationId, fetchActiveApplications, openChat])
 
   return (
     <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 z-50">
-      {/* Floating chat launcher - visible only when panel is closed */}
+      {/* Floating chat launcher - show when panel is closed */}
       {!isPanelOpen && (
         <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4">
           <Button
@@ -572,97 +660,187 @@ export default function ChatTabs() {
           </Button>
         </div>
       )}
-      {/* Minimized Tabs */}
-      {minimizedTabs.length > 0 && (
-        <div className="flex flex-col gap-2 mb-2">
-          {minimizedTabs.map((tab) => (
-            <Button
-              key={tab.id}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 min-w-0 bg-white shadow-lg"
-              onClick={() => toggleMinimize(tab.id)}
-            >
-              <MessageSquare className="h-4 w-4" />
-              <span className="truncate max-w-20">{tab.title}</span>
-              {tab.unreadCount > 0 && (
-                <Badge variant="destructive" className="h-5 w-5 p-0 text-xs">
-                  {tab.unreadCount}
-                </Badge>
-              )}
-              <X
-                className="h-4 w-4 ml-1"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  closeChat(tab.id)
-                }}
-              />
-            </Button>
-          ))}
-        </div>
-      )}
 
       {/* Single Chat Window with Conversation List */}
       {isPanelOpen && (
-        <Card className="w-[90vw] sm:w-[600px] md:w-[720px] h-[360px] sm:h-[460px] flex flex-col shadow-xl border-0">
+        <Card className="w-[95vw] sm:w-[800px] md:w-[900px] lg:w-[1000px] h-[500px] sm:h-[600px] max-h-[80vh] flex flex-col shadow-xl border-0 overflow-hidden">
           <CardHeader className="p-3 pb-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
             <div className="flex items-center justify-between gap-2 min-w-0">
               <CardTitle className="text-sm font-medium truncate flex-1 min-w-0 max-w-full">
                 {selectedTab?.title || 'Chats'}
               </CardTitle>
-              {selectedTab && (
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 hover:bg-blue-100"
-                    onClick={() => setIsPanelOpen(false)}
-                  >
-                    <Minimize2 className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 hover:bg-red-100"
-                    onClick={() => setIsPanelOpen(false)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-red-100"
+                onClick={() => setIsPanelOpen(false)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
             </div>
           </CardHeader>
 
-          <CardContent className="p-0 flex-1 min-h-0 flex">
-            {/* Left: conversation list */}
-            <div className="w-36 sm:w-48 md:w-56 border-r h-full flex flex-col">
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col sm:flex-row">
+            {/* Left: conversation list - organized by role */}
+            <div className="w-full sm:w-80 sm:border-r border-b sm:border-b-0 bg-gray-50 h-full flex flex-col flex-shrink-0 min-w-0 max-w-80">
+              <div className="p-3 border-b bg-white">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-gray-700">Conversations</h3>
+                  <p className="text-xs text-gray-500">
+                    {searchQuery ? `${filteredChatTabs.length} of ${chatTabs.length}` : `${chatTabs.length} total`}
+                  </p>
+                </div>
+                {/* Search bar */}
+                <div className="relative">
+                  <Input
+                    placeholder="Search conversations..."
+                    className="h-8 text-xs pr-8"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+                </div>
+              </div>
+              
               <ScrollArea className="flex-1">
-                <div className="p-2 space-y-1">
-                  {chatTabs.map(item => (
-                    <button
-                      key={item.id}
-                      className={`w-full text-left px-2 py-2 rounded-md text-sm hover:bg-zinc-100 ${item.applicationId === selectedApplicationId ? 'bg-zinc-100 font-medium' : ''}`}
-                      onClick={() => openChat(item.applicationId)}
-                    >
-                      <div className="truncate">{item.otherPartyName}</div>
-                      <div className="text-xs text-zinc-500 truncate">{item.propertyName}</div>
-                    </button>
-                  ))}
-                  {chatTabs.length === 0 && (
-                    <div className="text-xs text-zinc-500 p-2">No conversations</div>
+                <div className="p-2 space-y-3">
+                  {/* Property Owner Section */}
+                  {filteredChatTabs.filter(item => item.role === 'owner').length > 0 && (
+                    <div>
+                      <div className="px-2 py-1 mb-2">
+                        <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-2">
+                          <Building2 className="h-3 w-3" />
+                          My Properties
+                        </h4>
+                      </div>
+                      <div className="space-y-1">
+                        {filteredChatTabs.filter(item => item.role === 'owner').map(item => (
+                          <button
+                            key={item.id}
+                            className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 hover:bg-white hover:shadow-sm ${
+                              item.applicationId === selectedApplicationId 
+                                ? 'bg-white shadow-sm border-l-4 border-blue-500' 
+                                : 'hover:border-l-2 hover:border-gray-200'
+                            }`}
+                            onClick={() => openChat(item.applicationId)}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="font-medium text-gray-900 truncate">
+                                {item.otherPartyName}
+                              </div>
+                              {item.unreadCount > 0 && (
+                                <Badge variant="destructive" className="h-5 w-5 p-0 text-xs flex-shrink-0">
+                                  {item.unreadCount}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate leading-tight mb-1">
+                              {item.propertyName}
+                            </div>
+                            {item.lastMessage && (
+                              <div className="text-xs text-gray-600 truncate leading-tight mb-1">
+                                {item.lastMessage}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                variant={item.applicationStatus === 'accepted' ? 'default' : 
+                                       item.applicationStatus === 'pending' ? 'secondary' : 
+                                       item.applicationStatus === 'rejected' ? 'destructive' : 'outline'}
+                                className="text-xs h-4 px-2"
+                              >
+                                {item.applicationStatus}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs h-4 px-2 text-blue-600 border-blue-200">
+                                {item.role === 'owner' ? 'Applicant' : 'Property Owner'}
+                              </Badge>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Applicant Section */}
+                  {filteredChatTabs.filter(item => item.role === 'applicant').length > 0 && (
+                    <div>
+                      <div className="px-2 py-1 mb-2">
+                        <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-2">
+                          <User className="h-3 w-3" />
+                          My Applications
+                        </h4>
+                      </div>
+                      <div className="space-y-1">
+                        {filteredChatTabs.filter(item => item.role === 'applicant').map(item => (
+                          <button
+                            key={item.id}
+                            className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 hover:bg-white hover:shadow-sm ${
+                              item.applicationId === selectedApplicationId 
+                                ? 'bg-white shadow-sm border-l-4 border-blue-500' 
+                                : 'hover:border-l-2 hover:border-gray-200'
+                            }`}
+                            onClick={() => openChat(item.applicationId)}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="font-medium text-gray-900 truncate">
+                                {item.otherPartyName}
+                              </div>
+                              {item.unreadCount > 0 && (
+                                <Badge variant="destructive" className="h-5 w-5 p-0 text-xs flex-shrink-0">
+                                  {item.unreadCount}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate leading-tight mb-1">
+                              {item.propertyName}
+                            </div>
+                            {item.lastMessage && (
+                              <div className="text-xs text-gray-600 truncate leading-tight mb-1">
+                                {item.lastMessage}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                variant={item.applicationStatus === 'accepted' ? 'default' : 
+                                       item.applicationStatus === 'pending' ? 'secondary' : 
+                                       item.applicationStatus === 'rejected' ? 'destructive' : 'outline'}
+                                className="text-xs h-4 px-2"
+                              >
+                                {item.applicationStatus}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs h-4 px-2 text-blue-600 border-blue-200">
+                                {item.role === 'owner' ? 'Applicant' : 'Property Owner'}
+                              </Badge>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {filteredChatTabs.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">
+                        {searchQuery ? 'No conversations found' : 'No conversations yet'}
+                      </p>
+                      <p className="text-xs">
+                        {searchQuery ? 'Try adjusting your search terms' : 'Start chatting with applicants or property owners'}
+                      </p>
+                    </div>
                   )}
                 </div>
               </ScrollArea>
             </div>
 
-            {/* Right: message thread */}
-            <div className="flex-1 flex flex-col min-h-0">
-              <div className="p-3 pb-0 text-sm font-medium truncate min-w-0 max-w-full">
+            {/* Right: message thread - FIXED WIDTH */}
+            <div className="w-full sm:w-[calc(100%-20rem)] lg:w-[calc(100%-22rem)] flex flex-col min-h-0 flex-shrink-0">
+              <div className="p-3 pb-0 text-sm font-medium truncate min-w-0 max-w-full border-b">
                 {selectedTab?.title || 'Select a conversation'}
               </div>
-              <div className="p-3 pt-0 flex-1 min-h-0 flex flex-col">
-                <ScrollArea className="flex-1">
-                  <div className="space-y-2 pr-2">
+              <div className="flex-1 min-h-0 flex flex-col">
+                <ScrollArea className="flex-1 p-3">
+                  <div className="space-y-3 pr-2 min-w-0">
                     {(() => {
                       const chatRoom = selectedTab ? chatRooms[selectedTab.applicationId] : undefined
                       const chatMessages = chatRoom ? (messages[chatRoom.id] || []) : []
@@ -690,13 +868,13 @@ export default function ChatTabs() {
 
                 {/* Message input */}
                 {selectedTab && (
-                  <div className="flex gap-2 mt-2 px-1 pb-2">
+                  <div className="flex gap-2 p-3 border-t bg-gray-50">
                     <Input
                       value={newMessages[selectedTab.applicationId] || ''}
                       onChange={(e) => setNewMessages(prev => ({
                         ...prev,
-                        [selectedTab.applicationId]: e.target.value
-                      }))}
+                        [selectedTab.applicationId]: e.target.value}
+                      ))}
                       onKeyPress={(e) => handleKeyPress(e, selectedTab.applicationId)}
                       placeholder="Type a message..."
                       className="flex-1 text-sm"
@@ -719,7 +897,7 @@ export default function ChatTabs() {
   )
 }
 
-// Message Bubble Component
+// Message Bubble Component with fixed width
 function MessageBubble({
   message,
   isOwnMessage
@@ -731,8 +909,8 @@ function MessageBubble({
   const avatarUrl = message.sender?.avatar_url || '/defaultAvatar.png'
 
   return (
-    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-      <div className={`flex items-start gap-2 max-w-full overflow-hidden ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} w-full`}>
+      <div className={`flex items-start gap-2 w-full max-w-[400px] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
         <Avatar className="h-6 w-6 flex-shrink-0">
           <AvatarImage
             src={avatarUrl}
@@ -742,14 +920,16 @@ function MessageBubble({
             {senderName.charAt(0)}
           </AvatarFallback>
         </Avatar>
-        <div className={`rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap max-w-[70%] sm:max-w-[75%] md:max-w-[80%] ${isOwnMessage
+        <div className={`flex flex-col min-w-0 flex-1 ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+          <div className={`rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap w-full max-w-[320px] ${isOwnMessage
             ? 'bg-blue-500 text-white'
             : 'bg-gray-100 text-gray-900'
           }`}>
-          <div className="font-medium text-xs mb-1">
-            {senderName}
+            <div className="font-medium text-xs mb-1 opacity-80">
+              {senderName}
+            </div>
+            <div className="break-words whitespace-pre-wrap leading-relaxed">{message.content}</div>
           </div>
-          <div className="break-words">{message.content}</div>
         </div>
       </div>
     </div>

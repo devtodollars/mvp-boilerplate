@@ -379,8 +379,8 @@ function MessageBubble({ message }: { message: Message }) {
   const avatarUrl = senderProfile?.avatar_url || message.sender?.avatar_url || '/defaultAvatar.png'
 
   return (
-    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-      <div className={`flex gap-2 max-w-[70%] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} w-full`}>
+      <div className={`flex gap-2 w-full max-w-[400px] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
         <Avatar className="h-8 w-8 flex-shrink-0">
           <AvatarImage 
             src={avatarUrl} 
@@ -392,7 +392,7 @@ function MessageBubble({ message }: { message: Message }) {
         </Avatar>
         
         <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
-          <div className={`rounded-lg px-3 py-2 ${
+          <div className={`rounded-lg px-3 py-2 w-full max-w-[320px] break-words whitespace-pre-wrap ${
             isOwnMessage 
               ? 'bg-blue-600 text-white' 
               : 'bg-gray-100 text-gray-900'

@@ -26,6 +26,7 @@ import { usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/components/providers/AuthProvider';
 import NotificationBell from '@/components/NotificationBell';
+import ChatNotificationBell from '@/components/ChatNotificationBell';
 
 interface RouteProps {
   href: string;
@@ -193,6 +194,7 @@ export const Navbar = () => {
             {user ? (
               <div className="flex items-center gap-2">
                 <NotificationBell />
+                <ChatNotificationBell />
                 <Button
                   onClick={handleAuth}
                   variant="ghost"

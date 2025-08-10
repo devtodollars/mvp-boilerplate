@@ -20,17 +20,16 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  ExternalLink
+  X
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/utils/supabase/client"
-import { useRouter } from "next/navigation"
 import { format } from "date-fns"
 import {
   fetchNotifications,
   getNotificationCount,
   deleteAllNotifications,
-  handleNotificationClick
+  deleteNotification
 } from "@/utils/supabase/notifications"
 import { Database } from "@/types_db"
 
@@ -43,7 +42,6 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false)
   const supabase = createClient()
   const { toast } = useToast()
-  const router = useRouter()
 
   useEffect(() => {
     fetchNotificationsData()
@@ -60,9 +58,10 @@ export default function NotificationBell() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Fetch notifications from the database
-      const notificationsData = await fetchNotifications(user.id, 20)
-      const countData = await getNotificationCount(user.id)
+      // Fetch notifications from the database (excluding chat notifications)
+      const allNotifications = await fetchNotifications(user.id, 50)
+      const notificationsData = allNotifications.filter(n => n.type !== 'message')
+      const countData = notificationsData.length
 
       setNotifications(notificationsData)
       setNotificationCount(countData)
@@ -76,19 +75,20 @@ export default function NotificationBell() {
 
   const handleNotificationClickLocal = async (notification: Notification) => {
     try {
-      // Handle navigation and deletion
-      const success = await handleNotificationClick(notification, router)
+      // Just mark as read and remove - no navigation
+      const deleted = await deleteNotification(notification.id)
       
-      if (success) {
+      if (deleted) {
         // Remove notification from local state
         setNotifications(prev => prev.filter(n => n.id !== notification.id))
         setNotificationCount(prev => Math.max(0, prev - 1))
         setOpen(false)
+        
+
       } else {
-        // Show error toast if navigation failed
         toast({
-          title: "Navigation failed",
-          description: "Could not navigate to the notification content.",
+          title: "Error",
+          description: "Could not clear the notification.",
           variant: "destructive"
         })
       }
@@ -171,7 +171,7 @@ export default function NotificationBell() {
 
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between">
-          <span>Notifications</span>
+          <span>General Notifications</span>
           {notificationCount > 0 && (
             <Badge variant="secondary" className="text-xs">
               {notificationCount} new
@@ -197,29 +197,46 @@ export default function NotificationBell() {
           ) : (
             <div className="space-y-1">
               {notifications.map((notification) => (
-                <DropdownMenuItem
+                <div
                   key={notification.id}
-                  className="flex items-start gap-3 p-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => handleNotificationClickLocal(notification)}
+                  className="group relative"
                 >
-                  <div className={`mt-1 ${getNotificationColor(notification.type)}`}>
-                    {getNotificationIcon(notification.type)}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {notification.title}
-                      </p>
-                      <span className="text-xs text-gray-500 flex-shrink-0">
-                        {format(new Date(notification.created_at), 'HH:mm')}
-                      </span>
+                  <DropdownMenuItem
+                    className="flex items-start gap-3 p-3 cursor-default hover:bg-gray-50 w-full"
+                  >
+                    <div className={`mt-1 ${getNotificationColor(notification.type)}`}>
+                      {getNotificationIcon(notification.type)}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                      {notification.message}
-                    </p>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {notification.title}
+                        </p>
+                        <span className="text-xs text-gray-500 flex-shrink-0">
+                          {format(new Date(notification.created_at), 'HH:mm')}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                        {notification.message}
+                      </p>
+                    </div>
+                  </DropdownMenuItem>
+                  
+                  {/* Clear Button - slides out from right */}
+                  <div className="absolute left-full top-1/2 ml-2 opacity-0 group-hover:opacity-100 transition-all duration-200 transform -translate-y-1/2 translate-x-2 group-hover:translate-x-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleNotificationClickLocal(notification)
+                      }}
+                      className="flex items-center justify-center w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-lg transition-colors duration-200"
+                      title="Clear notification"
+                    >
+                      <X className="h-6 w-6" />
+                    </button>
                   </div>
-                </DropdownMenuItem>
+                </div>
               ))}
             </div>
           )}
@@ -229,16 +246,6 @@ export default function NotificationBell() {
           <>
             <DropdownMenuSeparator />
             <div className="flex flex-col gap-1 p-2">
-              <DropdownMenuItem
-                className="flex items-center justify-center gap-2 text-sm text-gray-600"
-                onClick={() => {
-                  router.push('/notifications')
-                  setOpen(false)
-                }}
-              >
-                <ExternalLink className="h-4 w-4" />
-                View all notifications
-              </DropdownMenuItem>
               <DropdownMenuItem
                 className="flex items-center justify-center gap-2 text-sm text-red-600"
                 onClick={handleMarkAllAsRead}
