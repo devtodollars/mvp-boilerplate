@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { chatRoomId: string } }
+  { params }: { params: Promise<{ chatRoomId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -14,12 +14,15 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { chatRoomId } = params
+    const { chatRoomId } = await params
 
-    // Call the mark_messages_as_read function
-    const { error } = await supabase.rpc('mark_messages_as_read', {
-      chat_room_uuid: chatRoomId
-    })
+    // Directly update messages to mark them as read instead of using RPC
+    const { error } = await supabase
+      .from('messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('chat_room_id', chatRoomId)
+      .neq('sender_id', user.id) // Don't mark own messages as read
+      .is('read_at', null) // Only update unread messages
 
     if (error) {
       console.error('Error marking messages as read:', error)

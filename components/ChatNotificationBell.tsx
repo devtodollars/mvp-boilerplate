@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -59,7 +59,9 @@ export default function ChatNotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const supabase = createClient()
+  
+  // Memoize the Supabase client to prevent recreation on every render
+  const supabase = useMemo(() => createClient(), [])
   const { toast } = useToast()
   const router = useRouter()
 
@@ -89,11 +91,11 @@ export default function ChatNotificationBell() {
         )
         .subscribe()
       
-      // Poll for new chat rooms and unread counts every 30 seconds
+      // Poll for new chat rooms and unread counts every 2 minutes
       const interval = setInterval(() => {
         fetchChatRooms()
         fetchUnreadCount()
-      }, 30000)
+      }, 120000) // 2 minutes
       
       return () => {
         clearInterval(interval)
@@ -101,8 +103,16 @@ export default function ChatNotificationBell() {
       }
     }
     
-    setupSubscriptions()
-  }, [])
+    // Only set up subscriptions if we have a user
+    const checkAuthAndSetup = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setupSubscriptions()
+      }
+    }
+    
+    checkAuthAndSetup()
+  }, [supabase])
 
   const fetchUnreadCount = async () => {
     try {

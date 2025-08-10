@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -11,26 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  Bell,
-  MessageSquare,
-  FileText,
-  CheckCircle,
-  XCircle,
-  Clock,
-  X
-} from "lucide-react"
+import { Bell, X, Check, Trash2, FileText, MessageSquare, CheckCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/utils/supabase/client"
+import { fetchNotifications, deleteAllNotifications, deleteNotification } from "@/utils/supabase/notifications"
 import { format } from "date-fns"
-import {
-  fetchNotifications,
-  getNotificationCount,
-  deleteAllNotifications,
-  deleteNotification
-} from "@/utils/supabase/notifications"
 import { Database } from "@/types_db"
 
 type Notification = Database['public']['Tables']['notifications']['Row']
@@ -40,15 +26,32 @@ export default function NotificationBell() {
   const [notificationCount, setNotificationCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const supabase = createClient()
+  
+  // Memoize the Supabase client to prevent recreation on every render
+  const supabase = useMemo(() => createClient(), [])
   const { toast } = useToast()
 
   useEffect(() => {
-    fetchNotificationsData()
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(fetchNotificationsData, 30000)
+    // Only fetch notifications if we have a user
+    const checkAuthAndFetch = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        fetchNotificationsData()
+      }
+    }
+    
+    checkAuthAndFetch()
+    
+    // Poll for new notifications every 2 minutes
+    const interval = setInterval(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        fetchNotificationsData()
+      }
+    }, 120000) // 2 minutes
+    
     return () => clearInterval(interval)
-  }, [])
+  }, [supabase])
 
   const fetchNotificationsData = async () => {
     try {
@@ -65,7 +68,6 @@ export default function NotificationBell() {
 
       setNotifications(notificationsData)
       setNotificationCount(countData)
-
     } catch (error) {
       console.error('Error fetching notifications:', error)
     } finally {
@@ -104,6 +106,7 @@ export default function NotificationBell() {
 
   const handleMarkAllAsRead = async () => {
     try {
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
@@ -214,7 +217,7 @@ export default function NotificationBell() {
                           {notification.title}
                         </p>
                         <span className="text-xs text-gray-500 flex-shrink-0">
-                          {format(new Date(notification.created_at), 'HH:mm')}
+                          {notification.created_at ? format(new Date(notification.created_at), 'HH:mm') : '--:--'}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1 line-clamp-2">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -50,7 +50,10 @@ export default function ChatRoom({ applicationId, listingName, applicantName, on
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const supabase = createClient()
+  
+  // Memoize the Supabase client to prevent recreation on every render
+  const supabase = useMemo(() => createClient(), [])
+  
   // Keep a reference to the realtime channel so we can clean it up
   const realtimeChannelRef = useRef<any>(null)
   const { toast } = useToast()
@@ -350,7 +353,8 @@ export default function ChatRoom({ applicationId, listingName, applicantName, on
 
 // Message Bubble Component
 function MessageBubble({ message }: { message: Message }) {
-  const supabase = createClient()
+  // Memoize the Supabase client to prevent recreation on every render
+  const supabase = useMemo(() => createClient(), [])
   const [currentUser, setCurrentUser] = useState<string | null>(null)
   const [senderProfile, setSenderProfile] = useState<any>(null)
 

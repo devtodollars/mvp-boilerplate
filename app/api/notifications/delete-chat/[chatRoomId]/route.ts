@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { chatRoomId: string } }
+  { params }: { params: Promise<{ chatRoomId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -14,7 +14,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { chatRoomId } = params
+    const { chatRoomId } = await params
 
     // Get the application ID for this chat room
     const { data: chatRoom, error: chatError } = await supabase

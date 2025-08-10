@@ -79,7 +79,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
   // Track which application/chat is selected to view on the right pane
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
   // Controls visibility of the unified chat panel
-  const [isPanelOpen, setIsPanelOpen] = useState(true)
+  const [isPanelOpen, setIsPanelOpen] = useState(false) // Closed by default to prevent auth issues
 
   // Search functionality
   const [searchQuery, setSearchQuery] = useState('')
@@ -529,6 +529,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       // If specific application is provided, open it
       if (applicationId) {
         console.log('Opening specific chat for application:', applicationId)
+        setIsPanelOpen(true) // Open the panel
         // If user isn't loaded yet, retry after a short delay
         if (!currentUser) {
           console.log('User not loaded, retrying in 1 second...')
@@ -545,6 +546,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       } else if (showPanel && chatTabs.length > 0 && !selectedApplicationId) {
         // If just opening panel and no chat selected, select the first available one
         console.log('Selecting first available chat...')
+        setIsPanelOpen(true) // Open the panel
         setSelectedApplicationId(chatTabs[0].applicationId)
         openChat(chatTabs[0].applicationId)
       }
@@ -763,19 +765,15 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
 
 
 
+  // Don't render anything if user is not authenticated
+  if (!currentUser) {
+    return null
+  }
+
   return (
     <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 z-50">
       {/* Single Chat Window with Conversation List */}
-      {!isPanelOpen && (
-        <Button
-          size="icon"
-          className="rounded-full h-10 w-10 shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
-          onClick={() => setIsPanelOpen(true)}
-          aria-label="Open chat"
-        >
-          <MessageSquare className="h-5 w-5" />
-        </Button>
-      )}
+      {/* DONT ADD ANY ICON OR BUTTON ! */}
       {isPanelOpen && (
         <div 
           className="overscroll-contain"
