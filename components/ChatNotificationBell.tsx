@@ -56,6 +56,7 @@ interface ChatRoom {
 
 export default function ChatNotificationBell() {
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const supabase = createClient()
@@ -63,11 +64,68 @@ export default function ChatNotificationBell() {
   const router = useRouter()
 
   useEffect(() => {
-    fetchChatRooms()
-    // Poll for new chat rooms every 30 seconds
-    const interval = setInterval(fetchChatRooms, 30000)
-    return () => clearInterval(interval)
+    const setupSubscriptions = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      
+      fetchChatRooms()
+      fetchUnreadCount()
+      
+      // Set up real-time subscription for notifications
+      const channel = supabase
+        .channel(`notifications-${user.id}`)
+        .on(
+          'postgres_changes',
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            // Refresh unread count when notifications change
+            fetchUnreadCount()
+          }
+        )
+        .subscribe()
+      
+      // Poll for new chat rooms and unread counts every 30 seconds
+      const interval = setInterval(() => {
+        fetchChatRooms()
+        fetchUnreadCount()
+      }, 30000)
+      
+      return () => {
+        clearInterval(interval)
+        supabase.removeChannel(channel)
+      }
+    }
+    
+    setupSubscriptions()
   }, [])
+
+  const fetchUnreadCount = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Count unread message notifications
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('type', 'message')
+
+      if (error) {
+        console.error('Error counting unread notifications:', error)
+        return
+      }
+
+      setUnreadCount(count || 0)
+    } catch (error) {
+      console.error('Error fetching unread count:', error)
+    }
+  }
 
   const fetchChatRooms = async () => {
     try {
@@ -184,12 +242,12 @@ export default function ChatNotificationBell() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="relative">
           <MessageSquare className="h-5 w-5" />
-          {chatRooms.length > 0 && (
+          {unreadCount > 0 && (
             <Badge
               variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
             >
-              {chatRooms.length > 9 ? '9+' : chatRooms.length}
+              {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
           )}
         </Button>
