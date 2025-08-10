@@ -94,17 +94,16 @@ export default function AccountCreationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <AccountCreationForm
-        userEmail={userEmail}
-        onComplete={() => {
-          toast({
-            title: "Profile Created!",
-            description: "Welcome to our platform. You can now start browsing properties.",
-          })
-          // No redirect - let the form handle navigation
-        }}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-4xl mx-auto">
+        <AccountCreationForm
+          userEmail={userEmail}
+          onComplete={() => {
+            // Profile creation completed, redirect will be handled by the form
+            router.push('/')
+          }}
+        />
+      </div>
     </div>
   )
 } 

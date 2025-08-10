@@ -18,11 +18,13 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       throw new Error('Credentials are required for signup');
     }
 
+    // Handle both email and phone signup
     const email = 'email' in creds ? creds.email : undefined;
+    const phone = 'phone' in creds ? creds.phone : undefined;
     const password = creds.password;
     
-    if (!email || typeof email !== 'string') {
-      throw new Error('Valid email is required for signup');
+    if (!email && !phone) {
+      throw new Error('Valid email or phone is required for signup');
     }
 
     if (!password || typeof password !== 'string') {
@@ -35,9 +37,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     
     try {
       // Try to sign up the user
+      const signUpData: any = { password };
+      if (email) signUpData.email = email;
+      if (phone) signUpData.phone = phone;
+      
       const res = await supabase.auth.signUp({
-        email,
-        password,
+        ...signUpData,
         options: {
           emailRedirectTo: getURL('/api/auth_callback')
         }
@@ -106,18 +111,26 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       throw new Error('Credentials are required for signin');
     }
 
-    const { email, password } = creds;
-
-    if (!email || typeof email !== 'string') {
-      throw new Error('Valid email is required for signin');
+    // Handle both email and phone signin
+    const email = 'email' in creds ? creds.email : undefined;
+    const phone = 'phone' in creds ? creds.phone : undefined;
+    const password = creds.password;
+    
+    if (!email && !phone) {
+      throw new Error('Valid email or phone is required for signin');
     }
 
     if (!password || typeof password !== 'string') {
       throw new Error('Valid password is required for signin');
     }
-
+    
     try {
-      const res = await supabase.auth.signInWithPassword(creds);
+      // Try to sign in the user
+      const signInData: any = { password };
+      if (email) signInData.email = email;
+      if (phone) signInData.phone = phone;
+      
+      const res = await supabase.auth.signInWithPassword(signInData);
       if (res.error) {
         // Handle specific error cases with better messages
         if (res.error.message.includes('Invalid login credentials')) {
@@ -246,14 +259,28 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       if (!user) throw new Error('User not authenticated');
 
       // Check if profile already exists
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: profileError } = await supabase
         .from('users')
         .select('id, first_name, last_name')
         .eq('id', user.id)
         .single();
 
+      if (profileError && profileError.code !== 'PGRST116') {
+        // PGRST116 means no rows returned, which is expected for new users
+        console.error('Error checking existing profile:', profileError);
+        throw new Error(`Failed to check existing profile: ${profileError.message}`);
+      }
+
       if (existingProfile) {
         console.log('Profile already exists, updating:', existingProfile);
+        
+        // If profile exists but is incomplete (only has basic fields from trigger),
+        // we should still allow the update
+        if (!existingProfile.first_name || !existingProfile.last_name) {
+          console.log('Profile exists but is incomplete, proceeding with update');
+        } else {
+          console.log('Profile is complete, updating with new data');
+        }
       } else {
         console.log('Creating new profile for user:', user.id);
       }
@@ -264,6 +291,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
         try {
           const [day, month, year] = userData.date_of_birth.split('/');
           if (day && month && year) {
+            // Format as YYYY-MM-DD for PostgreSQL date type
             formattedDateOfBirth = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
           }
         } catch (error) {
@@ -276,13 +304,13 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
         first_name: userData.first_name,
         last_name: userData.last_name,
         full_name: `${userData.first_name} ${userData.last_name}`,
-        phone: userData.phone || null,
-        bio: userData.bio || null,
-        avatar_id: userData.avatar_id || null,
+        phone: userData.phone || undefined,
+        bio: userData.bio || undefined,
+        avatar_id: userData.avatar_id || undefined,
         date_of_birth: formattedDateOfBirth,
-        occupation: userData.occupation || null,
-        marital_status: userData.marital_status || null,
-        gender: userData.gender || null,
+        occupation: userData.occupation || undefined,
+        marital_status: userData.marital_status || undefined,
+        gender: userData.gender || undefined,
         smoker: userData.smoker || false,
         pets: userData.pets || false,
         verified: false,

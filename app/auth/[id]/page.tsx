@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/landing/Navbar';
-import { AuthForm } from '@/components/misc/AuthForm';
+import { EnhancedAuthForm } from '@/components/misc/enhancedAuthForm';
 import { AuthState } from '@/utils/types';
 
 export default async function SignIn(
@@ -30,7 +30,7 @@ export default async function SignIn(
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <AuthForm state={currState} />
+      <EnhancedAuthForm state={currState} />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useEffect, useState } from "react"
@@ -13,7 +13,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { AuthState, type StateInfo } from "@/utils/types"
 import SiGoogle from "@icons-pack/react-simple-icons/icons/SiGoogle"
 import { AccountCreationForm } from "./accountCreationForm"
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, Github } from "lucide-react"
+import { OtpVerification } from "./OtpVerification"
 
 export function EnhancedAuthForm({ state }: { state: AuthState }) {
   const { toast } = useToast()
@@ -21,7 +22,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  const [authState, setAuthState] = useState(state)
+  const [authState, setAuthState] = useState<AuthState>(state)
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -46,7 +47,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
       newErrors.password = "Password must be at least 6 characters"
     }
 
-    if (authState === "signup" && password !== confirmPassword) {
+    if (authState === AuthState.Signup && password !== confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match"
     }
 
@@ -66,25 +67,63 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
 
         setLoading(true)
         try {
-          await api.passwordSignup({ email, password })
+          console.log('Starting signup process for email:', email)
           
-          toast({
-            title: 'Account Already Created!',
-            description: 'Please sign in to continue. Or forgot your password?',
-          })
+          const result = await api.passwordSignup({ email, password })
           
-          // Redirect to signin page after successful signup
-          router.push('/auth/signin')
-        } catch (e) {
-          if (e instanceof Error) {
+          console.log('Signup result:', result) // Debug log
+          console.log('Signup result.user:', result?.user) // Debug log
+          console.log('Signup result.session:', result?.session) // Debug log
+          
+          // Check if signup was successful
+          if (result && result.user) {
+            // Supabase auth.signUp() behavior:
+            // - New user: returns user object, no session
+            // - Existing user: throws error with "User already registered"
+            // Since we're here, it means signup succeeded (no error thrown)
+            
+            console.log('Signup successful, proceeding to email verification')
+            
             toast({
-              title: "Signup Error",
-              description: e.message,
-              variant: "destructive",
+              title: 'Account Created Successfully!',
+              description: 'Please check your email and enter the verification code to complete your registration.',
+            })
+            
+            // Show email verification component
+            setAuthState(AuthState.EmailVerification)
+            console.log('Auth state changed to EmailVerification') // Debug log
+          } else {
+            // This shouldn't happen with successful signup
+            console.error('Unexpected signup result:', result)
+            toast({
+              title: 'Signup Error',
+              description: 'An unexpected error occurred during signup. Please try again.',
+              variant: 'destructive',
             })
           }
+        } catch (error) {
+          console.error('Signup error:', error)
+          
+          // Check if this is a "user already exists" error
+          if (error instanceof Error && error.message.includes('already exists')) {
+            toast({
+              title: 'Account Already Exists!',
+              description: 'Please sign in to continue. Or forgot your password?',
+              variant: 'destructive',
+            })
+            
+            // Redirect to signin page
+            router.push('/auth/signin')
+          } else {
+            toast({
+              title: 'Signup Error',
+              description: error instanceof Error ? error.message : 'An error occurred during signup',
+              variant: 'destructive',
+            })
+          }
+        } finally {
+          setLoading(false)
         }
-        setLoading(false)
       },
     },
     signin: {
@@ -181,6 +220,16 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
         // This will be handled by the AccountCreationForm
       },
     },
+    [AuthState.EmailVerification]: {
+      title: "Email Verification",
+      submitText: "Verify Email",
+      hasEmailField: false,
+      hasPasswordField: false,
+      hasOAuth: false,
+      onSubmit: async () => {
+        // This will be handled by the EmailConfirmation component
+      },
+    },
   }
 
   // Handle toast messages from URL params
@@ -204,16 +253,38 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
   }, [])
 
   const currState = stateInfo[authState]
+  
+  console.log('Current authState:', authState) // Debug log
+  console.log('Current currState:', currState) // Debug log
 
   // Show account creation form after successful signup
   if (showAccountCreation) {
+    console.log('Rendering AccountCreationForm') // Debug log
     return (
       <AccountCreationForm
         userEmail={email}
         userPassword={userPassword}
         onComplete={() => {
           setShowAccountCreation(false)
-          // No redirect - let the form handle navigation
+          // Redirect to home after successful profile creation
+          router.push('/')
+        }}
+      />
+    )
+  }
+
+  // Show email verification component
+  if (authState === AuthState.EmailVerification) {
+    console.log('Rendering EmailVerification state') // Debug log
+    return (
+      <OtpVerification
+        email={email}
+        onComplete={() => {
+          // After email verification, show profile setup
+          setShowAccountCreation(true)
+        }}
+        onBack={() => {
+          setAuthState(AuthState.Signup)
         }}
       />
     )
@@ -228,10 +299,10 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
           </div>
           <CardTitle className="text-2xl">{currState.title}</CardTitle>
           <CardDescription>
-            {authState === "signin" && "Sign in to your account to continue"}
-            {authState === "signup" && "Create your account to get started"}
-            {authState === "forgot_password" && "Enter your email to reset your password"}
-            {authState === "update_password" && "Enter your new password"}
+            {authState === AuthState.Signin && "Sign in to your account to continue"}
+            {authState === AuthState.Signup && "Create your account to get started"}
+            {authState === AuthState.ForgotPassword && "Enter your email to reset your password"}
+            {authState === AuthState.UpdatePassword && "Enter your new password"}
           </CardDescription>
         </CardHeader>
 
@@ -265,7 +336,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Password</Label>
-                    {authState === "signin" && (
+                    {authState === AuthState.Signin && (
                       <Link
                         href="#"
                         onClick={() => setAuthState(AuthState.ForgotPassword)}
@@ -302,7 +373,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
                   {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
                 </div>
 
-                {authState === "signup" && (
+                {authState === AuthState.Signup && (
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
                     <div className="relative">
@@ -326,13 +397,10 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
               </>
             )}
 
-            <Button type="submit" className="w-full" onClick={currState.onSubmit} disabled={loading}>
-              {loading ? "Please wait..." : currState.submitText}
-            </Button>
-
+            {/* Show OAuth buttons if enabled for current state */}
             {currState.hasOAuth && (
-              <>
-                <div className="relative my-4">
+              <div className="space-y-3">
+                <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t" />
                   </div>
@@ -341,61 +409,71 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
                   </div>
                 </div>
 
-                <Button
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  onClick={() => api.oauthSignin("google")}
-                  disabled={loading}
-                >
-                  <SiGoogle className="h-4 w-4 mr-2" />
-                  Google
-                </Button>
-              </>
+                <div className="grid grid-cols-1 gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => api.oauthSignin("google")}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    <SiGoogle className="mr-2 h-4 w-4" />
+                    Continue with Google
+                  </Button>
+                </div>
+              </div>
             )}
-
-            {/* Navigation Links */}
-            <div className="text-center text-sm space-y-2">
-              {authState === "signin" && (
-                <p>
-                  Don't have an account?{" "}
-                  <Link
-                    href="#"
-                    className="text-primary hover:underline"
-                    onClick={() => setAuthState(AuthState.Signup)}
-                  >
-                    Sign up
-                  </Link>
-                </p>
-              )}
-
-              {authState === "signup" && (
-                <p>
-                  Already have an account?{" "}
-                  <Link
-                    href="#"
-                    className="text-primary hover:underline"
-                    onClick={() => setAuthState(AuthState.Signin)}
-                  >
-                    Sign in
-                  </Link>
-                </p>
-              )}
-
-              {authState === "forgot_password" && (
-                <p>
-                  Remember your password?{" "}
-                  <Link
-                    href="#"
-                    className="text-primary hover:underline"
-                    onClick={() => setAuthState(AuthState.Signin)}
-                  >
-                    Sign in
-                  </Link>
-                </p>
-              )}
-            </div>
           </div>
         </CardContent>
+
+        <CardFooter>
+          <Button type="submit" className="w-full" onClick={currState.onSubmit} disabled={loading}>
+            {loading ? "Please wait..." : currState.submitText}
+          </Button>
+        </CardFooter>
+
+        {/* Show state switching links */}
+        <div className="px-6 pb-6 text-center space-y-2">
+          
+          {authState === AuthState.Signin && (
+            <p className="text-sm text-muted-foreground">
+              Don't have an account?{" "}
+              <Link
+                href="#"
+                onClick={() => setAuthState(AuthState.Signup)}
+                className="text-primary hover:underline"
+              >
+                Sign up
+              </Link>
+            </p>
+          )}
+
+          {authState === AuthState.Signup && (
+            <p className="text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link
+                href="#"
+                onClick={() => setAuthState(AuthState.Signin)}
+                className="text-primary hover:underline"
+              >
+                Sign in
+              </Link>
+            </p>
+          )}
+
+          {authState === AuthState.ForgotPassword && (
+            <p className="text-sm text-muted-foreground">
+              Remember your password?{" "}
+              <Link
+                href="#"
+                onClick={() => setAuthState(AuthState.Signin)}
+                className="text-primary hover:underline"
+              >
+                Sign in
+              </Link>
+            </p>
+          )}
+        </div>
       </Card>
     </div>
   )
