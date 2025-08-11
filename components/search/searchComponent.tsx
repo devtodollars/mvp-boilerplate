@@ -269,14 +269,6 @@ export default function Component({
     // Always apply text search for location queries, even if they are parsed as structured filters
     const isLocationSearch = parsedFilters && (parsedFilters.location || parsedFilters.county)
     
-    // Skip all filtering if there's no search query
-    if (!effectiveSearchQuery || effectiveSearchQuery.trim() === '') {
-      console.log('No search query, showing all listings')
-      setFilteredListings(listings)
-      if (onResultsUpdate) onResultsUpdate(listings)
-      return
-    }
-    
     // If search was explicitly cleared, show all listings
     if (searchCleared) {
       console.log('Search was cleared, showing all listings')
@@ -285,29 +277,36 @@ export default function Component({
       return
     }
     
-    console.log('Applying filters:', { effectiveSearchQuery, localSearchQuery, currentFilters, effectiveFilters, searchCleared })
-    
-    if (effectiveSearchQuery && (!hasStructuredFilters || isLocationSearch)) {
-      // Apply text search if we didn't extract structured filters, OR if it's a location search
-      const query = effectiveSearchQuery.toLowerCase()
-      const beforeCount = filtered.length
-      console.log('Applying text search for:', query)
-      filtered = filtered.filter(listing => 
-        listing.property_name?.toLowerCase().includes(query) ||
-        listing.address?.toLowerCase().includes(query) ||
-        listing.city?.toLowerCase().includes(query) ||
-        listing.area?.toLowerCase().includes(query) ||
-        listing.description?.toLowerCase().includes(query)
-      )
-      console.log(`Text search results: ${beforeCount} -> ${filtered.length}`)
-    } else if (hasStructuredFilters && !isLocationSearch) {
-      console.log('Skipping text search because we have structured filters:', parsedFilters)
+    // Apply text search only if there's a search query
+    if (effectiveSearchQuery && effectiveSearchQuery.trim() !== '') {
+      if (effectiveSearchQuery && (!hasStructuredFilters || isLocationSearch)) {
+        // Apply text search if we didn't extract structured filters, OR if it's a location search
+        const query = effectiveSearchQuery.toLowerCase()
+        const beforeCount = filtered.length
+        console.log('Applying text search for:', query)
+        filtered = filtered.filter(listing => 
+          listing.property_name?.toLowerCase().includes(query) ||
+          listing.address?.toLowerCase().includes(query) ||
+          listing.city?.toLowerCase().includes(query) ||
+          listing.area?.toLowerCase().includes(query) ||
+          listing.description?.toLowerCase().includes(query)
+        )
+        console.log(`Text search results: ${beforeCount} -> ${filtered.length}`)
+      } else if (hasStructuredFilters && !isLocationSearch) {
+        console.log('Skipping text search because we have structured filters:', parsedFilters)
+      }
     }
+    
+    console.log('Applying filters:', { effectiveSearchQuery, localSearchQuery, currentFilters, effectiveFilters, searchCleared })
 
     // Apply filters
     if (currentFilters || effectiveFilters) {
       const beforeCount = filtered.length
       const filtersToApply = { ...currentFilters, ...effectiveFilters }
+      
+      console.log('Applying filters:', filtersToApply)
+      console.log('Current filters state:', currentFilters)
+      console.log('Effective filters:', effectiveFilters)
       
       // Location filter
       if (filtersToApply.location) {
@@ -616,68 +615,70 @@ export default function Component({
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <header className={`sticky top-0 z-30 lg:hidden mb-4 mt-4 ${viewMode === "map" ? "bg-transparent" : "bg-white"}`}>
-        <div className="px-4 py-3">
-          {/* Search and Filters Row */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <EnhancedSearchBar 
-                onSearch={(query: string, filters: Partial<SearchFilters>) => {
-                  // Update the local search query for immediate filtering
-                  setLocalSearchQuery(query)
-                  // Apply parsed filters from the search query
-                  const parsedFilters = parseNaturalLanguageQuery(query)
-                  setCurrentFilters(prev => ({
-                    ...prev,
-                    ...parsedFilters,
-                    ...filters // Explicit filters from the search bar take precedence
-                  }))
-                  
-                  // If query is empty, reset all filters
-                  if (!query.trim()) {
-                    setCurrentFilters({
-                      location: '',
-                      county: '',
-                      city: '',
-                      minPrice: 0,
-                      maxPrice: 0,
-                      propertyType: '',
-                      roomType: '',
-                      size: 0,
-                      currentOccupants: 0,
-                      maxOccupants: 0,
-                      amenities: [],
-                      ensuite: false,
-                      pets: false,
-                      ownerOccupied: false,
-                      availableFrom: '',
-                      verifiedOnly: false,
-                      hasViewingTimes: false
-                    })
-                    setLocalSearchQuery("")
-                    setSearchCleared(true)
-                  } else {
-                    setSearchCleared(false)
-                  }
-                }}
-                placeholder="Search properties..."
-                initialValue={effectiveSearchQuery}
-              />
-            </div>
+      <header className={`sticky top-0 z-30 lg:hidden ${viewMode === "map" ? "bg-transparent" : "bg-white"}`}>
+        <div className="px-4 py-4">
+          {/* Search Bar - Full Width */}
+          <div className="mb-4">
+            <EnhancedSearchBar 
+              onSearch={(query: string, filters: Partial<SearchFilters>) => {
+                // Update the local search query for immediate filtering
+                setLocalSearchQuery(query)
+                // Apply parsed filters from the search query
+                const parsedFilters = parseNaturalLanguageQuery(query)
+                setCurrentFilters(prev => ({
+                  ...prev,
+                  ...parsedFilters,
+                  ...filters // Explicit filters from the search bar take precedence
+                }))
+                
+                // If query is empty, reset all filters
+                if (!query.trim()) {
+                  setCurrentFilters({
+                    location: '',
+                    county: '',
+                    city: '',
+                    minPrice: 0,
+                    maxPrice: 0,
+                    propertyType: '',
+                    roomType: '',
+                    size: 0,
+                    currentOccupants: 0,
+                    maxOccupants: 0,
+                    amenities: [],
+                    ensuite: false,
+                    pets: false,
+                    ownerOccupied: false,
+                    availableFrom: '',
+                    verifiedOnly: false,
+                    hasViewingTimes: false
+                  })
+                  setLocalSearchQuery("")
+                  setSearchCleared(true)
+                } else {
+                  setSearchCleared(false)
+                }
+              }}
+              placeholder="Search properties..."
+              initialValue={effectiveSearchQuery}
+            />
+          </div>
+          
+          {/* Filters Row - Better Layout */}
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="text-xs text-muted-foreground text-right min-w-[80px]">
-                {filteredListings.length} found
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(true)}
-                className="h-10 px-3"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
+              <span className="text-sm text-muted-foreground">
+                {filteredListings.length} properties found
+              </span>
             </div>
+            <Button
+              variant="outline"
+              size="default"
+              onClick={() => setShowFilters(true)}
+              className="h-11 px-4"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
           </div>
           
           {/* Active Filters Display - Mobile */}
