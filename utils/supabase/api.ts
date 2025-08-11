@@ -157,7 +157,6 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       const res = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: getURL('/api/reset_password')
       });
-      console.log(res);
       if (res.error) {
         if (res.error.message.includes('User not found')) {
           throw new Error('No account found with this email address.');

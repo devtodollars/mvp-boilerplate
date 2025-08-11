@@ -35,10 +35,13 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!email) {
-      newErrors.email = "Email is required"
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Please enter a valid email address"
+    // Only validate email if the current state has an email field
+    if (authState === AuthState.Signin || authState === AuthState.Signup || authState === AuthState.ForgotPassword) {
+      if (!email) {
+        newErrors.email = "Email is required"
+      } else if (!/\S+@\S+\.\S+/.test(email)) {
+        newErrors.email = "Please enter a valid email address"
+      }
     }
 
     if (!password) {
@@ -47,7 +50,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
       newErrors.password = "Password must be at least 6 characters"
     }
 
-    if (authState === AuthState.Signup && password !== confirmPassword) {
+    if ((authState === AuthState.Signup || authState === AuthState.UpdatePassword) && password !== confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match"
     }
 
@@ -167,9 +170,18 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
         try {
           await api.passwordReset(email)
           toast({
-            title: "Email Sent!",
-            description: "Check your email to reset your password",
+            title: "Reset Email Sent! 📧",
+            description: "We've sent you an email with a link to reset your password. Please check your inbox (and spam folder).",
           })
+          // Clear the email field after successful send
+          setEmail("")
+          // Show additional info
+          setTimeout(() => {
+            toast({
+              title: "Next Steps",
+              description: "Click the link in your email to continue. The link will expire in 1 hour.",
+            })
+          }, 2000)
         } catch (e) {
           if (e instanceof Error) {
             toast({
@@ -198,6 +210,10 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
             title: "Password Updated",
             description: "Your password has been updated successfully.",
           })
+          // Redirect to dashboard after successful password update
+          setTimeout(() => {
+            router.push('/dashboard')
+          }, 1500)
         } catch (e) {
           if (e instanceof Error) {
             toast({
@@ -250,16 +266,12 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
         100,
       )
     }
-  }, [])
+  }, [searchParams, toast])
 
   const currState = stateInfo[authState]
-  
-  console.log('Current authState:', authState) // Debug log
-  console.log('Current currState:', currState) // Debug log
 
   // Show account creation form after successful signup
   if (showAccountCreation) {
-    console.log('Rendering AccountCreationForm') // Debug log
     return (
       <AccountCreationForm
         userEmail={email}
@@ -275,7 +287,6 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
 
   // Show email verification component
   if (authState === AuthState.EmailVerification) {
-    console.log('Rendering EmailVerification state') // Debug log
     return (
       <OtpVerification
         email={email}
@@ -293,20 +304,24 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="bg-primary/10 p-3 rounded-full w-fit mx-auto mb-4">
-            <User className="h-8 w-8 text-primary" />
-          </div>
-          <CardTitle className="text-2xl">{currState.title}</CardTitle>
-          <CardDescription>
-            {authState === AuthState.Signin && "Sign in to your account to continue"}
-            {authState === AuthState.Signup && "Create your account to get started"}
-            {authState === AuthState.ForgotPassword && "Enter your email to reset your password"}
-            {authState === AuthState.UpdatePassword && "Enter your new password"}
-          </CardDescription>
-        </CardHeader>
+        <form onSubmit={(e) => { 
+          e.preventDefault(); 
+          currState.onSubmit(); 
+        }}>
+          <CardHeader className="text-center">
+            <div className="bg-primary/10 p-3 rounded-full w-fit mx-auto mb-4">
+              <User className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">{currState.title}</CardTitle>
+            <CardDescription>
+              {authState === AuthState.Signin && "Sign in to your account to continue"}
+              {authState === AuthState.Signup && "Create your account to get started"}
+              {authState === AuthState.ForgotPassword && "Enter your email to reset your password"}
+              {authState === AuthState.UpdatePassword && "Enter your new password"}
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent>
+          <CardContent>
           <div className="space-y-4">
             {currState.hasEmailField && (
               <div className="space-y-2">
@@ -373,7 +388,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
                   {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
                 </div>
 
-                {authState === AuthState.Signup && (
+                {(authState === AuthState.Signup || authState === AuthState.UpdatePassword) && (
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
                     <div className="relative">
@@ -427,7 +442,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
         </CardContent>
 
         <CardFooter>
-          <Button type="submit" className="w-full" onClick={currState.onSubmit} disabled={loading}>
+          <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Please wait..." : currState.submitText}
           </Button>
         </CardFooter>
@@ -474,6 +489,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
             </p>
           )}
         </div>
+        </form>
       </Card>
     </div>
   )

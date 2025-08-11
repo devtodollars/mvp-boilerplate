@@ -172,7 +172,7 @@ export default function NotificationBell() {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-80">
+      <DropdownMenuContent align="end" className="w-80 sm:w-96">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>General Notifications</span>
           {notificationCount > 0 && (
@@ -184,7 +184,7 @@ export default function NotificationBell() {
 
         <DropdownMenuSeparator />
 
-        <ScrollArea className="h-80">
+        <ScrollArea className="h-80 sm:h-96">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
@@ -205,7 +205,7 @@ export default function NotificationBell() {
                   className="group relative"
                 >
                   <DropdownMenuItem
-                    className="flex items-start gap-3 p-3 cursor-default hover:bg-gray-50 w-full"
+                    className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 cursor-default hover:bg-gray-50 w-full"
                   >
                     <div className={`mt-1 ${getNotificationColor(notification.type)}`}>
                       {getNotificationIcon(notification.type)}

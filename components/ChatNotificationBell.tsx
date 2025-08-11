@@ -263,7 +263,7 @@ export default function ChatNotificationBell() {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-80">
+      <DropdownMenuContent align="end" className="w-80 sm:w-96">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Recent Chats</span>
           {chatRooms.length > 0 && (
@@ -275,7 +275,7 @@ export default function ChatNotificationBell() {
 
         <DropdownMenuSeparator />
 
-        <ScrollArea className="h-80">
+        <ScrollArea className="h-80 sm:h-96">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
@@ -301,7 +301,7 @@ export default function ChatNotificationBell() {
                 return (
                   <DropdownMenuItem
                     key={chatRoom.id}
-                    className="flex items-start gap-3 p-3 cursor-pointer hover:bg-gray-50"
+                    className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 cursor-pointer hover:bg-gray-50"
                     onClick={() => handleChatRoomClick(chatRoom)}
                   >
                     <div className="mt-1 text-blue-600">

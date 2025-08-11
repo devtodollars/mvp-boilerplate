@@ -71,6 +71,7 @@ interface AdvancedSearchFiltersProps {
   onFiltersChange: (filters: SearchFilters) => void
   onClearFilters: () => void
   totalResults: number
+  hideMobileButton?: boolean
 }
 
 const COUNTIES = [
@@ -145,7 +146,8 @@ export default function AdvancedSearchFilters({
   filters,
   onFiltersChange,
   onClearFilters,
-  totalResults
+  totalResults,
+  hideMobileButton = false
 }: AdvancedSearchFiltersProps) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -171,28 +173,29 @@ export default function AdvancedSearchFilters({
 
   return (
     <>
-      {/* Mobile Filter Button */}
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>
-          <Button variant="outline" className="lg:hidden gap-2">
-            <Filter className="h-4 w-4" />
-            Filters
-            {activeFiltersCount > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {activeFiltersCount}
-              </Badge>
-            )}
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-[400px] sm:w-[540px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <SlidersHorizontal className="h-5 w-5" />
-              Search Filters
+      {/* Mobile Filter Button - Only show if not hidden */}
+      {!hideMobileButton && (
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" className="lg:hidden gap-2">
+              <Filter className="h-4 w-4" />
+              Filters
               {activeFiltersCount > 0 && (
-                <Badge variant="secondary">
-                  {activeFiltersCount} active
+                <Badge variant="secondary" className="ml-1">
+                  {activeFiltersCount}
                 </Badge>
+              )}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[400px] sm:w-[540px] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <SlidersHorizontal className="h-5 w-5" />
+                Search Filters
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary">
+                    {activeFiltersCount} active
+                  </Badge>
               )}
             </SheetTitle>
           </SheetHeader>
@@ -206,6 +209,7 @@ export default function AdvancedSearchFilters({
           </div>
         </SheetContent>
       </Sheet>
+      )}
 
       {/* Desktop Filters */}
       <div className="hidden lg:block">
@@ -234,6 +238,18 @@ export default function AdvancedSearchFilters({
           </CardContent>
         </Card>
       </div>
+
+      {/* Mobile Filter Content - Show when hideMobileButton is true */}
+      {hideMobileButton && (
+        <div className="lg:hidden">
+          <FilterContent 
+            filters={filters} 
+            onFiltersChange={onFiltersChange}
+            onClearFilters={clearFilters}
+            totalResults={totalResults}
+          />
+        </div>
+      )}
     </>
   )
 }

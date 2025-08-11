@@ -41,7 +41,21 @@ npm run dev
 
 * Verify acount deletion deletes also the objects from buckets
 * Privacy Policy and terms of conditions
-* Creating user with existing email and passowrd reset handling
+* Creating user with existing email 
+passowrd reset handling
+NOTIFICATIONS REFRESH
+MESSAGES what ones are read 
+make notifications and messages dropdowns bigger
+Cant clear indivitaul notifications anymore
+Messages notification takes time or need refresh
+make the map bit bigger maybe like the left hand side
+Clicking on map with no property selected error
+mobile going to view property from management dashboard
+
+Cant scroll page when chat is open
+
+
+MOBILE!!!!!!
 
 
 ### MVP Features
@@ -49,7 +63,12 @@ npm run dev
 #### WIP - Dominik
 
 TODO
-* Notifications
+* Notifications Testing
+* Chat read/unread fix chat top tab
+* Reset Password and test Auth logging in and deletion
+
+
+
 
 
 #### TODO

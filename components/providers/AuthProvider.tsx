@@ -31,8 +31,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       
-      console.log('Auth state change:', event, session?.user?.email);
-      
       if (event === 'SIGNED_OUT') {
         // Clear user state immediately on sign out
         setUser(null);
@@ -51,7 +49,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Handle refresh token errors gracefully
         if (error.code === 'refresh_token_not_found' || 
             error.message?.includes('Invalid Refresh Token')) {
-          console.log('No valid session found on initial load');
           setUser(null);
         } else {
           console.error('Session error:', error);

@@ -674,7 +674,8 @@ export default function Component({
                 onClick={() => setShowFilters(true)}
                 className="h-10 px-3"
               >
-                <Filter className="h-4 w-4" />
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
               </Button>
             </div>
           </div>
@@ -1343,6 +1344,30 @@ export default function Component({
           </div>
         </div>
       )}
+
+      {/* Mobile Filter Sheet */}
+      <Sheet open={showFilters} onOpenChange={setShowFilters}>
+        <SheetContent side="left" className="w-[90vw] sm:w-[400px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Search Filters
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-6 overflow-y-auto max-h-[calc(100vh-120px)] pb-6">
+            <div className="space-y-6">
+             
+              <AdvancedSearchFilters
+                filters={currentFilters}
+                onFiltersChange={handleFiltersChange}
+                onClearFilters={handleClearFilters}
+                totalResults={filteredListings.length}
+                hideMobileButton={true}
+              />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Mobile Property Details Sheet */}
       <Sheet open={showPropertyDetails} onOpenChange={setShowPropertyDetails}>

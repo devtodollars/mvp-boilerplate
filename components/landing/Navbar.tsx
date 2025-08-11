@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -57,8 +57,26 @@ export const Navbar = () => {
   const { toast } = useToast();
   const api = createApiClient(createClient());
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
   const pathname = usePathname();
   const { user } = useAuth();
+
+  // Handle window resize for better responsive behavior
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
   const handleAuth = async () => {
     if (user) {
       return router.push('/dashboard');
@@ -99,7 +117,6 @@ export const Navbar = () => {
           </NavigationMenuItem>
 
           {/* mobile */}
-          {pathname === '/' && (
           <span className="flex md:hidden"> 
             {/* <ModeToggle /> */}
 
@@ -117,19 +134,28 @@ export const Navbar = () => {
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col justify-center items-center gap-2 mt-4">
-                  {routeList.map(({ href, label }: RouteProps) => (
-                    <a
-                      rel="noreferrer noopener"
-                      key={label}
-                      href={href}
-                      onClick={() => setIsOpen(false)}
-                      className={buttonVariants({ variant: 'ghost' })}
-                    >
-                      {label}
-                    </a>
-                  ))}
+                  {pathname === '/' && (
+                    <>
+                      {routeList.map(({ href, label }: RouteProps) => (
+                        <a
+                          rel="noreferrer noopener"
+                          key={label}
+                          href={href}
+                          onClick={() => setIsOpen(false)}
+                          className={buttonVariants({ variant: 'ghost' })}
+                        >
+                          {label}
+                        </a>
+                      ))}
+                    </>
+                  )}
                   {user ? (
                     <div className="flex flex-col gap-2">
+                      {/* Mobile Notifications */}
+                      <div className="flex justify-center gap-2 mb-2">
+                        <NotificationBell />
+                        <ChatNotificationBell />
+                      </div>
                       <Button
                         variant="ghost"
                         onClick={handleAuth}
@@ -156,7 +182,6 @@ export const Navbar = () => {
               </SheetContent>
             </Sheet>
           </span>
-           )}
 
           {/* desktop */}
           {pathname === '/' && (
