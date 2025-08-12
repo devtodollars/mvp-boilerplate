@@ -1105,15 +1105,18 @@ function MessageBubble({
   return (
     <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} w-full`}>
       <div className={`flex items-start gap-2 w-full max-w-[400px] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-        <Avatar className="h-6 w-6 flex-shrink-0">
-          <AvatarImage
-            src={avatarUrl}
-            alt={senderName}
-          />
-          <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
-            {senderName.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
+        {/* Only show avatar for messages from other person */}
+        {!isOwnMessage && (
+          <Avatar className="h-6 w-6 flex-shrink-0">
+            <AvatarImage
+              src={avatarUrl}
+              alt={senderName}
+            />
+            <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
+              {senderName.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+        )}
         <div className={`flex flex-col min-w-0 flex-1 ${isOwnMessage ? 'items-end' : 'items-start'}`}>
           <div className={`rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap w-full max-w-[320px] ${isOwnMessage
             ? 'bg-blue-500 text-white'
