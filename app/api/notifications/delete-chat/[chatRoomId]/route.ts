@@ -33,7 +33,7 @@ export async function DELETE(
       .delete()
       .eq('user_id', user.id)
       .eq('type', 'message')
-      .eq('data->application_id', chatRoom.application_id)
+      .eq('data->>application_id', chatRoom.application_id)
 
     if (deleteError) {
       console.error('Error deleting notifications:', deleteError)

@@ -84,7 +84,7 @@ describe('API Client', () => {
     it('should throw error when email is not provided', async () => {
       const mockCredentials = { password: 'password123' };
       
-      await expect(apiClient.passwordSignup(mockCredentials)).rejects.toThrow('Valid email is required for signup');
+      await expect(apiClient.passwordSignup(mockCredentials)).rejects.toThrow('Valid email or phone is required for signup');
     });
 
     it('should throw error when password is not provided', async () => {
@@ -214,7 +214,7 @@ describe('API Client', () => {
     it('should throw error when email is not provided', async () => {
       const mockCredentials = { password: 'password123' };
       
-      await expect(apiClient.passwordSignin(mockCredentials)).rejects.toThrow('Valid email is required for signin');
+      await expect(apiClient.passwordSignin(mockCredentials)).rejects.toThrow('Valid email or phone is required for signin');
     });
 
     it('should throw error when password is not provided', async () => {

@@ -105,19 +105,19 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
   const calculateUnreadCount = useCallback(async (applicationId: string, currentUserId: string) => {
     try {
       console.log('Calculating unread count for application:', applicationId, 'user:', currentUserId)
-      
+
       const { count, error } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', currentUserId)
         .eq('type', 'message')
         .eq('data->application_id', applicationId)
-      
+
       if (error) {
         console.error('Error counting notifications:', error)
         return 0
       }
-      
+
       console.log('Unread count for application', applicationId, ':', count)
       return count || 0
     } catch (error) {
@@ -130,11 +130,11 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
   const markMessagesAsRead = useCallback(async (chatRoomId: string) => {
     try {
       console.log('Attempting to mark messages as read for chat room:', chatRoomId)
-      
+
       const response = await fetch(`/api/chat/mark-read/${chatRoomId}`, {
         method: 'POST'
       })
-      
+
       if (!response.ok) {
         console.error('Failed to mark messages as read:', response.status, response.statusText)
         const errorText = await response.text()
@@ -151,11 +151,11 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
   const deleteChatNotifications = useCallback(async (chatRoomId: string) => {
     try {
       console.log('Attempting to delete chat notifications for chat room:', chatRoomId)
-      
+
       const response = await fetch(`/api/notifications/delete-chat/${chatRoomId}`, {
         method: 'DELETE'
       })
-      
+
       if (!response.ok) {
         console.error('Failed to delete chat notifications:', response.status, response.statusText)
         const errorText = await response.text()
@@ -245,7 +245,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       // Create tabs for each application using chat room data
       const newTabsPromises = validChatRooms.map(async ({ applicationId, chatRoom }) => {
         const isOwner = chatRoom.owner_id === currentUser
-        
+
         // Get the actual name of the other party from chat room data
         let otherPartyName = ''
         if (isOwner) {
@@ -255,7 +255,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
           // User is applicant, so other party is property owner
           otherPartyName = chatRoom.owner?.full_name || 'Property Owner'
         }
-        
+
         const propertyName = chatRoom.application?.listing?.property_name || 'Property'
 
         console.log(`Creating tab for app ${applicationId}:`, {
@@ -296,10 +296,10 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
             ...existingTabs.get(tab.id)
           }))
 
-        console.log('Setting chat tabs:', mergedTabs.map(t => ({ 
-          id: t.id, 
-          otherPartyName: t.otherPartyName, 
-          propertyName: t.propertyName 
+        console.log('Setting chat tabs:', mergedTabs.map(t => ({
+          id: t.id,
+          otherPartyName: t.otherPartyName,
+          propertyName: t.propertyName
         })))
 
         return mergedTabs
@@ -317,10 +317,10 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
     if (currentUser) {
       console.log('User loaded, fetching active applications...')
       fetchActiveApplications().then(tabs => {
-        console.log('Fetched tabs with names:', tabs.map(t => ({ 
-          id: t.id, 
-          otherPartyName: t.otherPartyName, 
-          propertyName: t.propertyName 
+        console.log('Fetched tabs with names:', tabs.map(t => ({
+          id: t.id,
+          otherPartyName: t.otherPartyName,
+          propertyName: t.propertyName
         })))
       })
     } else {
@@ -335,7 +335,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
     } else {
       document.body.style.overflow = 'unset'
     }
-    
+
     return () => {
       document.body.style.overflow = 'unset'
     }
@@ -361,10 +361,10 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       // Update last message and time for the chat tab
       if (messages.length > 0) {
         // Find the application ID for this chat room
-        const applicationId = Object.keys(chatRooms).find(key => 
+        const applicationId = Object.keys(chatRooms).find(key =>
           chatRooms[key].id === chatRoomId
         )
-        
+
         if (applicationId) {
           setChatTabs(prev => prev.map(tab => {
             if (tab.applicationId === applicationId) {
@@ -460,12 +460,17 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       // Load messages
       await loadMessages(chatRoomId)
 
-      // Mark messages as read and delete notifications
+      // Mark messages as read and delete notifications only if there are unread messages
       console.log('Marking messages as read for chat room:', chatRoomId)
       await markMessagesAsRead(chatRoomId)
-      
-      console.log('Deleting chat notifications for chat room:', chatRoomId)
-      await deleteChatNotifications(chatRoomId)
+
+      // Only delete notifications if there were unread messages
+      if (existingTab.unreadCount > 0) {
+        console.log('Deleting chat notifications for chat room:', chatRoomId)
+        await deleteChatNotifications(chatRoomId)
+      } else {
+        console.log('No unread messages, skipping notification deletion')
+      }
 
       // Update unread count to 0 for this chat
       console.log('Setting unread count to 0 for application:', applicationId)
@@ -510,9 +515,11 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
     // Load messages
     await loadMessages(chatRoomId)
 
-    // Mark messages as read and delete notifications
+    // Mark messages as read and delete notifications only if there are unread messages
     await markMessagesAsRead(chatRoomId)
-    await deleteChatNotifications(chatRoomId)
+
+    // For new chats, there shouldn't be unread messages, so skip deletion
+    console.log('New chat opened, skipping notification deletion')
 
     // Subscribe to realtime for this room
     subscribeToRoom(chatRoomId)
@@ -654,14 +661,14 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
           // Update unread count for this chat room from notifications table
           if (currentUser && newMessage.sender_id !== currentUser) {
             // Find the application ID for this chat room
-            const applicationId = Object.keys(chatRooms).find(key => 
+            const applicationId = Object.keys(chatRooms).find(key =>
               chatRooms[key].id === roomId
             )
-            
+
             if (applicationId) {
               // Recalculate unread count from notifications table
               const newUnreadCount = await calculateUnreadCount(applicationId, currentUser)
-              
+
               setChatTabs(prev => prev.map(tab => {
                 if (tab.applicationId === applicationId) {
                   return {
@@ -734,8 +741,8 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
   }, [messages, chatRooms])
 
   // Filter conversations based on search query
-  const filteredChatTabs = chatTabs.filter(tab => 
-    searchQuery === '' || 
+  const filteredChatTabs = chatTabs.filter(tab =>
+    searchQuery === '' ||
     tab.otherPartyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     tab.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     tab.applicationStatus.toLowerCase().includes(searchQuery.toLowerCase())
@@ -775,244 +782,243 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       {/* Single Chat Window with Conversation List */}
       {/* DONT ADD ANY ICON OR BUTTON ! */}
       {isPanelOpen && (
-        <div 
+        <div
           className="overscroll-contain"
           onWheel={(e) => e.stopPropagation()}
           onTouchMove={(e) => e.stopPropagation()}
         >
           <Card className="w-[95vw] sm:w-[800px] md:w-[900px] lg:w-[1000px] h-[500px] sm:h-[600px] max-h-[80vh] flex flex-col shadow-xl border-0 overflow-hidden">
-        <CardHeader className="p-3 pb-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-          <div className="flex items-center justify-between gap-2 min-w-0">
-            <CardTitle className="text-sm font-medium truncate flex-1 min-w-0 max-w-full">
-              {selectedTab?.title || 'Chats'}
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 hover:bg-red-100"
-              onClick={() => setIsPanelOpen(false)}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-        </CardHeader>
-
-          <CardContent className="p-0 flex-1 min-h-0 flex flex-col sm:flex-row">
-            {/* Left: conversation list - organized by role */}
-            <div className="w-full sm:w-80 sm:border-r border-b sm:border-b-0 bg-gray-50 h-full flex flex-col flex-shrink-0 min-w-0 max-w-80">
-              <div className="p-3 border-b bg-white">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-gray-700">Conversations</h3>
-                  <p className="text-xs text-gray-500">
-                    {searchQuery ? `${filteredChatTabs.length} of ${chatTabs.length}` : `${chatTabs.length} total`}
-                  </p>
-                </div>
-                {/* Search bar */}
-                <div className="relative">
-                  <Input
-                    placeholder="Search conversations..."
-                    className="h-8 text-xs pr-8"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
-                </div>
+            <CardHeader className="p-3 pb-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <CardTitle className="text-sm font-medium truncate flex-1 min-w-0 max-w-full">
+                  {selectedTab?.title || 'Chats'}
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 hover:bg-red-100"
+                  onClick={() => setIsPanelOpen(false)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
               </div>
-              
-              <ScrollArea className="flex-1">
-                <div className="p-2 space-y-3">
-                  {/* Property Owner Section */}
-                  {filteredChatTabs.filter(item => item.role === 'owner').length > 0 && (
-                    <div>
-                      <div className="px-2 py-1 mb-2">
-                        <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-2">
-                          <Building2 className="h-3 w-3" />
-                          My Properties
-                        </h4>
-                      </div>
-                      <div className="space-y-1">
-                        {filteredChatTabs.filter(item => item.role === 'owner').map(item => (
-                          <button
-                            key={item.id}
-                            className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 hover:bg-white hover:shadow-sm ${
-                              item.applicationId === selectedApplicationId 
-                                ? 'bg-white shadow-sm border-l-4 border-blue-500' 
-                                : item.unreadCount > 0
-                                ? 'bg-blue-50 border-l-2 border-blue-300 hover:bg-blue-100'
-                                : 'hover:border-l-2 hover:border-gray-200'
-                            }`}
-                            onClick={() => openChat(item.applicationId)}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <div className={`truncate ${item.unreadCount > 0 ? 'font-semibold text-blue-900' : 'font-medium text-gray-900'}`}>
-                                {item.otherPartyName}
-                              </div>
-                              {item.unreadCount > 0 && (
-                                <Badge variant="destructive" className="h-5 w-5 p-0 text-xs flex-shrink-0">
-                                  {item.unreadCount}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-500 truncate leading-tight mb-1">
-                              {item.propertyName}
-                            </div>
-                            {item.lastMessage && (
-                              <div className="text-xs text-gray-600 truncate leading-tight mb-1">
-                                {item.lastMessage}
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <Badge 
-                                variant={item.applicationStatus === 'accepted' ? 'default' : 
-                                       item.applicationStatus === 'pending' ? 'secondary' : 
-                                       item.applicationStatus === 'rejected' ? 'destructive' : 'outline'}
-                                className="text-xs h-4 px-2"
-                              >
-                                {item.applicationStatus}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs h-4 px-2 text-blue-600 border-blue-200">
-                                {item.role === 'owner' ? 'Applicant' : 'Property Owner'}
-                              </Badge>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+            </CardHeader>
 
-                  {/* Applicant Section */}
-                  {filteredChatTabs.filter(item => item.role === 'applicant').length > 0 && (
-                    <div>
-                      <div className="px-2 py-1 mb-2">
-                        <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-2">
-                          <User className="h-3 w-3" />
-                          My Applications
-                        </h4>
-                      </div>
-                      <div className="space-y-1">
-                        {filteredChatTabs.filter(item => item.role === 'applicant').map(item => (
-                          <button
-                            key={item.id}
-                            className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 hover:bg-white hover:shadow-sm ${
-                              item.applicationId === selectedApplicationId 
-                                ? 'bg-white shadow-sm border-l-4 border-blue-500' 
-                                : item.unreadCount > 0
-                                ? 'bg-blue-50 border-l-2 border-blue-300 hover:bg-blue-100'
-                                : 'hover:border-l-2 hover:border-gray-200'
-                            }`}
-                            onClick={() => openChat(item.applicationId)}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <div className={`truncate ${item.unreadCount > 0 ? 'font-semibold text-blue-900' : 'font-medium text-gray-900'}`}>
-                                {item.otherPartyName}
-                              </div>
-                              {item.unreadCount > 0 && (
-                                <Badge variant="destructive" className="h-5 w-5 p-0 text-xs flex-shrink-0">
-                                  {item.unreadCount}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-500 truncate leading-tight mb-1">
-                              {item.propertyName}
-                            </div>
-                            {item.lastMessage && (
-                              <div className="text-xs text-gray-600 truncate leading-tight mb-1">
-                                {item.lastMessage}
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <Badge 
-                                variant={item.applicationStatus === 'accepted' ? 'default' : 
-                                       item.applicationStatus === 'pending' ? 'secondary' : 
-                                       item.applicationStatus === 'rejected' ? 'destructive' : 'outline'}
-                                className="text-xs h-4 px-2"
-                              >
-                                {item.applicationStatus}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs h-4 px-2 text-blue-600 border-blue-200">
-                                {item.role === 'owner' ? 'Applicant' : 'Property Owner'}
-                              </Badge>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {filteredChatTabs.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">
-                        {searchQuery ? 'No conversations found' : 'No conversations yet'}
-                      </p>
-                      <p className="text-xs">
-                        {searchQuery ? 'Try adjusting your search terms' : 'Start chatting with applicants or property owners'}
-                      </p>
-                    </div>
-                  )}
+            <CardContent className="p-0 flex-1 min-h-0 flex flex-col sm:flex-row">
+              {/* Left: conversation list - organized by role */}
+              <div className="w-full sm:w-80 sm:border-r border-b sm:border-b-0 bg-gray-50 h-full flex flex-col flex-shrink-0 min-w-0 max-w-80">
+                <div className="p-3 border-b bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-semibold text-gray-700">Conversations</h3>
+                    <p className="text-xs text-gray-500">
+                      {searchQuery ? `${filteredChatTabs.length} of ${chatTabs.length}` : `${chatTabs.length} total`}
+                    </p>
+                  </div>
+                  {/* Search bar */}
+                  <div className="relative">
+                    <Input
+                      placeholder="Search conversations..."
+                      className="h-8 text-xs pr-8"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+                  </div>
                 </div>
-              </ScrollArea>
-            </div>
 
-            {/* Right: message thread - FIXED WIDTH */}
-            <div className="w-full sm:w-[calc(100%-20rem)] lg:w-[calc(100%-22rem)] flex flex-col min-h-0 flex-shrink-0">
-              <div className="p-3 pb-0 text-sm font-medium truncate min-w-0 max-w-full border-b">
-                {selectedTab?.title || 'Select a conversation'}
-              </div>
-              <div className="flex-1 min-h-0 flex flex-col">
-                <ScrollArea className="flex-1 p-3">
-                  <div className="space-y-3 pr-2 min-w-0">
-                    {(() => {
-                      const chatRoom = selectedTab ? chatRooms[selectedTab.applicationId] : undefined
-                      const chatMessages = chatRoom ? (messages[chatRoom.id] || []) : []
-                      return chatMessages.length > 0 ? (
-                        chatMessages.map((message: Message) => (
-                          <MessageBubble
-                            key={message.id}
-                            message={message}
-                            isOwnMessage={currentUser === message.sender_id}
-                          />
-                        ))
-                      ) : (
-                        <div className="text-center py-8 text-gray-500 text-sm">
-                          <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          {selectedTab ? 'No messages yet' : 'Choose a chat to start'}
+                <ScrollArea className="flex-1">
+                  <div className="p-2 space-y-3">
+                    {/* Property Owner Section */}
+                    {filteredChatTabs.filter(item => item.role === 'owner').length > 0 && (
+                      <div>
+                        <div className="px-2 py-1 mb-2">
+                          <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-2">
+                            <Building2 className="h-3 w-3" />
+                            My Properties
+                          </h4>
                         </div>
-                      )
-                    })()}
-                    <div ref={(el) => {
-                      const room = selectedTab ? chatRooms[selectedTab.applicationId] : undefined
-                      if (room) messageEndRefs.current[room.id] = el
-                    }} />
+                        <div className="space-y-1">
+                          {filteredChatTabs.filter(item => item.role === 'owner').map(item => (
+                            <button
+                              key={item.id}
+                              className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 hover:bg-white hover:shadow-sm ${item.applicationId === selectedApplicationId
+                                  ? 'bg-white shadow-sm border-l-4 border-blue-500'
+                                  : item.unreadCount > 0
+                                    ? 'bg-blue-50 border-l-2 border-blue-300 hover:bg-blue-100'
+                                    : 'hover:border-l-2 hover:border-gray-200'
+                                }`}
+                              onClick={() => openChat(item.applicationId)}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <div className={`truncate ${item.unreadCount > 0 ? 'font-semibold text-blue-900' : 'font-medium text-gray-900'}`}>
+                                  {item.otherPartyName}
+                                </div>
+                                {item.unreadCount > 0 && (
+                                  <Badge variant="destructive" className="h-5 w-5 p-0 text-xs flex-shrink-0">
+                                    {item.unreadCount}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-500 truncate leading-tight mb-1">
+                                {item.propertyName}
+                              </div>
+                              {item.lastMessage && (
+                                <div className="text-xs text-gray-600 truncate leading-tight mb-1">
+                                  {item.lastMessage}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant={item.applicationStatus === 'accepted' ? 'default' :
+                                    item.applicationStatus === 'pending' ? 'secondary' :
+                                      item.applicationStatus === 'rejected' ? 'destructive' : 'outline'}
+                                  className="text-xs h-4 px-2"
+                                >
+                                  {item.applicationStatus}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs h-4 px-2 text-blue-600 border-blue-200">
+                                  {item.role === 'owner' ? 'Applicant' : 'Property Owner'}
+                                </Badge>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Applicant Section */}
+                    {filteredChatTabs.filter(item => item.role === 'applicant').length > 0 && (
+                      <div>
+                        <div className="px-2 py-1 mb-2">
+                          <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-2">
+                            <User className="h-3 w-3" />
+                            My Applications
+                          </h4>
+                        </div>
+                        <div className="space-y-1">
+                          {filteredChatTabs.filter(item => item.role === 'applicant').map(item => (
+                            <button
+                              key={item.id}
+                              className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 hover:bg-white hover:shadow-sm ${item.applicationId === selectedApplicationId
+                                  ? 'bg-white shadow-sm border-l-4 border-blue-500'
+                                  : item.unreadCount > 0
+                                    ? 'bg-blue-50 border-l-2 border-blue-300 hover:bg-blue-100'
+                                    : 'hover:border-l-2 hover:border-gray-200'
+                                }`}
+                              onClick={() => openChat(item.applicationId)}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <div className={`truncate ${item.unreadCount > 0 ? 'font-semibold text-blue-900' : 'font-medium text-gray-900'}`}>
+                                  {item.otherPartyName}
+                                </div>
+                                {item.unreadCount > 0 && (
+                                  <Badge variant="destructive" className="h-5 w-5 p-0 text-xs flex-shrink-0">
+                                    {item.unreadCount}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-500 truncate leading-tight mb-1">
+                                {item.propertyName}
+                              </div>
+                              {item.lastMessage && (
+                                <div className="text-xs text-gray-600 truncate leading-tight mb-1">
+                                  {item.lastMessage}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant={item.applicationStatus === 'accepted' ? 'default' :
+                                    item.applicationStatus === 'pending' ? 'secondary' :
+                                      item.applicationStatus === 'rejected' ? 'destructive' : 'outline'}
+                                  className="text-xs h-4 px-2"
+                                >
+                                  {item.applicationStatus}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs h-4 px-2 text-blue-600 border-blue-200">
+                                  {item.role === 'owner' ? 'Applicant' : 'Property Owner'}
+                                </Badge>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {filteredChatTabs.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">
+                          {searchQuery ? 'No conversations found' : 'No conversations yet'}
+                        </p>
+                        <p className="text-xs">
+                          {searchQuery ? 'Try adjusting your search terms' : 'Start chatting with applicants or property owners'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </ScrollArea>
-
-                {/* Message input */}
-                {selectedTab && (
-                  <div className="flex gap-2 p-3 border-t bg-gray-50">
-                    <Input
-                      value={newMessages[selectedTab.applicationId] || ''}
-                      onChange={(e) => setNewMessages(prev => ({
-                        ...prev,
-                        [selectedTab.applicationId]: e.target.value}
-                      ))}
-                      onKeyPress={(e) => handleKeyPress(e, selectedTab.applicationId)}
-                      placeholder="Type a message..."
-                      className="flex-1 text-sm"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => sendMessage(selectedTab.applicationId)}
-                      disabled={!newMessages[selectedTab.applicationId]?.trim()}
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+
+              {/* Right: message thread - FIXED WIDTH */}
+              <div className="w-full sm:w-[calc(100%-20rem)] lg:w-[calc(100%-22rem)] flex flex-col min-h-0 flex-shrink-0">
+                <div className="p-3 pb-0 text-sm font-medium truncate min-w-0 max-w-full border-b">
+                  {selectedTab?.title || 'Select a conversation'}
+                </div>
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <ScrollArea className="flex-1 p-3">
+                    <div className="space-y-3 pr-2 min-w-0">
+                      {(() => {
+                        const chatRoom = selectedTab ? chatRooms[selectedTab.applicationId] : undefined
+                        const chatMessages = chatRoom ? (messages[chatRoom.id] || []) : []
+                        return chatMessages.length > 0 ? (
+                          chatMessages.map((message: Message) => (
+                            <MessageBubble
+                              key={message.id}
+                              message={message}
+                              isOwnMessage={currentUser === message.sender_id}
+                            />
+                          ))
+                        ) : (
+                          <div className="text-center py-8 text-gray-500 text-sm">
+                            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            {selectedTab ? 'No messages yet' : 'Choose a chat to start'}
+                          </div>
+                        )
+                      })()}
+                      <div ref={(el) => {
+                        const room = selectedTab ? chatRooms[selectedTab.applicationId] : undefined
+                        if (room) messageEndRefs.current[room.id] = el
+                      }} />
+                    </div>
+                  </ScrollArea>
+
+                  {/* Message input */}
+                  {selectedTab && (
+                    <div className="flex gap-2 p-3 border-t bg-gray-50">
+                      <Input
+                        value={newMessages[selectedTab.applicationId] || ''}
+                        onChange={(e) => setNewMessages(prev => ({
+                          ...prev,
+                          [selectedTab.applicationId]: e.target.value
+                        }
+                        ))}
+                        onKeyPress={(e) => handleKeyPress(e, selectedTab.applicationId)}
+                        placeholder="Type a message..."
+                        className="flex-1 text-sm"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => sendMessage(selectedTab.applicationId)}
+                        disabled={!newMessages[selectedTab.applicationId]?.trim()}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
@@ -1046,7 +1052,7 @@ function MessageBubble({
           <div className={`rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap w-full max-w-[320px] ${isOwnMessage
             ? 'bg-blue-500 text-white'
             : 'bg-gray-100 text-gray-900'
-          }`}>
+            }`}>
             <div className="font-medium text-xs mb-1 opacity-80">
               {senderName}
             </div>
