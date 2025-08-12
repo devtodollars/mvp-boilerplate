@@ -111,10 +111,16 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
         .select('*', { count: 'exact', head: true })
         .eq('user_id', currentUserId)
         .eq('type', 'message')
-        .eq('data->application_id', applicationId)
+        .eq('data->>application_id', applicationId)
 
       if (error) {
         console.error('Error counting notifications:', error)
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        })
         return 0
       }
 
