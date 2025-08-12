@@ -13,6 +13,56 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     throw new Error('Supabase client is required');
   }
 
+  const checkUserExists = async (email: string): Promise<boolean> => {
+    if (!email || typeof email !== 'string') {
+      throw new Error('Valid email is required to check user existence');
+    }
+
+    try {
+      console.log('Checking if user exists for email:', email);
+      
+      // Use Supabase's admin API to check if user exists
+      // This is a safe way to check without exposing user data
+      const { data, error } = await supabase.rpc('check_user_exists', {
+        email_to_check: email
+      });
+
+      if (error) {
+        // If the RPC function doesn't exist, fall back to a different method
+        console.log('RPC function not available, using alternative method');
+        
+        // Alternative: Try to sign in with a dummy password to check if user exists
+        // This will fail but give us info about whether the user exists
+        try {
+          await supabase.auth.signInWithPassword({
+            email,
+            password: 'dummy_password_for_check_only'
+          });
+          // If this succeeds (unlikely), user exists
+          return true;
+        } catch (signInError: any) {
+          // Check the error message to determine if user exists
+          if (signInError?.message?.includes('Invalid login credentials')) {
+            // User exists but password is wrong
+            return true;
+          } else if (signInError?.message?.includes('Email not confirmed')) {
+            // User exists but email not confirmed
+            return true;
+          } else {
+            // User likely doesn't exist
+            return false;
+          }
+        }
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Error checking user existence:', error);
+      // If we can't check, assume user doesn't exist to allow signup attempt
+      return false;
+    }
+  };
+
   const passwordSignup = async (creds: SignUpWithPasswordCredentials) => {
     if (!creds) {
       throw new Error('Credentials are required for signup');
@@ -36,6 +86,22 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
     
     try {
+      // Check if user already exists (only for email signup)
+      if (email) {
+        console.log('Checking if user already exists before signup...');
+        const userExists = await checkUserExists(email);
+        
+        if (userExists) {
+          return {
+            user: null,
+            session: null,
+            error: { message: 'An account with this email already exists. Please sign in instead.', code: 'user_already_exists' }
+          };
+        }
+        
+        console.log('User does not exist, proceeding with signup...');
+      }
+
       // Try to sign up the user
       const signUpData: any = { password };
       if (email) signUpData.email = email;
@@ -756,6 +822,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     createUserProfile,
     verifyOtp,
     checkProfileCompletion,
+    checkUserExists,
     applyToProperty,
     getUserApplications,
     getListingApplications,
