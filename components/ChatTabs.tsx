@@ -284,6 +284,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
 
       const finalTabs = await Promise.all(newTabsPromises)
 
+      console.log('📋 Setting chat tabs state with', finalTabs.length, 'tabs')
       setChatTabs(prev => {
         // Merge with existing tabs, preserving state
         const existingTabs = new Map(prev.map(tab => [tab.id, tab]))
@@ -296,7 +297,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
             ...existingTabs.get(tab.id)
           }))
 
-        console.log('Setting chat tabs:', mergedTabs.map(t => ({
+        console.log('📋 Chat tabs state updated:', mergedTabs.map(t => ({
           id: t.id,
           otherPartyName: t.otherPartyName,
           propertyName: t.propertyName
@@ -343,14 +344,16 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
 
   // Load messages for a chat room
   const loadMessages = useCallback(async (chatRoomId: string) => {
+    console.log('🚀 loadMessages called for room:', chatRoomId, 'caller:', new Error().stack?.split('\n')[2]?.trim())
+
     // Prevent duplicate calls for the same room
     if (messages[chatRoomId] && messages[chatRoomId].length > 0) {
-      console.log('Messages already loaded for room:', chatRoomId, 'skipping load')
+      console.log('✅ Messages already loaded for room:', chatRoomId, 'skipping load')
       return
     }
 
     try {
-      console.log('Loading messages for room:', chatRoomId)
+      console.log('📡 Making API call for room:', chatRoomId)
       const response = await fetch(`/api/chat/messages/${chatRoomId}`)
       const data = await response.json()
 
@@ -360,6 +363,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       }
 
       const messages = data.messages || []
+      console.log('💬 Setting messages state for room:', chatRoomId, 'message count:', messages.length)
       setMessages(prev => ({
         ...prev,
         [chatRoomId]: messages
@@ -393,15 +397,28 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
   // Load recent messages for all conversations to populate last message data
   // Only run this once when chatTabs are first loaded, not every time chatRooms change
   useEffect(() => {
+    console.log('🔍 useEffect for loading messages triggered:', {
+      chatTabsLength: chatTabs.length,
+      chatRoomsLength: Object.keys(chatRooms).length,
+      currentUser: !!currentUser,
+      timestamp: new Date().toISOString()
+    })
+
     if (chatTabs.length > 0 && Object.keys(chatRooms).length > 0 && currentUser) {
-      // Track which rooms we've already loaded to prevent duplicates
+      // Only load messages for tabs that don't have lastMessage AND don't already have messages loaded
       const loadedRooms = new Set<string>()
 
       chatTabs.forEach(async tab => {
         const chatRoom = chatRooms[tab.applicationId]
         if (chatRoom && !tab.lastMessage && !loadedRooms.has(chatRoom.id)) {
-          loadedRooms.add(chatRoom.id)
-          await loadMessages(chatRoom.id)
+          // Check if messages are already loaded for this room
+          if (!messages[chatRoom.id] || messages[chatRoom.id].length === 0) {
+            loadedRooms.add(chatRoom.id)
+            console.log('📥 Loading messages for room:', chatRoom.id, 'from useEffect')
+            await loadMessages(chatRoom.id)
+          } else {
+            console.log('📥 Skipping room', chatRoom.id, 'messages already loaded')
+          }
         }
       })
     }
@@ -409,7 +426,9 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
 
   // Get or create chat room
   const getChatRoom = useCallback(async (applicationId: string): Promise<{ id: string, chatRoom: ChatRoom } | null> => {
+    console.log('🏠 getChatRoom called for application:', applicationId, 'at:', new Date().toISOString())
     try {
+      console.log('🏠 Making API call to get chat room for:', applicationId)
       const response = await fetch(`/api/chat/rooms/${applicationId}`)
       const data = await response.json()
 
@@ -419,6 +438,8 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       }
 
       const chatRoom = data.chatRoom
+      console.log('🏠 Chat room data received:', chatRoom.id)
+      console.log('🏠 Setting chatRooms state for application:', applicationId, 'room:', chatRoom.id)
       setChatRooms(prev => ({
         ...prev,
         [applicationId]: chatRoom
@@ -433,7 +454,8 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
 
   // Open chat tab
   const openChat = useCallback(async (applicationId: string) => {
-    console.log('Opening chat for application:', applicationId)
+    console.log('🚪🚪🚪 OPENCHAT STARTED for application:', applicationId, 'at:', new Date().toISOString())
+    console.log('🚪 Current state - chatTabs:', chatTabs.length, 'chatRooms:', Object.keys(chatRooms).length, 'messages:', Object.keys(messages).length)
 
     if (!currentUser) {
       console.log('Current user not loaded yet, waiting...')
@@ -447,9 +469,10 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
     if (chatRoom) {
       // We already have the chat room, use it
       chatRoomId = chatRoom.id
-      console.log('Using existing chat room data:', chatRoom)
+      console.log('🚪 Using existing chat room data:', chatRoom.id)
     } else {
       // Get or create the chat room
+      console.log('🚪 Fetching new chat room data for:', applicationId)
       const result = await getChatRoom(applicationId)
       if (!result) {
         console.error('Failed to get chat room for application:', applicationId)
@@ -457,11 +480,15 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       }
       chatRoom = result.chatRoom
       chatRoomId = result.id
-      console.log('Fetched new chat room data:', chatRoom)
+      console.log('🚪 Fetched new chat room data:', chatRoom.id)
     }
+
+    console.log('🚪 Chat room ID determined:', chatRoomId)
 
     // Find the corresponding chat tab to get the correct names
     const existingTab = chatTabs.find(tab => tab.applicationId === applicationId)
+    console.log('🚪 Looking for existing tab:', applicationId, 'found:', !!existingTab)
+
     if (existingTab) {
       // Use the existing tab data which has the correct names
       const otherPartyName = existingTab.otherPartyName
@@ -469,10 +496,12 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       const role = existingTab.role
       const applicationStatus = existingTab.applicationStatus
 
-      console.log('Using existing tab data:', { otherPartyName, propertyName, role, applicationStatus })
+      console.log('🚪 Using existing tab data:', { otherPartyName, propertyName, role, applicationStatus, unreadCount: existingTab.unreadCount })
 
       // Mark selected
+      console.log('🚪 Setting selected application ID:', applicationId)
       setSelectedApplicationId(applicationId)
+      console.log('🚪 Updating chat tabs - setting isOpen for:', applicationId)
       setChatTabs(prev => prev.map(tab =>
         tab.applicationId === applicationId
           ? { ...tab, isOpen: true }
@@ -480,25 +509,31 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       ))
 
       // Load messages only if we don't already have them
+      console.log('🚪 About to check if messages need loading for room:', chatRoomId)
+      console.log('🚪 Current messages state:', { hasMessages: !!messages[chatRoomId], messageCount: messages[chatRoomId]?.length || 0 })
+
       if (!messages[chatRoomId] || messages[chatRoomId].length === 0) {
+        console.log('🔄 Calling loadMessages from openChat for room:', chatRoomId)
         await loadMessages(chatRoomId)
       } else {
-        console.log('Messages already loaded for chat room:', chatRoomId)
+        console.log('✅ Messages already loaded for chat room:', chatRoomId)
       }
 
       // Mark messages as read and delete notifications only if there are unread messages
+      console.log('🚪 Checking unread count:', existingTab.unreadCount, 'for room:', chatRoomId)
+
       if (existingTab.unreadCount > 0) {
-        console.log('Marking messages as read for chat room:', chatRoomId)
+        console.log('🚪 Unread messages found, marking as read for chat room:', chatRoomId)
         await markMessagesAsRead(chatRoomId)
 
-        console.log('Deleting chat notifications for chat room:', chatRoomId)
+        console.log('🚪 Deleting chat notifications for chat room:', chatRoomId)
         await deleteChatNotifications(chatRoomId)
       } else {
-        console.log('No unread messages, skipping mark-as-read and notification deletion')
+        console.log('🚪 No unread messages, skipping mark-as-read and notification deletion')
       }
 
       // Update unread count to 0 for this chat
-      console.log('Setting unread count to 0 for application:', applicationId)
+      console.log('🚪 Setting unread count to 0 for application:', applicationId)
       setChatTabs(prev => prev.map(tab =>
         tab.applicationId === applicationId
           ? { ...tab, unreadCount: 0 }
@@ -506,21 +541,25 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       ))
 
       // Subscribe to realtime for this room
+      console.log('🚪 Subscribing to realtime for room:', chatRoomId)
       subscribeToRoom(chatRoomId)
+      console.log('🚪🚪🚪 OPENCHAT COMPLETED for existing tab')
       return
     }
 
     // If no existing tab, determine the other party's name from application data
     // This should only happen for new chats
+    console.log('🚪 No existing tab found, creating new chat')
     const isOwner = chatRoom.owner_id === currentUser
     const otherPartyName = isOwner
       ? (chatRoom.applicant?.full_name || 'Unknown Applicant')
       : (chatRoom.owner?.full_name || 'Unknown Property Owner')
     const propertyName = chatRoom.application?.listing?.property_name || 'Unknown Property'
 
-    console.log('Chat title will be:', `${otherPartyName} - ${propertyName}`)
+    console.log('🚪 Chat title will be:', `${otherPartyName} - ${propertyName}`)
 
     // Mark selected and ensure only this tab is open
+    console.log('🚪 Creating new tab and setting selected application ID:', applicationId)
     setSelectedApplicationId(applicationId)
     setChatTabs(prev => {
       const newTab: ChatTab = {
@@ -534,18 +573,25 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
         role: isOwner ? 'owner' : 'applicant',
         applicationStatus: 'pending' // Default status for new chats
       }
+      console.log('🚪 New tab created:', newTab.id)
       return prev.map(t => ({ ...t, isOpen: false })).concat(newTab)
     })
 
     // Load messages only if we don't already have them
+    console.log('🚪 About to check if messages need loading for new chat room:', chatRoomId)
+    console.log('🚪 Current messages state for new chat:', { hasMessages: !!messages[chatRoomId], messageCount: messages[chatRoomId]?.length || 0 })
+
     if (!messages[chatRoomId] || messages[chatRoomId].length === 0) {
+      console.log('🔄 Calling loadMessages from openChat for new chat room:', chatRoomId)
       await loadMessages(chatRoomId)
     } else {
-      console.log('Messages already loaded for chat room:', chatRoomId)
+      console.log('✅ Messages already loaded for new chat room:', chatRoomId)
     }
 
     // Subscribe to realtime for this room
+    console.log('🚪 Subscribing to realtime for new chat room:', chatRoomId)
     subscribeToRoom(chatRoomId)
+    console.log('🚪🚪🚪 OPENCHAT COMPLETED for new chat')
   }, [getChatRoom, currentUser, loadMessages, chatTabs, markMessagesAsRead, deleteChatNotifications])
 
   // Listen for open chat events
@@ -715,10 +761,17 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
 
   // When chatRooms map changes, ensure subscriptions exist for rooms with open tabs
   useEffect(() => {
+    console.log('🔌 useEffect for subscriptions triggered:', {
+      chatTabsLength: chatTabs.length,
+      chatRoomsLength: Object.keys(chatRooms).length,
+      timestamp: new Date().toISOString()
+    })
+
     // Only subscribe to rooms that don't already have subscriptions
     chatTabs.forEach(tab => {
       const room = chatRooms[tab.applicationId]
       if (room && !roomChannelsRef.current[room.id]) {
+        console.log('📡 Subscribing to room:', room.id)
         subscribeToRoom(room.id)
       }
     })

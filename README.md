@@ -45,19 +45,18 @@ npm run dev
 - Verify acount deletion deletes also the objects from buckets
 - Privacy Policy and terms of conditions
 - Creating user with existing email
-passowrd reset handling
-NOTIFICATIONS REFRESH
-MESSAGES what ones are read
-make notifications and messages dropdowns bigger
-Cant clear indivitaul notifications anymore
-Messages notification takes time or need refresh
-make the map bit bigger maybe like the left hand side
-Clicking on map with no property selected error
-mobile going to view property from management dashboard
-
-Cant scroll page when chat is open
-
-MOBILE!!!!!!
+- passowrd reset handling
+- Notifications refresh
+- Indicate which messages are read
+- Make notifications and messages dropdowns bigger
+- Cannot clear individual notifications anymore
+- Messages notification takes time or needs refresh
+- Make the map a bit bigger, maybe like the left-hand side
+- Error when clicking on map with no property selected
+- On mobile, going to view property from management dashboard
+- Cannot scroll page when chat is open
+- Mobile improvements needed
+- Fix tripple get request when clicking an empty chat in the chat window
 
 ### MVP Features
 
