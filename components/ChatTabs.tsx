@@ -343,7 +343,14 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
 
   // Load messages for a chat room
   const loadMessages = useCallback(async (chatRoomId: string) => {
+    // Prevent duplicate calls for the same room
+    if (messages[chatRoomId] && messages[chatRoomId].length > 0) {
+      console.log('Messages already loaded for room:', chatRoomId, 'skipping load')
+      return
+    }
+
     try {
+      console.log('Loading messages for room:', chatRoomId)
       const response = await fetch(`/api/chat/messages/${chatRoomId}`)
       const data = await response.json()
 
@@ -387,9 +394,13 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
   // Only run this once when chatTabs are first loaded, not every time chatRooms change
   useEffect(() => {
     if (chatTabs.length > 0 && Object.keys(chatRooms).length > 0 && currentUser) {
+      // Track which rooms we've already loaded to prevent duplicates
+      const loadedRooms = new Set<string>()
+
       chatTabs.forEach(async tab => {
         const chatRoom = chatRooms[tab.applicationId]
-        if (chatRoom && !tab.lastMessage) {
+        if (chatRoom && !tab.lastMessage && !loadedRooms.has(chatRoom.id)) {
+          loadedRooms.add(chatRoom.id)
           await loadMessages(chatRoom.id)
         }
       })
@@ -672,25 +683,8 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
 
           // Update unread count for this chat room from notifications table
           if (currentUser && newMessage.sender_id !== currentUser) {
-            // Find the application ID for this chat room
-            const applicationId = Object.keys(chatRooms).find(key =>
-              chatRooms[key].id === roomId
-            )
-
-            if (applicationId) {
-              // Recalculate unread count from notifications table
-              const newUnreadCount = await calculateUnreadCount(applicationId, currentUser)
-
-              setChatTabs(prev => prev.map(tab => {
-                if (tab.applicationId === applicationId) {
-                  return {
-                    ...tab,
-                    unreadCount: newUnreadCount
-                  }
-                }
-                return tab
-              }))
-            }
+            // We'll update the unread count when the chat is actually opened
+            // This avoids the dependency on chatRooms and prevents unnecessary recalculations
           }
 
           // Try to enrich sender but don't block UI
@@ -717,13 +711,14 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       .subscribe()
 
     roomChannelsRef.current[roomId] = channel
-  }, [supabase, currentUser, chatRooms, calculateUnreadCount])
+  }, [supabase, currentUser, calculateUnreadCount])
 
   // When chatRooms map changes, ensure subscriptions exist for rooms with open tabs
   useEffect(() => {
+    // Only subscribe to rooms that don't already have subscriptions
     chatTabs.forEach(tab => {
       const room = chatRooms[tab.applicationId]
-      if (room) {
+      if (room && !roomChannelsRef.current[room.id]) {
         subscribeToRoom(room.id)
       }
     })
