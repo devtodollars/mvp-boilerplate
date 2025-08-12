@@ -384,6 +384,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
   }, [chatRooms])
 
   // Load recent messages for all conversations to populate last message data
+  // Only run this once when chatTabs are first loaded, not every time chatRooms change
   useEffect(() => {
     if (chatTabs.length > 0 && Object.keys(chatRooms).length > 0 && currentUser) {
       chatTabs.forEach(async tab => {
@@ -393,7 +394,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
         }
       })
     }
-  }, [chatTabs, chatRooms, loadMessages, currentUser])
+  }, [chatTabs, currentUser]) // Removed chatRooms and loadMessages dependencies
 
   // Get or create chat room
   const getChatRoom = useCallback(async (applicationId: string): Promise<{ id: string, chatRoom: ChatRoom } | null> => {
@@ -428,15 +429,25 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       return
     }
 
-    // First, get or create the chat room to ensure we have the data
-    const result = await getChatRoom(applicationId)
-    if (!result) {
-      console.error('Failed to get chat room for application:', applicationId)
-      return
-    }
+    // Check if we already have the chat room data
+    let chatRoom = chatRooms[applicationId]
+    let chatRoomId: string
 
-    const { id: chatRoomId, chatRoom } = result
-    console.log('Chat room data:', chatRoom)
+    if (chatRoom) {
+      // We already have the chat room, use it
+      chatRoomId = chatRoom.id
+      console.log('Using existing chat room data:', chatRoom)
+    } else {
+      // Get or create the chat room
+      const result = await getChatRoom(applicationId)
+      if (!result) {
+        console.error('Failed to get chat room for application:', applicationId)
+        return
+      }
+      chatRoom = result.chatRoom
+      chatRoomId = result.id
+      console.log('Fetched new chat room data:', chatRoom)
+    }
 
     // Find the corresponding chat tab to get the correct names
     const existingTab = chatTabs.find(tab => tab.applicationId === applicationId)
@@ -457,19 +468,22 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
           : { ...tab, isOpen: false }
       ))
 
-      // Load messages
-      await loadMessages(chatRoomId)
+      // Load messages only if we don't already have them
+      if (!messages[chatRoomId] || messages[chatRoomId].length === 0) {
+        await loadMessages(chatRoomId)
+      } else {
+        console.log('Messages already loaded for chat room:', chatRoomId)
+      }
 
       // Mark messages as read and delete notifications only if there are unread messages
-      console.log('Marking messages as read for chat room:', chatRoomId)
-      await markMessagesAsRead(chatRoomId)
-
-      // Only delete notifications if there were unread messages
       if (existingTab.unreadCount > 0) {
+        console.log('Marking messages as read for chat room:', chatRoomId)
+        await markMessagesAsRead(chatRoomId)
+
         console.log('Deleting chat notifications for chat room:', chatRoomId)
         await deleteChatNotifications(chatRoomId)
       } else {
-        console.log('No unread messages, skipping notification deletion')
+        console.log('No unread messages, skipping mark-as-read and notification deletion')
       }
 
       // Update unread count to 0 for this chat
@@ -512,14 +526,12 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
       return prev.map(t => ({ ...t, isOpen: false })).concat(newTab)
     })
 
-    // Load messages
-    await loadMessages(chatRoomId)
-
-    // Mark messages as read and delete notifications only if there are unread messages
-    await markMessagesAsRead(chatRoomId)
-
-    // For new chats, there shouldn't be unread messages, so skip deletion
-    console.log('New chat opened, skipping notification deletion')
+    // Load messages only if we don't already have them
+    if (!messages[chatRoomId] || messages[chatRoomId].length === 0) {
+      await loadMessages(chatRoomId)
+    } else {
+      console.log('Messages already loaded for chat room:', chatRoomId)
+    }
 
     // Subscribe to realtime for this room
     subscribeToRoom(chatRoomId)
@@ -842,10 +854,10 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
                             <button
                               key={item.id}
                               className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 hover:bg-white hover:shadow-sm ${item.applicationId === selectedApplicationId
-                                  ? 'bg-white shadow-sm border-l-4 border-blue-500'
-                                  : item.unreadCount > 0
-                                    ? 'bg-blue-50 border-l-2 border-blue-300 hover:bg-blue-100'
-                                    : 'hover:border-l-2 hover:border-gray-200'
+                                ? 'bg-white shadow-sm border-l-4 border-blue-500'
+                                : item.unreadCount > 0
+                                  ? 'bg-blue-50 border-l-2 border-blue-300 hover:bg-blue-100'
+                                  : 'hover:border-l-2 hover:border-gray-200'
                                 }`}
                               onClick={() => openChat(item.applicationId)}
                             >
@@ -900,10 +912,10 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
                             <button
                               key={item.id}
                               className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 hover:bg-white hover:shadow-sm ${item.applicationId === selectedApplicationId
-                                  ? 'bg-white shadow-sm border-l-4 border-blue-500'
-                                  : item.unreadCount > 0
-                                    ? 'bg-blue-50 border-l-2 border-blue-300 hover:bg-blue-100'
-                                    : 'hover:border-l-2 hover:border-gray-200'
+                                ? 'bg-white shadow-sm border-l-4 border-blue-500'
+                                : item.unreadCount > 0
+                                  ? 'bg-blue-50 border-l-2 border-blue-300 hover:bg-blue-100'
+                                  : 'hover:border-l-2 hover:border-gray-200'
                                 }`}
                               onClick={() => openChat(item.applicationId)}
                             >
