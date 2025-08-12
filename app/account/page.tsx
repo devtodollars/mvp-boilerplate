@@ -102,13 +102,13 @@ export default function AccountPage() {
       const api = createApiClient(supabase);
 
       // Create individual promises with proper error handling
-      const applicationsPromise = api.getUserApplications()
+      const applicationsPromise = api.getUserApplications(user)
         .then(result => result)
         .catch(() => ({ success: false, applications: [] }));
         
       const ownedPromise = fetchOwnedListings(userId);
       
-      const likedPromise = api.getUserLikedListings()
+      const likedPromise = api.getUserLikedListings(user)
         .then(result => result)
         .catch(() => ({ success: false, listings: [] }));
 

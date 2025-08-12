@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/utils/supabase/client"
 import { fetchNotifications, deleteAllNotifications, deleteNotification } from "@/utils/supabase/notifications"
 import { Database } from "@/types_db"
+import { useAuth } from "@/components/providers/AuthProvider"
 
 type Notification = Database['public']['Tables']['notifications']['Row']
 
@@ -113,8 +114,7 @@ export default function NotificationBell() {
     try {
       setLoading(true)
 
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
+      // Get current user from context
       if (!user) return
 
       // Fetch notifications from the database (excluding chat notifications)

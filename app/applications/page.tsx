@@ -81,12 +81,12 @@ export default function ApplicationsPage() {
 
         // Fetch all data in parallel
         const [applicationsResult, ownedResult, likedResult] = await Promise.allSettled([
-          api.getUserApplications().catch(error => {
+          api.getUserApplications(user).catch(error => {
             console.error('Error fetching applications:', error);
             return { success: false, applications: [] };
           }),
           fetchOwnedListings(supabase, user.id),
-          api.getUserLikedListings().catch(error => {
+          api.getUserLikedListings(user).catch(error => {
             console.error('Error fetching liked listings:', error);
             return { success: false, listings: [] };
           })

@@ -27,6 +27,7 @@ import {
 import { createListing } from '@/utils/supabase/listings';
 import { useToast } from '@/components/ui/use-toast';
 import { createClient } from '@/utils/supabase/client';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { format, isBefore, startOfDay } from "date-fns";
 import { cn } from "@/utils/cn";
@@ -462,8 +463,7 @@ export default function PostRoomPage() {
   const onSubmit = async (data: CreateListing) => {
     try {
       const supabase = createClient();
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData?.user;
+      const { user } = useAuth();
       if (!user) {
         toast({ title: 'Error', description: 'You must be signed in to post a listing.', variant: 'destructive' });
         return;

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/landing/Navbar';
 import { EnhancedAuthForm } from '@/components/misc/enhancedAuthForm';
 import { AuthState } from '@/utils/types';
+import { getCachedUser } from '@/utils/supabase/serverAuth';
 
 export default async function SignIn(
   props: {
@@ -17,10 +18,7 @@ export default async function SignIn(
   const currState = params.id as AuthState;
 
   // Check if the user is already logged in and redirect to the account page if so
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (user && currState !== AuthState.ProfileSetup) {
     return redirect('/');

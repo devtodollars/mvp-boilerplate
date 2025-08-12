@@ -46,6 +46,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DeleteListingDialog } from '@/components/DeleteListingDialog';
 import { PaymentStatusCard } from '@/components/PaymentStatusCard';
+import { getCachedUser } from '@/utils/supabase/serverAuth';
 
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<any[]>([]);
@@ -68,9 +69,9 @@ export default function ApplicationsPage() {
       const supabase = createClient();
       const api = createApiClient(supabase);
 
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
+      // Get current user (cached to prevent repeated auth calls)
+      const user = await getCachedUser();
+      if (!user) {
         const currentUrl = window.location.pathname + window.location.search;
         router.push(`/auth/signin?redirect=${encodeURIComponent(currentUrl)}`);
         return;
@@ -87,12 +88,12 @@ export default function ApplicationsPage() {
 
       // Fetch all data in parallel
       const [applicationsResult, ownedResult, likedResult] = await Promise.allSettled([
-        api.getUserApplications().catch(error => {
+        api.getUserApplications(user).catch(error => {
           console.error('Error fetching applications:', error);
           return { success: false, applications: [] };
         }),
         fetchOwnedListings(supabase, user.id),
-        api.getUserLikedListings().catch(error => {
+        api.getUserLikedListings(user).catch(error => {
           console.error('Error fetching liked listings:', error);
           return { success: false, listings: [] };
         })

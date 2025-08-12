@@ -298,7 +298,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
   };
 
-  const createUserProfile = async (userData: UserForm & { email: string }) => {
+  const createUserProfile = async (userData: UserForm & { email: string }, user?: any) => {
     if (!userData) {
       throw new Error('User data is required');
     }
@@ -318,16 +318,17 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     console.log('createUserProfile called with:', userData);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('Current user:', user);
+      // Use provided user or fetch if not provided (for backward compatibility)
+      const currentUser = user || (await supabase.auth.getUser()).data.user;
+      console.log('Current user:', currentUser);
       
-      if (!user) throw new Error('User not authenticated');
+      if (!currentUser) throw new Error('User not authenticated');
 
       // Check if profile already exists
       const { data: existingProfile, error: profileError } = await supabase
         .from('users')
         .select('id, first_name, last_name')
-        .eq('id', user.id)
+        .eq('id', currentUser.id)
         .single();
 
       if (profileError && profileError.code !== 'PGRST116') {
@@ -365,7 +366,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       }
 
       const profileData = {
-        id: user.id,
+        id: currentUser.id,
         first_name: userData.first_name,
         last_name: userData.last_name,
         full_name: `${userData.first_name} ${userData.last_name}`,
@@ -416,18 +417,19 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
   };
 
-  const checkProfileCompletion = async (): Promise<{ completed: boolean; profile?: any }> => {
+  const checkProfileCompletion = async (user?: any): Promise<{ completed: boolean; profile?: any }> => {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Use provided user or fetch if not provided (for backward compatibility)
+      const currentUser = user || (await supabase.auth.getUser()).data.user;
       
-      if (userError || !user) {
+      if (!currentUser) {
         return { completed: false };
       }
 
       const { data: profile, error: profileError } = await supabase
         .from('users')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', currentUser.id)
         .single();
 
       if (profileError) {
@@ -459,19 +461,20 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
   };
 
   // Application functions
-  const applyToProperty = async (listingId: string, notes?: string) => {
+  const applyToProperty = async (listingId: string, notes?: string, user?: any) => {
     if (!listingId || typeof listingId !== 'string') {
       throw new Error('Valid listing ID is required');
     }
 
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Use provided user or fetch if not provided (for backward compatibility)
+      const currentUser = user || (await supabase.auth.getUser()).data.user;
       
-      if (userError || !user) {
+      if (!currentUser) {
         throw new Error('User not authenticated');
       }
 
-      console.log('Applying to property:', { listingId, userId: user.id, notes });
+      console.log('Applying to property:', { listingId, userId: currentUser.id, notes });
 
       // Use the server API endpoint instead of calling the database function directly
       const response = await fetch('/api/applications', {
@@ -500,11 +503,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
   };
 
-  const getUserApplications = async () => {
+  const getUserApplications = async (user?: any) => {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Use provided user or fetch if not provided (for backward compatibility)
+      const currentUser = user || (await supabase.auth.getUser()).data.user;
       
-      if (userError || !user) {
+      if (!currentUser) {
         throw new Error('User not authenticated');
       }
 
@@ -536,15 +540,16 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
   };
 
-  const getListingApplications = async (listingId: string) => {
+  const getListingApplications = async (listingId: string, user?: any) => {
     if (!listingId || typeof listingId !== 'string') {
       throw new Error('Valid listing ID is required');
     }
 
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Use provided user or fetch if not provided (for backward compatibility)
+      const currentUser = user || (await supabase.auth.getUser()).data.user;
       
-      if (userError || !user) {
+      if (!currentUser) {
         throw new Error('User not authenticated');
       }
 
@@ -557,7 +562,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
 
       if (listingError) throw listingError;
 
-      if (listing.user_id !== user.id) {
+      if (listing.user_id !== currentUser.id) {
         throw new Error('Unauthorized: You can only view applications for your own listings');
       }
 
@@ -587,7 +592,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
   };
 
-  const updateApplicationStatus = async (applicationId: string, status: 'accepted' | 'rejected' | 'withdrawn', notes?: string) => {
+  const updateApplicationStatus = async (applicationId: string, status: 'accepted' | 'rejected' | 'withdrawn', notes?: string, user?: any) => {
     if (!applicationId || typeof applicationId !== 'string') {
       throw new Error('Valid application ID is required');
     }
@@ -597,9 +602,10 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
 
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Use provided user or fetch if not provided (for backward compatibility)
+      const currentUser = user || (await supabase.auth.getUser()).data.user;
       
-      if (userError || !user) {
+      if (!currentUser) {
         throw new Error('User not authenticated');
       }
 
@@ -626,15 +632,16 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     return updateApplicationStatus(applicationId, 'withdrawn');
   };
 
-  const checkUserApplication = async (listingId: string) => {
+  const checkUserApplication = async (listingId: string, user?: any) => {
     if (!listingId || typeof listingId !== 'string') {
       throw new Error('Valid listing ID is required');
     }
 
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Use provided user or fetch if not provided (for backward compatibility)
+      const currentUser = user || (await supabase.auth.getUser()).data.user;
       
-      if (userError || !user) {
+      if (!currentUser) {
         return { hasApplied: false, application: null };
       }
 
@@ -642,7 +649,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
         .from('applications')
         .select('*')
         .eq('listing_id', listingId)
-        .eq('user_id', user.id)
+        .eq('user_id', currentUser.id)
         .maybeSingle(); // Use maybeSingle() instead of single() to handle no rows gracefully
 
       if (error) {
@@ -659,15 +666,16 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
   };
 
   // Like/Unlike functions
-  const toggleLikeListing = async (listingId: string) => {
+  const toggleLikeListing = async (listingId: string, user?: any) => {
     if (!listingId || typeof listingId !== 'string') {
       throw new Error('Valid listing ID is required');
     }
 
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Use provided user or fetch if not provided (for backward compatibility)
+      const currentUser = user || (await supabase.auth.getUser()).data.user;
       
-      if (userError || !user) {
+      if (!currentUser) {
         throw new Error('User not authenticated');
       }
 
@@ -675,7 +683,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       const { data: userData, error: userDataError } = await supabase
         .from('users')
         .select('liked_listings')
-        .eq('id', user.id)
+        .eq('id', currentUser.id)
         .single();
 
       if (userDataError) throw userDataError;
@@ -699,7 +707,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
           liked_listings: newLikedListings,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id);
+        .eq('id', currentUser.id);
 
       if (updateError) throw updateError;
 
@@ -714,16 +722,17 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
   };
 
-  const getUserLikedListings = async () => {
+  const getUserLikedListings = async (user?: any) => {
     try {
       console.log('getUserLikedListings: Starting...');
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Use provided user or fetch if not provided (for backward compatibility)
+      const currentUser = user || (await supabase.auth.getUser()).data.user;
       
-      if (userError || !user) {
+      if (!currentUser) {
         throw new Error('User not authenticated');
       }
 
-      console.log('getUserLikedListings: User found:', user.id);
+      console.log('getUserLikedListings: User found:', currentUser.id);
       const { data: userData, error: userDataError } = await supabase
         .from('users')
         .select('liked_listings')
@@ -782,22 +791,23 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
   };
 
-  const checkIfListingLiked = async (listingId: string) => {
+  const checkIfListingLiked = async (listingId: string, user?: any) => {
     if (!listingId || typeof listingId !== 'string') {
       throw new Error('Valid listing ID is required');
     }
 
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Use provided user or fetch if not provided (for backward compatibility)
+      const currentUser = user || (await supabase.auth.getUser()).data.user;
       
-      if (userError || !user) {
+      if (!currentUser) {
         return { success: false, isLiked: false };
       }
 
       const { data: userData, error: userDataError } = await supabase
         .from('users')
         .select('liked_listings')
-        .eq('id', user.id)
+        .eq('id', currentUser.id)
         .single();
 
       if (userDataError) throw userDataError;

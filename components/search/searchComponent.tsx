@@ -26,6 +26,8 @@ import { buildSupabaseQuery, parseNaturalLanguageQuery } from "./AISearchLogic"
 import { SearchFilters } from "./AdvancedSearchFilters"
 import AdvancedSearchFilters from "./AdvancedSearchFilters"
 import EnhancedSearchBar from "./EnhancedSearchBar"
+import { useAuth } from "@/components/providers/AuthProvider"
+import { useDebounce } from "@/hooks/useDebounce"
 import dynamic from "next/dynamic";
 
 const MapboxMap = dynamic(() => import("@/components/mapbox/MapboxMap"), {
@@ -58,6 +60,9 @@ export default function Component({
   const [isClient, setIsClient] = useState(false)
   const [likedListings, setLikedListings] = useState<Set<string>>(new Set())
   const [likingListing, setLikingListing] = useState<string | null>(null)
+  
+  // Debounce user to prevent excessive auth-related operations
+  const debouncedUser = useDebounce(useAuth().user, 500)
   const [currentFilters, setCurrentFilters] = useState<SearchFilters>({
     location: '',
     county: '',
@@ -151,7 +156,7 @@ export default function Component({
         const supabase = createClient()
         const api = createApiClient(supabase)
 
-        const { data: { user } } = await supabase.auth.getUser()
+        const { user } = useAuth()
         if (user) {
           // Check if liked_listings column exists, if not, skip
           const { data: userData, error } = await supabase

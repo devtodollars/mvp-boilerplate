@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
 
@@ -60,16 +60,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [supabase]);
 
-  const signOut = async () => {
+  // Memoize signOut function to prevent unnecessary re-renders
+  const signOut = useCallback(async () => {
     try {
+      // Clear API cache for the current user before signing out
+      if (user?.id) {
+        const { apiCache } = await import('@/utils/cache/apiCache');
+        apiCache.clearUser(user.id);
+      }
+      
       await supabase.auth.signOut();
       setUser(null);
     } catch (error) {
       console.error('Sign out error:', error);
     }
-  };
+  }, [supabase, user?.id]);
 
-  const value = { user, isLoading, signOut };
+  // Memoize the context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({ user, isLoading, signOut }), [user, isLoading, signOut]);
 
   return (
     <AuthContext.Provider value={value}>

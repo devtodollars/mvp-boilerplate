@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { MessageSquare } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
+import { useAuth } from "@/components/providers/AuthProvider"
 
 export default function ChatNotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
@@ -12,9 +13,14 @@ export default function ChatNotificationBell() {
   // Memoize the Supabase client to prevent recreation on every render
   const supabase = useMemo(() => createClient(), [])
 
+  // Use AuthProvider context
+  const { user } = useAuth()
+  
+  // Memoize user ID to prevent unnecessary effect triggers
+  const userId = useMemo(() => user?.id, [user?.id])
+  
   useEffect(() => {
     const setupSubscriptions = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
       fetchUnreadCount()
@@ -51,11 +57,10 @@ export default function ChatNotificationBell() {
     }
 
     checkAuthAndSetup()
-  }, [supabase])
+  }, [userId, supabase])
 
   const fetchUnreadCount = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
       // Count unread message notifications

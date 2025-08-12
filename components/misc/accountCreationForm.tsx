@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { createApiClient } from "@/utils/supabase/api"
 import { createClient } from "@/utils/supabase/client"
+import { useAuth } from "@/components/providers/AuthProvider"
 import { userFormSchema, type UserForm, genderEnum, maritalStatusEnum } from "@/schemas/user"
 import { ChevronLeft, ChevronRight, User, Phone, Heart, Home, CalendarIcon, Search } from "lucide-react"
 import { z } from "zod"
@@ -83,7 +84,7 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
   useEffect(() => {
     const getUserEmail = async () => {
       if (!userEmail) {
-        const { data: { user } } = await supabase.auth.getUser()
+        const { user } = useAuth()
         if (user?.email) {
           setActualUserEmail(user.email)
         }

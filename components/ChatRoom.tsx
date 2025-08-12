@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAuth } from "@/components/providers/AuthProvider"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
@@ -358,13 +359,12 @@ function MessageBubble({ message }: { message: Message }) {
   const [currentUser, setCurrentUser] = useState<string | null>(null)
   const [senderProfile, setSenderProfile] = useState<any>(null)
 
+  // Use AuthProvider context instead of direct auth call
+  const { user } = useAuth()
+  
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setCurrentUser(user?.id || null)
-    }
-    getUser()
-  }, [supabase])
+    setCurrentUser(user?.id || null)
+  }, [user])
 
   useEffect(() => {
     const getSenderProfile = async () => {

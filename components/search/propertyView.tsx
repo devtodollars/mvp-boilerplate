@@ -27,6 +27,7 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { createApiClient } from "@/utils/supabase/api"
 import { useToast } from "@/components/ui/use-toast"
+import { useAuth } from "@/components/providers/AuthProvider"
 import ApplicationDialog from "@/components/misc/ApplicationDialog"
 import WithdrawConfirmationDialog from "@/components/misc/WithdrawConfirmationDialog"
 
@@ -56,9 +57,9 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       try {
         const supabase = createClient();
         
-        // First check if user is authenticated
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        setUser(user);
+        // Get user from AuthProvider context
+        const { user: authUser } = useAuth();
+        setUser(authUser);
         
         if (userError || !user) {
           // User is not authenticated, don't check for applications
@@ -86,7 +87,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       try {
         const supabase = createClient();
         
-        const { data: { user } } = await supabase.auth.getUser();
+        const { user } = useAuth();
         if (user) {
           const { data: userData } = await supabase
             .from('users')

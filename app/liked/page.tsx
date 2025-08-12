@@ -31,7 +31,7 @@ export default function LikedListingsPage() {
           return
         }
 
-        const result = await api.getUserLikedListings()
+        const result = await api.getUserLikedListings(user)
         if (result.success) {
           setListings(result.listings)
         }

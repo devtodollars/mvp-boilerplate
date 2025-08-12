@@ -30,6 +30,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { format, isBefore, startOfDay } from "date-fns";
 import { cn } from "@/utils/cn";
 import { useRouter } from 'next/navigation';
+import { useAuth } from "@/components/providers/AuthProvider";
 import type { Database } from '@/types_db';
 
 const IRISH_COUNTIES = [
@@ -269,8 +270,7 @@ export default function EditListing({ listing }: EditListingProps) {
     const onSubmit = async (data: UpdateListing) => {
         try {
             const supabase = createClient();
-            const { data: userData } = await supabase.auth.getUser();
-            const user = userData?.user;
+            const { user } = useAuth();
             if (!user) {
                 toast({ title: 'Error', description: 'You must be signed in to edit a listing.', variant: 'destructive' });
                 return;
