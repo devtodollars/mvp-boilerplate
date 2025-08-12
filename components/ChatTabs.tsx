@@ -733,12 +733,6 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
             }
           })
 
-          // Update unread count for this chat room from notifications table
-          if (currentUser && newMessage.sender_id !== currentUser) {
-            // We'll update the unread count when the chat is actually opened
-            // This avoids the dependency on chatRooms and prevents unnecessary recalculations
-          }
-
           // Try to enrich sender but don't block UI
           try {
             const { data: sender } = await supabase
