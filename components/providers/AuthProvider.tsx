@@ -28,31 +28,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     let mounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
       if (event === 'SIGNED_OUT') {
-        // Clear user state immediately on sign out
         setUser(null);
         setIsLoading(false);
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
         setUser(session?.user ?? null);
         setIsLoading(false);
       }
     });
 
-    // Check initial session with error handling
+    // Check initial session once
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (!mounted) return;
       
       if (error) {
-        // Handle refresh token errors gracefully
-        if (error.code === 'refresh_token_not_found' || 
-            error.message?.includes('Invalid Refresh Token')) {
-          setUser(null);
-        } else {
-          console.error('Session error:', error);
-        }
+        console.error('Session error:', error);
+        setUser(null);
       } else {
         setUser(session?.user ?? null);
       }

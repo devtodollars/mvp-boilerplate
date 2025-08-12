@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sheet';
 
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import { HouseIcon, Menu } from 'lucide-react';
 import { ModeToggle } from './mode-toggle';
 import { LogoIcon } from './Icons';
 import { createApiClient } from '@/utils/supabase/api';
@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/components/providers/AuthProvider';
 import NotificationBell from '@/components/NotificationBell';
 import ChatNotificationBell from '@/components/ChatNotificationBell';
+import { DashboardIcon } from '@radix-ui/react-icons';
 
 interface RouteProps {
   href: string;
@@ -66,10 +67,10 @@ export const Navbar = () => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768); // md breakpoint
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -117,7 +118,7 @@ export const Navbar = () => {
           </NavigationMenuItem>
 
           {/* mobile */}
-          <span className="flex md:hidden"> 
+          <span className="flex md:hidden">
             {/* <ModeToggle /> */}
 
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -185,20 +186,20 @@ export const Navbar = () => {
 
           {/* desktop */}
           {pathname === '/' && (
-          <nav className="hidden md:flex gap-2">
-            {routeList.map((route: RouteProps, i) => (
-              <a
-                rel="noreferrer noopener"
-                href={route.href}
-                key={i}
-                className={`text-[17px] ${buttonVariants({
-                  variant: 'ghost'
-                })}`}
-              >
-                {route.label}
-              </a>
-            ))}
-          </nav>
+            <nav className="hidden md:flex gap-2">
+              {routeList.map((route: RouteProps, i) => (
+                <a
+                  rel="noreferrer noopener"
+                  href={route.href}
+                  key={i}
+                  className={`text-[17px] ${buttonVariants({
+                    variant: 'ghost'
+                  })}`}
+                >
+                  {route.label}
+                </a>
+              ))}
+            </nav>
           )}
 
 
@@ -224,7 +225,7 @@ export const Navbar = () => {
                   onClick={handleAuth}
                   variant="ghost"
                 >
-                  Hello {user.email?.split('@')[0]} 👋
+                  <HouseIcon></HouseIcon>
                 </Button>
                 <Button
                   onClick={handleSignOut}

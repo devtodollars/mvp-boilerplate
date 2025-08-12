@@ -341,7 +341,26 @@ export default function ApplicationsPage() {
               </p>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-3">
+          {/* Quick Actions + Account Settings */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/search')}
+              className="flex items-center gap-2 hover:bg-blue-50 transition-colors"
+            >
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">Browse</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/listroom')}
+              className="flex items-center gap-2 hover:bg-green-50 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">List Property</span>
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -349,7 +368,7 @@ export default function ApplicationsPage() {
               className="flex items-center gap-2 hover:bg-white/80 transition-colors"
             >
               <Settings className="h-4 w-4" />
-              Account Settings
+              <span className="hidden sm:inline">Account Settings</span>
             </Button>
           </div>
         </div>
@@ -456,46 +475,6 @@ export default function ApplicationsPage() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-8">
-            {/* Quick Actions */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Award className="h-5 w-5 text-blue-600" />
-                  Quick Actions
-                </CardTitle>
-                <CardDescription>
-                  Common tasks and navigation shortcuts
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button 
-                    onClick={() => router.push('/search')} 
-                    variant="outline"
-                    className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
-                  >
-                    <Home className="h-6 w-6" />
-                    <span>Browse Properties</span>
-                  </Button>
-                  <Button 
-                    onClick={() => router.push('/listroom')}
-                    variant="outline"
-                    className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
-                  >
-                    <Plus className="h-6 w-6" />
-                    <span>List Property</span>
-                  </Button>
-                  <Button 
-                    onClick={() => router.push('/account')} 
-                    variant="outline"
-                    className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
-                  >
-                    <User className="h-6 w-6" />
-                    <span>Account Settings</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Recent Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

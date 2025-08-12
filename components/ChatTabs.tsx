@@ -336,17 +336,16 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
   }, [currentUser, fetchActiveApplications])
 
   // Prevent body scroll when chat panel is open
-  useEffect(() => {
-    if (isPanelOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'unset'
-    }
+  // Event handlers to prevent scroll conflicts
+  const handleWheelEvent = (e: React.WheelEvent) => {
+    // Stop wheel events from bubbling to the main page
+    e.stopPropagation()
+  }
 
-    return () => {
-      document.body.style.overflow = 'unset'
-    }
-  }, [isPanelOpen])
+  const handleTouchEvent = (e: React.TouchEvent) => {
+    // Stop touch events from bubbling to the main page
+    e.stopPropagation()
+  }
 
   // Load messages for a chat room
   const loadMessages = useCallback(async (chatRoomId: string) => {
@@ -847,7 +846,12 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
           onWheel={(e) => e.stopPropagation()}
           onTouchMove={(e) => e.stopPropagation()}
         >
-          <Card className="w-[95vw] sm:w-[800px] md:w-[900px] lg:w-[1000px] h-[500px] sm:h-[600px] max-h-[80vh] flex flex-col shadow-xl border-0 overflow-hidden">
+          <Card 
+            className="w-[95vw] sm:w-[800px] md:w-[900px] lg:w-[1000px] h-[500px] sm:h-[600px] max-h-[80vh] flex flex-col shadow-xl border-0 overflow-hidden"
+            onWheel={handleWheelEvent}
+            onTouchMove={handleTouchEvent}
+            onTouchStart={handleTouchEvent}
+          >
             <CardHeader className="p-3 pb-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
               <div className="flex items-center justify-between gap-2 min-w-0">
                 <CardTitle className="text-sm font-medium truncate flex-1 min-w-0 max-w-full">

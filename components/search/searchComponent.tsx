@@ -28,7 +28,7 @@ import AdvancedSearchFilters from "./AdvancedSearchFilters"
 import EnhancedSearchBar from "./EnhancedSearchBar"
 import dynamic from "next/dynamic";
 
-const MapboxMap = dynamic(() => import("@/components/mapbox/MapboxMap"), { 
+const MapboxMap = dynamic(() => import("@/components/mapbox/MapboxMap"), {
   ssr: false,
   loading: () => <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg" />
 });
@@ -39,10 +39,10 @@ interface SearchComponentProps {
   onResultsUpdate?: (results: any[]) => void
 }
 
-export default function Component({ 
-  searchQuery = "", 
-  filters, 
-  onResultsUpdate 
+export default function Component({
+  searchQuery = "",
+  filters,
+  onResultsUpdate
 }: SearchComponentProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -114,7 +114,7 @@ export default function Component({
     const urlPets = searchParams.get('pets')
     const urlEnsuite = searchParams.get('ensuite')
     const urlVerifiedOnly = searchParams.get('verifiedOnly')
-    
+
     if (urlCounty) filters.county = urlCounty
     if (urlPropertyType) filters.propertyType = urlPropertyType
     if (urlRoomType) filters.roomType = urlRoomType
@@ -123,7 +123,7 @@ export default function Component({
     if (urlPets === 'true') filters.pets = true
     if (urlEnsuite === 'true') filters.ensuite = true
     if (urlVerifiedOnly === 'true') filters.verifiedOnly = true
-    
+
     return filters
   }, [searchParams])
 
@@ -150,7 +150,7 @@ export default function Component({
       try {
         const supabase = createClient()
         const api = createApiClient(supabase)
-        
+
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
           // Check if liked_listings column exists, if not, skip
@@ -159,7 +159,7 @@ export default function Component({
             .select('*')
             .eq('id', user.id)
             .single()
-          
+
           if (userData && (userData as any).liked_listings) {
             setLikedListings(new Set((userData as any).liked_listings))
           }
@@ -176,19 +176,19 @@ export default function Component({
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
-      
+
       try {
         // Try the API route first (bypasses RLS)
         const response = await fetch('/api/listings')
         const result = await response.json()
-        
+
         if (result.data && result.data.length > 0) {
           setListings(result.data)
-          
+
           // Handle URL parameters for property selection and view mode
           const propertyId = searchParams.get('id')
           const viewModeParam = searchParams.get('view')
-          
+
           if (propertyId) {
             const property = result.data.find((listing: any) => listing.id === propertyId)
             if (property) {
@@ -204,21 +204,21 @@ export default function Component({
           }
         } else {
           console.log('No listings found via API route, trying client-side...')
-          
+
           // Fallback to client-side fetch
           const debugResult = await debugListings()
           console.log('Debug result:', debugResult)
-          
+
           const { data, error } = await fetchListings()
           console.log('Client-side fetch result:', { data, error })
-          
+
           if (!error && data) {
             setListings(data)
-            
+
             // Handle URL parameters for property selection and view mode
             const propertyId = searchParams.get('id')
             const viewModeParam = searchParams.get('view')
-            
+
             if (propertyId) {
               const property = data.find((listing: any) => listing.id === propertyId)
               if (property) {
@@ -239,7 +239,7 @@ export default function Component({
       } catch (error) {
         console.error('Error in fetchData:', error)
       }
-      
+
       setLoading(false)
     }
     fetchData()
@@ -253,22 +253,22 @@ export default function Component({
     }
 
     let filtered = [...listings]
-    
+
     // Apply search query - but don't apply text search if we parsed structured filters
     const parsedFilters = parseNaturalLanguageQuery(effectiveSearchQuery)
     const hasStructuredFilters = parsedFilters && (
-      parsedFilters.roomType || 
-      parsedFilters.propertyType || 
-      parsedFilters.county || 
+      parsedFilters.roomType ||
+      parsedFilters.propertyType ||
+      parsedFilters.county ||
       parsedFilters.location ||
       parsedFilters.amenities?.length ||
       parsedFilters.pets ||
       parsedFilters.ensuite
     )
-    
+
     // Always apply text search for location queries, even if they are parsed as structured filters
     const isLocationSearch = parsedFilters && (parsedFilters.location || parsedFilters.county)
-    
+
     // If search was explicitly cleared, show all listings
     if (searchCleared) {
       console.log('Search was cleared, showing all listings')
@@ -276,7 +276,7 @@ export default function Component({
       if (onResultsUpdate) onResultsUpdate(listings)
       return
     }
-    
+
     // Apply text search only if there's a search query
     if (effectiveSearchQuery && effectiveSearchQuery.trim() !== '') {
       if (effectiveSearchQuery && (!hasStructuredFilters || isLocationSearch)) {
@@ -284,7 +284,7 @@ export default function Component({
         const query = effectiveSearchQuery.toLowerCase()
         const beforeCount = filtered.length
         console.log('Applying text search for:', query)
-        filtered = filtered.filter(listing => 
+        filtered = filtered.filter(listing =>
           listing.property_name?.toLowerCase().includes(query) ||
           listing.address?.toLowerCase().includes(query) ||
           listing.city?.toLowerCase().includes(query) ||
@@ -296,18 +296,18 @@ export default function Component({
         console.log('Skipping text search because we have structured filters:', parsedFilters)
       }
     }
-    
+
     console.log('Applying filters:', { effectiveSearchQuery, localSearchQuery, currentFilters, effectiveFilters, searchCleared })
 
     // Apply filters
     if (currentFilters || effectiveFilters) {
       const beforeCount = filtered.length
       const filtersToApply = { ...currentFilters, ...effectiveFilters }
-      
+
       console.log('Applying filters:', filtersToApply)
       console.log('Current filters state:', currentFilters)
       console.log('Effective filters:', effectiveFilters)
-      
+
       // Location filter
       if (filtersToApply.location) {
         const location = filtersToApply.location.toLowerCase()
@@ -332,20 +332,20 @@ export default function Component({
 
       // Price filters
       if (filtersToApply.minPrice > 0) {
-        filtered = filtered.filter(listing => 
+        filtered = filtered.filter(listing =>
           listing.monthly_rent >= filtersToApply.minPrice
         )
       }
 
       if (filtersToApply.maxPrice > 0) {
-        filtered = filtered.filter(listing => 
+        filtered = filtered.filter(listing =>
           listing.monthly_rent <= filtersToApply.maxPrice
         )
       }
 
       // Property type filter
       if (filtersToApply.propertyType) {
-        filtered = filtered.filter(listing => 
+        filtered = filtered.filter(listing =>
           listing.property_type === filtersToApply.propertyType
         )
       }
@@ -359,7 +359,7 @@ export default function Component({
 
       // Size filter
       if (filtersToApply.size > 0) {
-        filtered = filtered.filter(listing => 
+        filtered = filtered.filter(listing =>
           listing.size >= filtersToApply.size
         )
       }
@@ -394,7 +394,7 @@ export default function Component({
 
       // Viewing times
       if (filtersToApply.hasViewingTimes) {
-        filtered = filtered.filter(listing => 
+        filtered = filtered.filter(listing =>
           listing.viewing_times && listing.viewing_times.length > 0
         )
       }
@@ -403,16 +403,16 @@ export default function Component({
       if (filtersToApply.amenities.length > 0) {
         filtered = filtered.filter(listing => {
           if (!listing.amenities || !Array.isArray(listing.amenities)) return false
-          return filtersToApply.amenities.every(amenity => 
+          return filtersToApply.amenities.every(amenity =>
             listing.amenities.includes(amenity)
           )
         })
       }
-      
+
     }
 
     setFilteredListings(filtered)
-    
+
     // Update results count
     if (onResultsUpdate) {
       onResultsUpdate(filtered)
@@ -442,11 +442,11 @@ export default function Component({
         ...filters
       }))
     }
-    
+
     // Parse search query to extract additional filters
     if (effectiveSearchQuery && effectiveSearchQuery.trim() !== '') {
       const parsedFilters = parseNaturalLanguageQuery(effectiveSearchQuery)
-      
+
       setCurrentFilters(prev => ({
         ...prev,
         ...parsedFilters
@@ -485,7 +485,7 @@ export default function Component({
 
   const handlePropertySelect = useCallback(async (property: any) => {
     setSelectedProperty(property)
-    
+
     // Track view when property is selected
     if (property?.id) {
       try {
@@ -494,7 +494,7 @@ export default function Component({
         console.error('Error tracking view:', error);
       }
     }
-    
+
     if (isClient && window.innerWidth < 1024) {
       setShowPropertyDetails(true)
     }
@@ -524,17 +524,17 @@ export default function Component({
 
   const handleLike = async (listingId: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    
+
     if (likingListing) return // Prevent multiple clicks
-    
+
     setLikingListing(listingId)
-    
+
     try {
       const supabase = createClient()
       const api = createApiClient(supabase)
-      
+
       const result = await api.toggleLikeListing(listingId)
-      
+
       if (result.success) {
         setLikedListings(prev => {
           const newSet = new Set(prev)
@@ -589,7 +589,7 @@ export default function Component({
   }
 
   // Memoize the properties data for the map to prevent unnecessary re-renders
-  const mapProperties = useMemo(() => 
+  const mapProperties = useMemo(() =>
     filteredListings
       .filter((p) => typeof p.lat === "number" && typeof p.lng === "number")
       .map((p) => ({
@@ -601,7 +601,7 @@ export default function Component({
   );
 
   // Memoize the selected property for the map
-  const mapSelectedProperty = useMemo(() => 
+  const mapSelectedProperty = useMemo(() =>
     selectedProperty && typeof selectedProperty.lat === "number" && typeof selectedProperty.lng === "number" ? {
       id: selectedProperty.id,
       lat: selectedProperty.lat,
@@ -619,7 +619,7 @@ export default function Component({
         <div className="px-4 py-4">
           {/* Search Bar - Full Width */}
           <div className="mb-4">
-            <EnhancedSearchBar 
+            <EnhancedSearchBar
               onSearch={(query: string, filters: Partial<SearchFilters>) => {
                 // Update the local search query for immediate filtering
                 setLocalSearchQuery(query)
@@ -630,7 +630,7 @@ export default function Component({
                   ...parsedFilters,
                   ...filters // Explicit filters from the search bar take precedence
                 }))
-                
+
                 // If query is empty, reset all filters
                 if (!query.trim()) {
                   setCurrentFilters({
@@ -662,7 +662,7 @@ export default function Component({
               initialValue={effectiveSearchQuery}
             />
           </div>
-          
+
           {/* Filters Row - Better Layout */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -680,7 +680,7 @@ export default function Component({
               Filters
             </Button>
           </div>
-          
+
           {/* Active Filters Display - Mobile */}
           {(() => {
             const activeFilters = []
@@ -693,14 +693,14 @@ export default function Component({
             if (currentFilters.ensuite) activeFilters.push({ label: 'Ensuite', type: 'ensuite' })
             if (currentFilters.verifiedOnly) activeFilters.push({ label: 'Verified', type: 'verifiedOnly' })
             if (currentFilters.location && !currentFilters.county) activeFilters.push({ label: currentFilters.location, type: 'location' })
-            
+
             return activeFilters.length > 0 ? (
               <div className="mt-2 flex items-center gap-1 flex-wrap">
                 <span className="text-xs text-muted-foreground">Filters:</span>
                 {activeFilters.slice(0, 3).map((filter, index) => (
-                  <Badge 
-                    key={index} 
-                    variant="secondary" 
+                  <Badge
+                    key={index}
+                    variant="secondary"
                     className="text-xs cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
                     onClick={() => {
                       const newFilters = { ...currentFilters }
@@ -737,7 +737,7 @@ export default function Component({
           {/* Search and Filters Row */}
           <div className="flex items-center gap-4">
             <div className="flex-1 max-w-md">
-              <EnhancedSearchBar 
+              <EnhancedSearchBar
                 onSearch={(query: string, filters: Partial<SearchFilters>) => {
                   // Update the local search query for immediate filtering
                   setLocalSearchQuery(query)
@@ -748,7 +748,7 @@ export default function Component({
                     ...parsedFilters,
                     ...filters // Explicit filters from the search bar take precedence
                   }))
-                  
+
                   // If query is empty, reset all filters
                   if (!query.trim()) {
                     setCurrentFilters({
@@ -807,7 +807,7 @@ export default function Component({
               </Sheet>
             </div>
           </div>
-          
+
           {/* Active Filters Display */}
           {(() => {
             const activeFilters = []
@@ -820,14 +820,14 @@ export default function Component({
             if (currentFilters.ensuite) activeFilters.push({ label: 'Ensuite', type: 'ensuite' })
             if (currentFilters.verifiedOnly) activeFilters.push({ label: 'Verified', type: 'verifiedOnly' })
             if (currentFilters.location && !currentFilters.county) activeFilters.push({ label: currentFilters.location, type: 'location' })
-            
+
             return activeFilters.length > 0 ? (
               <div className="mt-3 flex items-center gap-2 flex-wrap">
                 <span className="text-sm text-muted-foreground">Active filters:</span>
                 {activeFilters.map((filter, index) => (
-                  <Badge 
-                    key={index} 
-                    variant="secondary" 
+                  <Badge
+                    key={index}
+                    variant="secondary"
                     className="text-xs cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
                     onClick={() => {
                       const newFilters = { ...currentFilters }
@@ -882,7 +882,7 @@ export default function Component({
 
       {/* Main Content */}
       <div className="lg:container lg:mx-auto lg:px-4 lg:py-6">
-        <div className="grid lg:grid-cols-2 gap-6 h-[calc(100vh-140px)]">
+        <div className="grid lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
           {/* Listings Section */}
           <div className={`space-y-4 overflow-y-auto pr-2 ${viewMode === "map" ? "hidden lg:block" : ""}`}>
             <div className="space-y-3 lg:space-y-4 px-4 lg:px-0 pb-20 lg:pb-0">
@@ -906,9 +906,8 @@ export default function Component({
                   return (
                     <Card
                       key={property.id}
-                      className={`overflow-hidden hover:shadow-lg transition-all cursor-pointer border-2 ${
-                        selectedProperty?.id === property.id ? "border-black shadow-lg" : "border-transparent"
-                      }`}
+                      className={`overflow-hidden hover:shadow-lg transition-all cursor-pointer border-2 ${selectedProperty?.id === property.id ? "border-black shadow-lg" : "border-transparent"
+                        }`}
                       onClick={() => handlePropertySelect(property)}
                     >
                       <CardContent className="p-0">
@@ -976,12 +975,11 @@ export default function Component({
                               size="icon"
                               onClick={(e) => handleLike(property.id, e)}
                               disabled={likingListing === property.id}
-                              className={`absolute top-3 right-3 bg-white/95 backdrop-blur-sm hover:bg-white h-10 w-10 shadow-lg transition-colors ${
-                                likedListings.has(property.id) ? 'text-red-500' : 'text-gray-600'
-                              }`}
+                              className={`absolute top-3 right-3 bg-white/95 backdrop-blur-sm hover:bg-white h-10 w-10 shadow-lg transition-colors ${likedListings.has(property.id) ? 'text-red-500' : 'text-gray-600'
+                                }`}
                             >
-                              <Heart 
-                                className={`h-5 w-5 ${likedListings.has(property.id) ? 'fill-current' : ''}`} 
+                              <Heart
+                                className={`h-5 w-5 ${likedListings.has(property.id) ? 'fill-current' : ''}`}
                               />
                             </Button>
 
@@ -1006,93 +1004,45 @@ export default function Component({
                             )}
                           </div>
 
-                          {/* Content Section */}
+                          {/* Content Section - Streamlined */}
                           <div className="p-4 space-y-3">
-                            {/* Property Type & Location */}
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="outline" className="text-sm">
-                                    {property.room_type?.charAt(0).toUpperCase() + property.room_type?.slice(1)}
-                                  </Badge>
-                                  {property.ensuite && <Badge className="bg-blue-500 text-white text-sm">Ensuite</Badge>}
-                                </div>
-                                <h3 className="font-semibold text-lg leading-tight line-clamp-2 break-words mb-2">
-                                  {property.property_name}
-                                </h3>
-                                <div className="flex items-center gap-2 text-gray-600 mb-1">
-                                  <MapPin className="h-4 w-4 flex-shrink-0" />
-                                  <span className="text-sm truncate">
-                                    {property.apartment_number && `${property.apartment_number}, `}
-                                    {property.address}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-500">
-                                  {property.area}, {property.city} {property.eircode}
-                                  {property.size && ` • ${property.size} m²`}
-                                </p>
-                              </div>
+                            {/* Property name takes full width at top */}
+                            <h3 className="font-semibold text-lg leading-tight line-clamp-2 break-words">
+                              {property.property_name}
+                            </h3>
+
+                            {/* Badges and amenities in one row - Mobile */}
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              {property.verified && <Badge className="bg-green-500 text-white text-xs flex-shrink-0">Verified</Badge>}
+                              {property.amenities && property.amenities.length > 0 && (
+                                <>
+                                  {property.amenities.slice(0, 3).map((amenity: string) => (
+                                    <Badge key={amenity} variant="outline" className="text-xs flex-shrink-0">
+                                      {amenity}
+                                    </Badge>
+                                  ))}
+                                  {property.amenities.length > 3 && (
+                                    <Badge variant="outline" className="text-xs flex-shrink-0">
+                                      +{property.amenities.length - 3} more
+                                    </Badge>
+                                  )}
+                                </>
+                              )}
                             </div>
 
-                            {/* Description */}
-                            <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                              {property.description}
-                            </p>
-
-                            {/* Amenities */}
-                            {property.amenities && property.amenities.length > 0 && (
-                              <div className="flex flex-wrap gap-2">
-                                {property.amenities.slice(0, 4).map((amenity: string) => (
-                                  <Badge key={amenity} variant="outline" className="text-xs">
-                                    {amenity}
-                                  </Badge>
-                                ))}
-                                {property.amenities.length > 4 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{property.amenities.length - 4} more
-                                  </Badge>
+                            {/* Bottom row - applicants on left, price on right */}
+                            <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
+                              <div>
+                                {property.applicants && (
+                                  <div className="text-gray-500">
+                                    {property.applicants.count || 0} applicant{(property.applicants.count || 0) !== 1 ? "s" : ""}
+                                  </div>
                                 )}
                               </div>
-                            )}
-
-                            {/* Availability & Details */}
-                            <div className="space-y-2 pt-2 border-t border-gray-100">
-                              <div className="flex items-center justify-between">
-                                <div className="space-y-1">
-                                  <div className="text-green-600 font-medium text-sm">
-                                    {property.available_from ? `Available ${property.available_from}` : "Available Now"}
-                                  </div>
-                                  {(property.current_males > 0 || property.current_females > 0) && (
-                                    <div className="text-gray-500 text-sm">
-                                      {property.current_males + property.current_females} current occupants
-                                    </div>
-                                  )}
-                                  {property.applicants && (
-                                    <div className="text-gray-500 text-sm">
-                                      {property.applicants.count || 0} applicant{(property.applicants.count || 0) !== 1 ? "s" : ""}
-                                    </div>
-                                  )}
-                                </div>
+                              <div className="text-right">
+                                <span className="text-xl font-bold">€{property.monthly_rent}</span>
+                                <span className="text-gray-500 text-sm"> / {property.rent_frequency || "month"}</span>
                               </div>
-
-                              {/* Viewing Times */}
-                              {property.viewing_times && property.viewing_times.length > 0 && (
-                                <div className="pt-2">
-                                  <p className="text-xs text-gray-500 mb-2">Next viewings:</p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {property.viewing_times.slice(0, 2).map((viewing: string, index: number) => (
-                                      <Badge key={index} variant="outline" className="text-xs">
-                                        {formatViewingTime(viewing)}
-                                      </Badge>
-                                    ))}
-                                    {property.viewing_times.length > 2 && (
-                                      <Badge variant="outline" className="text-xs">
-                                        +{property.viewing_times.length - 2} more
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -1165,103 +1115,58 @@ export default function Component({
                             )}
                           </div>
 
-                          <div className="flex-1 space-y-2 min-w-0 overflow-hidden">
+                          <div className="flex-1 space-y-3 min-w-0 overflow-hidden">
+                            {/* Property name takes full width at top */}
                             <div className="flex items-start justify-between">
-                              <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="outline">
-                                    {property.room_type?.charAt(0).toUpperCase() + property.room_type?.slice(1)}
-                                  </Badge>
-                                  {property.ensuite && <Badge className="bg-blue-500">Ensuite</Badge>}
-                                </div>
-                                <h3 className="font-semibold text-lg leading-tight line-clamp-2 break-words">
-                                  {property.property_name}
-                                </h3>
-                                <div className="flex items-center gap-1 text-muted-foreground mt-1">
-                                  <MapPin className="h-4 w-4" />
-                                  <span className="text-sm truncate">
-                                    {property.apartment_number && `${property.apartment_number}, `}
-                                    {property.address}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-muted-foreground mt-1 truncate">
-                                  {property.area}, {property.city} {property.eircode}
-                                  {property.size && ` • ${property.size} m²`}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e) => handleLike(property.id, e)}
-                                  disabled={likingListing === property.id}
-                                  className={`hover:bg-red-50 transition-colors ${
-                                    likedListings.has(property.id) ? 'text-red-500' : 'text-gray-600'
-                                  }`}
-                                >
-                                  <Heart 
-                                    className={`h-4 w-4 ${likedListings.has(property.id) ? 'fill-current' : ''}`} 
-                                  />
-                                </Button>
-                              </div>
+                              <h3 className="font-semibold text-lg leading-tight line-clamp-2 break-words flex-1 pr-2">
+                                {property.property_name}
+                              </h3>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => handleLike(property.id, e)}
+                                disabled={likingListing === property.id}
+                                className={`hover:bg-red-50 transition-colors flex-shrink-0 ${likedListings.has(property.id) ? 'text-red-500' : 'text-gray-600'}`}
+                              >
+                                <Heart
+                                  className={`h-4 w-4 ${likedListings.has(property.id) ? 'fill-current' : ''}`}
+                                />
+                              </Button>
                             </div>
 
-                            <p className="text-sm text-muted-foreground line-clamp-2 break-words">
-                              {property.description}
-                            </p>
-
-                            <div className="flex flex-wrap gap-2">
-                              {property.amenities?.slice(0, 4).map((amenity: string) => (
-                                <Badge key={amenity} variant="outline" className="text-xs">
-                                  {amenity}
-                                </Badge>
-                              ))}
-                              {property.amenities?.length > 4 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{property.amenities.length - 4} more
-                                </Badge>
+                            {/* Badges and amenities in one row - Desktop */}
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              {property.verified && <Badge className="bg-green-500 text-white text-xs flex-shrink-0">Verified</Badge>}
+                              {property.amenities && property.amenities.length > 0 && (
+                                <>
+                                  {property.amenities.slice(0, 3).map((amenity: string) => (
+                                    <Badge key={amenity} variant="outline" className="text-xs flex-shrink-0">
+                                      {amenity}
+                                    </Badge>
+                                  ))}
+                                  {property.amenities.length > 3 && (
+                                    <Badge variant="outline" className="text-xs flex-shrink-0">
+                                      +{property.amenities.length - 3} more
+                                    </Badge>
+                                  )}
+                                </>
                               )}
                             </div>
 
-                            <div className="flex items-center justify-between text-sm gap-4">
-                              <div className="space-y-1">
-                                <div className="text-green-600 font-medium">
-                                  {property.available_from ? `Available ${property.available_from}` : "Available Now"}
-                                </div>
-                                {(property.current_males > 0 || property.current_females > 0) && (
-                                  <div className="text-muted-foreground">
-                                    {property.current_males + property.current_females} current occupants
-                                  </div>
-                                )}
+                            {/* Bottom row - applicants on left, price on right */}
+                            <div className="flex items-center justify-between text-sm">
+                              <div>
                                 {property.applicants && (
                                   <div className="text-muted-foreground">
                                     {property.applicants.count || 0} applicant{(property.applicants.count || 0) !== 1 ? "s" : ""}
                                   </div>
                                 )}
                               </div>
-                              <div className="text-right flex-shrink-0">
-                                <span className="text-2xl font-bold">€{property.monthly_rent}</span>
-                                <span className="text-muted-foreground"> / {property.rent_frequency || "month"}</span>
+                              <div className="text-right">
+                                <span className="text-xl font-bold">€{property.monthly_rent}</span>
+                                <span className="text-muted-foreground text-sm"> / {property.rent_frequency || "month"}</span>
                               </div>
                             </div>
-
-                            {property.viewing_times && property.viewing_times.length > 0 && (
-                              <div className="pt-2 border-t">
-                                <p className="text-xs text-muted-foreground mb-1">Next viewings:</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {property.viewing_times.slice(0, 2).map((viewing: string, index: number) => (
-                                    <Badge key={index} variant="outline" className="text-xs">
-                                      {formatViewingTime(viewing)}
-                                    </Badge>
-                                  ))}
-                                  {property.viewing_times.length > 2 && (
-                                    <Badge variant="outline" className="text-xs">
-                                      +{property.viewing_times.length - 2} more
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -1274,7 +1179,7 @@ export default function Component({
 
           {/* Right Panel - Map or Property Details (Desktop) */}
           <div className={`${viewMode === "list" ? "hidden lg:block" : ""}`}>
-            <div className="sticky top-24">
+            <div className="sticky top-24 h-[calc(100vh-200px)] flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">{viewMode === "list" ? "Map View" : "Property Details"}</h2>
                 <div className="flex gap-2">
@@ -1299,19 +1204,19 @@ export default function Component({
                 </div>
               </div>
 
-              <Card className="max-h-[600px] overflow-y-auto">
-                <CardContent className="p-0">
+              <Card className="flex-1 overflow-hidden">
+                <CardContent className="p-0 h-full">
                   {viewMode === "list" ? (
-                    <div className="h-[500px]">
+                    <div className="h-full">
                       <MapboxMap
                         properties={mapProperties}
                         selectedProperty={mapSelectedProperty}
                         onSelect={handlePropertySelect}
-                        onMapClick={() => {}}
+                        onMapClick={() => { }}
                       />
                     </div>
                   ) : (
-                    <div className="max-h-[600px] overflow-y-auto">
+                    <div className="h-full overflow-y-auto">
                       <PropertyView selectedProperty={selectedProperty} onMediaClick={handleMediaClick} />
                     </div>
                   )}
@@ -1329,7 +1234,7 @@ export default function Component({
             properties={mapProperties}
             selectedProperty={mapSelectedProperty}
             onSelect={handlePropertySelect}
-            onMapClick={() => {}}
+            onMapClick={() => { }}
           />
           {/* Back Button */}
           <div className="absolute top-4 left-4 z-40">
@@ -1357,7 +1262,7 @@ export default function Component({
           </SheetHeader>
           <div className="mt-6 space-y-6 overflow-y-auto max-h-[calc(100vh-120px)] pb-6">
             <div className="space-y-6">
-             
+
               <AdvancedSearchFilters
                 filters={currentFilters}
                 onFiltersChange={handleFiltersChange}
@@ -1402,7 +1307,7 @@ export default function Component({
           <DialogTitle className="text-white bg-black/50 px-3 py-1 rounded absolute top-4 left-4 z-10">
             Property Media - {mediaModal.currentIndex + 1} of {mediaModal.media.length}
           </DialogTitle>
-          
+
           <DialogDescription className="sr-only">
             View property images and videos
           </DialogDescription>
