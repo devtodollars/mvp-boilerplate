@@ -197,8 +197,9 @@ export default function MapboxMap({ properties, selectedProperty, onSelect, onMa
           user-select: none;
         }
         .mapbox-marker.selected {
+          background: #000000;
           border: 2px solid #000000;
-          color: #000000;
+          color: #ffffff;
           z-index: 10;
           box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }

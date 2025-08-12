@@ -290,7 +290,18 @@ export default function AccountPage() {
       const responseData = await response.json();
       
       if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to delete account');
+        if (responseData.activeListings) {
+          // Show specific message about active listings
+          toast({
+            title: 'Cannot Delete Account',
+            description: `You have ${responseData.activeListings.length} active listing(s). Please deactivate or delete them first from your dashboard.`,
+            variant: 'destructive',
+          });
+          setDeleteLoading(false);
+          return;
+        } else {
+          throw new Error(responseData.error || 'Failed to delete account');
+        }
       }
 
       // Show appropriate message based on response

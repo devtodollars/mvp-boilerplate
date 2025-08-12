@@ -294,12 +294,11 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          currState.onSubmit();
-        }}>
+    <Card className="w-full max-w-md">
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        currState.onSubmit();
+      }}>
           <CardHeader className="text-center">
             <div className="bg-primary/10 p-3 rounded-full w-fit mx-auto mb-4">
               <User className="h-8 w-8 text-primary" />
@@ -483,6 +482,5 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
           </div>
         </form>
       </Card>
-    </div>
   )
 }

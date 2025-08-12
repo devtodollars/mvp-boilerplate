@@ -43,22 +43,18 @@ npm run dev
 * Privacy Policy and terms of conditions
 
 NOTIFICATIONS REFRESH
-MESSAGES what ones are read 
+MESSAGES what ones are read á
 make notifications and messages dropdowns bigger
 Cant clear indivitaul notifications anymore
 
 Messages notification takes time or need refresh
 
+TEST FILTERS AND SEARCH THOROUGHLY
 
-
-make the map bit bigger maybe like the left hand side
-Clicking on map with no property selected error
+MOBILE ISSUES 
+Clicking on map with no property selected error Mobile Issue
 mobile going to view property from management dashboard
 
-Cant scroll page when chat is open
-
-
-MOBILE!!!!!!
 
 
 ### MVP Features
