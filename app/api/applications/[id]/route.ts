@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { getApiUser } from '@/utils/supabase/serverApiAuth';
 
 export async function PATCH(
   request: Request,
@@ -82,8 +83,8 @@ export async function DELETE(
     const supabase = await createClient();
     const { id: applicationId } = await params;
 
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get the current user with caching
+    const { user, error: userError } = await getApiUser();
 
     if (userError || !user) {
       return NextResponse.json(
