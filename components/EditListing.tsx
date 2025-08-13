@@ -112,6 +112,9 @@ export default function EditListing({ listing }: EditListingProps) {
     const [existingVideos, setExistingVideos] = useState<string[]>([])
     const { toast } = useToast();
     const router = useRouter();
+    
+    // Get user from AuthProvider context at the top level
+    const { user } = useAuth();
 
     // Initialize state from listing data
     useEffect(() => {
@@ -270,7 +273,6 @@ export default function EditListing({ listing }: EditListingProps) {
     const onSubmit = async (data: UpdateListing) => {
         try {
             const supabase = createClient();
-            const { user } = useAuth();
             if (!user) {
                 toast({ title: 'Error', description: 'You must be signed in to edit a listing.', variant: 'destructive' });
                 return;

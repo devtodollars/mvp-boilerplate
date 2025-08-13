@@ -43,10 +43,12 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [userApplication, setUserApplication] = useState<any>(null);
   const [isCheckingApplication, setIsCheckingApplication] = useState(false);
-  const [user, setUser] = useState<any>(null);
   const [likedListings, setLikedListings] = useState<Set<string>>(new Set());
   const [likingListing, setLikingListing] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Get user from AuthProvider context at the top level
+  const { user } = useAuth();
 
   // Check if user is authenticated and has already applied to this property
   useEffect(() => {
@@ -57,11 +59,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       try {
         const supabase = createClient();
         
-        // Get user from AuthProvider context
-        const { user: authUser } = useAuth();
-        setUser(authUser);
-        
-        if (userError || !user) {
+        if (!user) {
           // User is not authenticated, don't check for applications
           setIsCheckingApplication(false);
           return;
@@ -87,7 +85,6 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       try {
         const supabase = createClient();
         
-        const { user } = useAuth();
         if (user) {
           const { data: userData } = await supabase
             .from('users')

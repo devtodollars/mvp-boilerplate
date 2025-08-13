@@ -9,6 +9,7 @@ import { trackListingView } from '@/utils/supabase/listings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { 
   User, 
   MapPin, 
@@ -46,14 +47,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DeleteListingDialog } from '@/components/DeleteListingDialog';
 import { PaymentStatusCard } from '@/components/PaymentStatusCard';
-import { getCachedUser } from '@/utils/supabase/serverAuth';
+
 
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<any[]>([]);
   const [ownedListings, setOwnedListings] = useState<any[]>([]);
   const [likedListings, setLikedListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [withdrawingApplicationId, setWithdrawingApplicationId] = useState<string | null>(null);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
@@ -63,20 +63,21 @@ export default function ApplicationsPage() {
   const [selectedListingForDelete, setSelectedListingForDelete] = useState<any>(null);
   const router = useRouter();
   const { toast } = useToast();
+  
+  // Get user from AuthProvider context at the top level
+  const { user } = useAuth();
 
   const fetchAllData = async () => {
     try {
       const supabase = createClient();
       const api = createApiClient(supabase);
 
-      // Get current user (cached to prevent repeated auth calls)
-      const user = await getCachedUser();
+      // Check if user is available
       if (!user) {
         const currentUrl = window.location.pathname + window.location.search;
         router.push(`/auth/signin?redirect=${encodeURIComponent(currentUrl)}`);
         return;
       }
-      setUser(user);
 
       // Get user profile
       const { data: profile } = await supabase
@@ -119,19 +120,33 @@ export default function ApplicationsPage() {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load your dashboard data.',
-        variant: 'destructive',
-      });
+      
+      // Set empty arrays to prevent UI issues
+      setApplications([]);
+      setOwnedListings([]);
+      setLikedListings([]);
+      
+      // Only show error toast if it's not an auth issue
+      if (user) {
+        toast({
+          title: 'Error',
+          description: 'Some dashboard data could not be loaded. Please refresh the page.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    if (user) {
+      fetchAllData();
+    } else if (user === null) {
+      // User is explicitly null (not loading), redirect to auth
+      setLoading(false);
+    }
+  }, [user]);
 
   const fetchOwnedListings = async (supabase: any, userId: string) => {
     try {
@@ -512,6 +527,7 @@ export default function ApplicationsPage() {
                                   src={application.listing.images[0]}
                                   alt={application.listing.property_name}
                                   fill
+                                  sizes="64px"
                                   className="object-cover"
                                 />
                               ) : (
@@ -643,6 +659,7 @@ export default function ApplicationsPage() {
                                     src={firstImage}
                                     alt={listing.property_name}
                                     fill
+                                    sizes="64px"
                                     className="object-cover"
                                   />
                                 ) : (
@@ -746,6 +763,7 @@ export default function ApplicationsPage() {
                                   src={application.listing.images[0]}
                                   alt={application.listing.property_name}
                                   fill
+                                  sizes="192px"
                                   className="object-cover"
                                 />
                               ) : (
@@ -916,18 +934,13 @@ export default function ApplicationsPage() {
                             {/* Left side - Image and basic info */}
                             <div className="w-full lg:w-1/2">
                               <div className="relative h-48 lg:h-48">
-                                {firstImage ? (
-                                  <Image
-                                    src={firstImage}
-                                    alt={listing.property_name}
-                                    fill
-                                    className="object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                    <Building2 className="h-12 w-12 text-gray-400" />
-                                  </div>
-                                )}
+                                <Image
+                                  src={firstImage || '/bedroom.PNG'}
+                                  alt={listing.property_name || 'Property'}
+                                  fill
+                                  sizes="(max-width: 1024px) 100vw, 50vw"
+                                  className="object-cover"
+                                />
                                 <div className="absolute top-3 right-3">
                                   <Badge className="bg-white/95 text-gray-800 font-semibold shadow-lg">
                                     €{listing.monthly_rent}
@@ -1061,6 +1074,7 @@ export default function ApplicationsPage() {
                                 src={firstImage}
                                 alt={listing.property_name}
                                 fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                 className="object-cover"
                               />
                             ) : (

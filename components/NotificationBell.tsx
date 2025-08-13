@@ -21,35 +21,41 @@ export default function NotificationBell() {
   const supabase = useMemo(() => createClient(), [])
   const { toast } = useToast()
   
+  // Get user from context (prevents repeated auth calls)
+  const { user } = useAuth()
+  
   // Keep track of the realtime subscription channel (same pattern as ChatTabs)
   const notificationChannelRef = useRef<any>(null)
 
   useEffect(() => {
     // Only fetch notifications if we have a user
-    const checkAuthAndFetch = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        fetchNotificationsData()
-        setupNotificationSubscription(user.id)
-      }
+    if (user) {
+      fetchNotificationsData()
+      setupNotificationSubscription(user.id)
     }
-    
-    checkAuthAndFetch()
     
     // Cleanup function (same pattern as ChatTabs)
     return () => {
       if (notificationChannelRef.current) {
-        try { supabase.removeChannel(notificationChannelRef.current) } catch { }
-        notificationChannelRef.current = {}
+        try { 
+          supabase.removeChannel(notificationChannelRef.current);
+        } catch (error) {
+          console.warn('Failed to remove notification channel:', error);
+        }
+        notificationChannelRef.current = null;
       }
     }
-  }, [supabase])
+  }, [user, supabase])
 
   // Setup realtime subscription for notifications (same pattern as ChatTabs)
   const setupNotificationSubscription = (userId: string) => {
     // Remove existing subscription if any
     if (notificationChannelRef.current) {
-      try { supabase.removeChannel(notificationChannelRef.current) } catch { }
+      try { 
+        supabase.removeChannel(notificationChannelRef.current);
+      } catch (error) {
+        console.warn('Failed to remove existing notification channel:', error);
+      }
     }
 
     // Set up real-time subscription for notifications (same structure as ChatTabs)

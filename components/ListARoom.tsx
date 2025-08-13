@@ -293,6 +293,9 @@ export default function PostRoomPage() {
   const [mapCoordinates, setMapCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [focusedArea, setFocusedArea] = useState<{ lat: number; lng: number } | null>(null)
   const { toast } = useToast();
+  
+  // Get user from AuthProvider context at the top level
+  const { user } = useAuth();
 
   // Memoize the onMapClick callback
   const onMapClick = useCallback((lng: number, lat: number) => {
@@ -463,7 +466,6 @@ export default function PostRoomPage() {
   const onSubmit = async (data: CreateListing) => {
     try {
       const supabase = createClient();
-      const { user } = useAuth();
       if (!user) {
         toast({ title: 'Error', description: 'You must be signed in to post a listing.', variant: 'destructive' });
         return;

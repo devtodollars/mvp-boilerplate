@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { AccountCreationForm } from "@/components/misc/accountCreationForm"
+import { useAuth } from "@/components/providers/AuthProvider"
 
 export default function AccountCreationPage() {
   const router = useRouter()
@@ -16,18 +17,7 @@ export default function AccountCreationPage() {
     const checkUser = async () => {
       try {
         const supabase = createClient()
-        const { data: { user }, error } = await supabase.auth.getUser()
-        
-        if (error) {
-          console.error('Auth error:', error)
-          toast({
-            title: "Authentication Required",
-            description: "Please sign in to continue.",
-            variant: "destructive",
-          })
-          router.push('/auth/signin')
-          return
-        }
+        const { user } = useAuth()
         
         if (!user) {
           toast({

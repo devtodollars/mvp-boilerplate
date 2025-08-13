@@ -156,13 +156,12 @@ export default function Component({
         const supabase = createClient()
         const api = createApiClient(supabase)
 
-        const { user } = useAuth()
-        if (user) {
+        if (debouncedUser) {
           // Check if liked_listings column exists, if not, skip
           const { data: userData, error } = await supabase
             .from('users')
             .select('*')
-            .eq('id', user.id)
+            .eq('id', debouncedUser.id)
             .single()
 
           if (userData && (userData as any).liked_listings) {
@@ -174,8 +173,10 @@ export default function Component({
       }
     }
 
-    checkLikedListings()
-  }, [])
+    if (debouncedUser) {
+      checkLikedListings()
+    }
+  }, [debouncedUser])
 
   // Fetch listings
   useEffect(() => {

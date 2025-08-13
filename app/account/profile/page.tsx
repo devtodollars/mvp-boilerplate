@@ -21,6 +21,7 @@ import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { useRouter } from "next/navigation"
 import { AccountCreationForm } from "@/components/misc/accountCreationForm"
+import { useAuth } from "@/components/providers/AuthProvider"
 
 export default function ProfilePage() {
   const { toast } = useToast()
@@ -31,6 +32,9 @@ export default function ProfilePage() {
   const [userProfile, setUserProfile] = useState<any>(null)
   const [showProfileCreation, setShowProfileCreation] = useState(false)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  
+  // Get user from AuthProvider context at the top level
+  const { user } = useAuth()
 
   const form = useForm<UserForm>({
     resolver: zodResolver(userFormSchema),
@@ -49,13 +53,16 @@ export default function ProfilePage() {
   })
 
   useEffect(() => {
-    fetchUserProfile()
-  }, [])
+    if (user) {
+      fetchUserProfile()
+    } else if (user === null) {
+      setIsLoadingProfile(false)
+    }
+  }, [user])
 
   const fetchUserProfile = async () => {
     try {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
         toast({
@@ -145,7 +152,6 @@ export default function ProfilePage() {
     setLoading(true)
     try {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
         toast({

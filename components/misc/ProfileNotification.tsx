@@ -24,8 +24,6 @@ export default function ProfileNotification() {
     const checkProfile = async () => {
       if (!user) return
 
-      setUser(user)
-
       try {
         const api = createApiClient(supabase)
         const { completed } = await api.checkProfileCompletion()
@@ -72,7 +70,7 @@ export default function ProfileNotification() {
     }
 
     checkProfile()
-  }, [pathname, supabase])
+  }, [user, pathname, supabase])
 
   const handleCompleteProfile = () => {
     setShowDialog(false)

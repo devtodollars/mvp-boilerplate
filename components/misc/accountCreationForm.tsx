@@ -61,6 +61,9 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
   const router = useRouter()
   const api = createApiClient(createClient())
   const supabase = createClient()
+  
+  // Get user from AuthProvider context at the top level
+  const { user } = useAuth()
 
   const [currentStep, setCurrentStep] = useState<FormStep>("personal")
   const [loading, setLoading] = useState(false)
@@ -82,16 +85,10 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
 
   // Get user email from session if not provided
   useEffect(() => {
-    const getUserEmail = async () => {
-      if (!userEmail) {
-        const { user } = useAuth()
-        if (user?.email) {
-          setActualUserEmail(user.email)
-        }
-      }
+    if (!userEmail && user?.email) {
+      setActualUserEmail(user.email)
     }
-    getUserEmail()
-  }, [userEmail, supabase.auth])
+  }, [userEmail, user])
 
   const validateStep = (step: FormStep): boolean => {
     const newErrors: Record<string, string> = {}

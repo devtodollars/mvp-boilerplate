@@ -49,14 +49,9 @@ export default function ChatNotificationBell() {
     }
 
     // Only set up subscriptions if we have a user
-    const checkAuthAndSetup = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setupSubscriptions()
-      }
+    if (user) {
+      setupSubscriptions()
     }
-
-    checkAuthAndSetup()
   }, [userId, supabase])
 
   const fetchUnreadCount = async () => {

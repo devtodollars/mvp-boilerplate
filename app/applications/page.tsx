@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { 
   User, 
   MapPin, 
@@ -47,7 +48,6 @@ export default function ApplicationsPage() {
   const [ownedListings, setOwnedListings] = useState<any[]>([]);
   const [likedListings, setLikedListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [withdrawingApplicationId, setWithdrawingApplicationId] = useState<string | null>(null);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
@@ -55,21 +55,30 @@ export default function ApplicationsPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const router = useRouter();
   const { toast } = useToast();
+  
+  // Get user from AuthProvider context at the top level
+  const { user } = useAuth();
 
   useEffect(() => {
+    if (!user) {
+      if (user === null) {
+        // User is explicitly null (not loading), stop loading
+        setLoading(false);
+      }
+      return;
+    }
+
     const fetchAllData = async () => {
       try {
         const supabase = createClient();
         const api = createApiClient(supabase);
 
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
+        // Check if user is available
+        if (!user) {
           const currentUrl = window.location.pathname + window.location.search;
           router.push(`/auth/signin?redirect=${encodeURIComponent(currentUrl)}`);
           return;
         }
-        setUser(user);
 
         // Get user profile
         const { data: profile } = await supabase
@@ -112,11 +121,20 @@ export default function ApplicationsPage() {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load your dashboard data.',
-          variant: 'destructive',
-        });
+        
+        // Set empty arrays to prevent UI issues
+        setApplications([]);
+        setOwnedListings([]);
+        setLikedListings([]);
+        
+        // Only show error toast if it's not an auth issue
+        if (user) {
+          toast({
+            title: 'Error',
+            description: 'Some dashboard data could not be loaded. Please refresh the page.',
+            variant: 'destructive',
+          });
+        }
       } finally {
         setLoading(false);
       }
@@ -139,8 +157,10 @@ export default function ApplicationsPage() {
       }
     };
 
-    fetchAllData();
-  }, [router, toast]);
+    if (user) {
+      fetchAllData();
+    }
+  }, [user, router, toast]);
 
   const handleWithdrawApplication = async (applicationId: string) => {
     setWithdrawingApplicationId(applicationId);

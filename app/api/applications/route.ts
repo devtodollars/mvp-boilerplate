@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { getApiUser } from '@/utils/supabase/serverApiAuth';
 
 export async function POST(request: Request) {
   try {
@@ -7,8 +8,8 @@ export async function POST(request: Request) {
 
     const { listingId, notes } = await request.json();
 
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get the current user with caching
+    const { user, error: userError } = await getApiUser();
 
     if (userError || !user) {
       return NextResponse.json(
@@ -57,8 +58,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const listingId = searchParams.get('listingId');
 
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get the current user with caching
+    const { user, error: userError } = await getApiUser();
 
     if (userError || !user) {
       return NextResponse.json(
