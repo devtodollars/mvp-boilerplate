@@ -318,11 +318,9 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     console.log('createUserProfile called with:', userData);
     
     try {
-      // Use provided user or fetch if not provided (for backward compatibility)
-      const currentUser = user || (await supabase.auth.getUser()).data.user;
-      console.log('Current user:', currentUser);
-      
-      if (!currentUser) throw new Error('User not authenticated');
+      // User must be provided - no fallback auth calls
+      if (!user) throw new Error('User not authenticated');
+      const currentUser = user;
 
       // Check if profile already exists
       const { data: existingProfile, error: profileError } = await supabase
@@ -419,8 +417,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
 
   const checkProfileCompletion = async (user?: any): Promise<{ completed: boolean; profile?: any }> => {
     try {
-      // Use provided user or fetch if not provided (for backward compatibility)
-      const currentUser = user || (await supabase.auth.getUser()).data.user;
+      // User must be provided - no fallback auth calls
+      if (!user) {
+        console.warn('checkProfileCompletion called without user parameter');
+        return { completed: false };
+      }
+      const currentUser = user;
       
       if (!currentUser) {
         return { completed: false };
@@ -505,8 +507,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
 
   const getUserApplications = async (user?: any) => {
     try {
-      // Use provided user or fetch if not provided (for backward compatibility)
-      const currentUser = user || (await supabase.auth.getUser()).data.user;
+      // User must be provided - no fallback auth calls
+      if (!user) {
+        console.warn('getUserApplications called without user parameter');
+        return { success: false, applications: [] };
+      }
+      const currentUser = user;
       
       if (!currentUser) {
         throw new Error('User not authenticated');
@@ -725,8 +731,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
   const getUserLikedListings = async (user?: any) => {
     try {
       console.log('getUserLikedListings: Starting...');
-      // Use provided user or fetch if not provided (for backward compatibility)
-      const currentUser = user || (await supabase.auth.getUser()).data.user;
+      // User must be provided - no fallback auth calls
+      if (!user) {
+        console.warn('getUserLikedListings called without user parameter');
+        return { success: false, listings: [] };
+      }
+      const currentUser = user;
       
       if (!currentUser) {
         throw new Error('User not authenticated');

@@ -26,7 +26,7 @@ export default function ProfileNotification() {
 
       try {
         const api = createApiClient(supabase)
-        const { completed } = await api.checkProfileCompletion()
+        const { completed } = await api.checkProfileCompletion(user)
         
         if (!completed) {
           // Show dialog on listroom page, notification elsewhere

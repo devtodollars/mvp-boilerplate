@@ -106,7 +106,7 @@ export const Pricing = ({ user }: { user: User | null }) => {
       
       try {
         const api = createApiClient(supabase);
-        const { completed } = await api.checkProfileCompletion();
+        const { completed } = await api.checkProfileCompletion(user);
         
         if (completed) {
           router.push('/listroom');

@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { getApiUser } from '@/utils/supabase/serverApiAuth'
 
 export async function GET(
   request: NextRequest,
@@ -9,8 +10,8 @@ export async function GET(
     const { chatRoomId } = await params
     const supabase = await createClient()
 
-    // Get user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    // Get user with caching
+    const { user, error: userError } = await getApiUser(request)
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -50,8 +51,8 @@ export async function POST(
     const { content } = await request.json()
     const supabase = await createClient()
 
-    // Get user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    // Get user with caching
+    const { user, error: userError } = await getApiUser(request)
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

@@ -8,8 +8,8 @@ export async function DELETE(
   try {
     const supabase = await createClient()
     
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get current user with caching
+    const { user, error: authError } = await getApiUser(request)
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
