@@ -539,7 +539,7 @@ export default function Component({
       const supabase = createClient()
       const api = createApiClient(supabase)
 
-      const result = await api.toggleLikeListing(listingId)
+      const result = await api.toggleLikeListing(listingId, debouncedUser)
 
       if (result.success) {
         setLikedListings(prev => {

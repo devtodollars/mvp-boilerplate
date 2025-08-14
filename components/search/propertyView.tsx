@@ -67,7 +67,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
         
         // User is authenticated, check for existing application
         const api = createApiClient(supabase);
-        const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id);
+        const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id, user);
         setUserApplication(application);
       } catch (error) {
         console.error('Error checking user and application:', error);
@@ -115,7 +115,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       const supabase = createClient();
       const api = createApiClient(supabase);
       
-      const result = await api.toggleLikeListing(listingId);
+      const result = await api.toggleLikeListing(listingId, user);
       
       if (result.success) {
         setLikedListings(prev => {
@@ -155,7 +155,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
     try {
       const supabase = createClient();
       const api = createApiClient(supabase);
-      await api.applyToProperty(selectedProperty.id, notes);
+      await api.applyToProperty(selectedProperty.id, notes, user);
       
       // Check if this was a re-application
       const isReapplication = userApplication && userApplication.status !== 'pending';
@@ -169,7 +169,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       });
       
       // Refresh application status
-      const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id);
+      const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id, user);
       setUserApplication(application);
     } catch (error) {
       console.error('Error applying:', error);

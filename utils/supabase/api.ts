@@ -469,12 +469,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
 
     try {
-      // Use provided user or fetch if not provided (for backward compatibility)
-      const currentUser = user || (await supabase.auth.getUser()).data.user;
-      
-      if (!currentUser) {
+      // User must be provided - no fallback auth calls
+      if (!user) {
+        console.warn('applyToProperty called without user parameter');
         throw new Error('User not authenticated');
       }
+      const currentUser = user;
 
       console.log('Applying to property:', { listingId, userId: currentUser.id, notes });
 
@@ -552,12 +552,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
 
     try {
-      // Use provided user or fetch if not provided (for backward compatibility)
-      const currentUser = user || (await supabase.auth.getUser()).data.user;
-      
-      if (!currentUser) {
+      // User must be provided - no fallback auth calls
+      if (!user) {
+        console.warn('getListingApplications called without user parameter');
         throw new Error('User not authenticated');
       }
+      const currentUser = user;
 
       // First check if user owns the listing
       const { data: listing, error: listingError } = await supabase
@@ -608,12 +608,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
 
     try {
-      // Use provided user or fetch if not provided (for backward compatibility)
-      const currentUser = user || (await supabase.auth.getUser()).data.user;
-      
-      if (!currentUser) {
+      // User must be provided - no fallback auth calls
+      if (!user) {
+        console.warn('updateApplicationStatus called without user parameter');
         throw new Error('User not authenticated');
       }
+      const currentUser = user;
 
       const { data, error } = await supabase.rpc('update_application_status', {
         application_uuid: applicationId,
@@ -644,12 +644,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
 
     try {
-      // Use provided user or fetch if not provided (for backward compatibility)
-      const currentUser = user || (await supabase.auth.getUser()).data.user;
-      
-      if (!currentUser) {
+      // User must be provided - no fallback auth calls
+      if (!user) {
+        console.warn('checkUserApplication called without user parameter');
         return { hasApplied: false, application: null };
       }
+      const currentUser = user;
 
       const { data, error } = await supabase
         .from('applications')
@@ -678,12 +678,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
 
     try {
-      // Use provided user or fetch if not provided (for backward compatibility)
-      const currentUser = user || (await supabase.auth.getUser()).data.user;
-      
-      if (!currentUser) {
+      // User must be provided - no fallback auth calls
+      if (!user) {
+        console.warn('toggleLikeListing called without user parameter');
         throw new Error('User not authenticated');
       }
+      const currentUser = user;
 
       // Get current user's liked listings
       const { data: userData, error: userDataError } = await supabase
@@ -807,12 +807,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
 
     try {
-      // Use provided user or fetch if not provided (for backward compatibility)
-      const currentUser = user || (await supabase.auth.getUser()).data.user;
-      
-      if (!currentUser) {
+      // User must be provided - no fallback auth calls
+      if (!user) {
+        console.warn('checkIfListingLiked called without user parameter');
         return { success: false, isLiked: false };
       }
+      const currentUser = user;
 
       const { data: userData, error: userDataError } = await supabase
         .from('users')

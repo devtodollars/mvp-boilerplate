@@ -65,7 +65,7 @@ export default function LikedListingsPage() {
       const supabase = createClient()
       const api = createApiClient(supabase)
       
-      const result = await api.toggleLikeListing(listingId)
+      const result = await api.toggleLikeListing(listingId, user)
       
       if (result.success) {
         setListings(prev => prev.filter(listing => listing.id !== listingId))

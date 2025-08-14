@@ -16,11 +16,11 @@ export async function GET(request: NextRequest) {
     if (code) {
       // Handle OAuth flow
       const supabase = await createClient();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) throw error;
 
-      // Check if user has a complete profile
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use the user from the session exchange instead of making another auth call
+      const user = data.user;
       if (user) {
         try {
           const { data: userProfile } = await supabase
@@ -68,8 +68,8 @@ export async function GET(request: NextRequest) {
         throw new Error('Failed to create session after email confirmation');
       }
 
-      // Check if user has a complete profile
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use the user from the session instead of making another auth call
+      const user = data.session.user;
       if (user) {
         try {
           const { data: userProfile } = await supabase

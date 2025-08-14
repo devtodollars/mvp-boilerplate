@@ -11,8 +11,8 @@ export async function PATCH(
     const { status, notes } = await request.json();
     const { id: applicationId } = await params;
 
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get the current user with caching
+    const { user, error: userError } = await getApiUser();
 
     if (userError || !user) {
       return NextResponse.json(

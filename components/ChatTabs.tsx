@@ -275,7 +275,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
     } else {
       setChatTabs([])
     }
-  }, [currentUser, fetchActiveApplications])
+  }, [currentUser]) // Remove fetchActiveApplications from dependencies to prevent infinite loops
 
   // Prevent body scroll when chat panel is open
   // Event handlers to prevent scroll conflicts
@@ -358,7 +358,7 @@ export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?
         void loadMessagesForTab(tab.applicationId)
       }
     })
-  }, [currentUser, chatTabs, chatRooms, loadMessagesForTab])
+  }, [currentUser, chatTabs.length, Object.keys(chatRooms).length]) // Simplified dependencies to prevent infinite loops
 
   // Send message
   const sendMessage = useCallback(async (chatRoomId: string, content: string): Promise<Message | null> => {

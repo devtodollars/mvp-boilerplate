@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const initializedRef = useRef(false);
+  const userRef = useRef<User | null>(null);
   
   // Create a stable Supabase client instance
   const supabase = useMemo(() => createClient(), []);
@@ -32,27 +33,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
+      const newUser = session?.user ?? null;
+      
+      // Only update state if user actually changed
+      if (userRef.current?.id !== newUser?.id) {
+        userRef.current = newUser;
+        setUser(newUser);
+      }
+      
       if (event === 'SIGNED_OUT') {
-        setUser(null);
         setIsLoading(false);
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        setUser(session?.user ?? null);
         setIsLoading(false);
       }
     });
 
-    // Check initial session once
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (!mounted) return;
-      
-      if (error) {
-        console.error('Session error:', error);
+    // Get initial session without additional auth calls
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (!mounted) return;
+        
+        if (error) {
+          console.error('Session error:', error);
+          const newUser = null;
+          if (userRef.current?.id !== newUser?.id) {
+            userRef.current = newUser;
+            setUser(newUser);
+          }
+        } else {
+          const newUser = session?.user ?? null;
+          if (userRef.current?.id !== newUser?.id) {
+            userRef.current = newUser;
+            setUser(newUser);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to get initial session:', error);
         setUser(null);
-      } else {
-        setUser(session?.user ?? null);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
-      setIsLoading(false);
-    });
+    };
+    
+    getInitialSession();
 
     return () => {
       mounted = false;
@@ -77,7 +101,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [supabase, user?.id]);
 
   // Memoize the context value to prevent unnecessary re-renders
-  const value = useMemo(() => ({ user, isLoading, signOut }), [user, isLoading, signOut]);
+  const value = useMemo(() => ({ 
+    user, 
+    isLoading, 
+    signOut 
+  }), [user, isLoading, signOut]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
+import { getApiUser } from '@/utils/supabase/serverApiAuth';
 import { extractFilePathFromUrl, deleteStorageFiles } from '@/utils/supabase/storage';
 
 export async function DELETE(request: NextRequest) {
@@ -10,8 +11,8 @@ export async function DELETE(request: NextRequest) {
     
     const supabase = await createClient();
     
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get the current user with caching
+    const { user, error: userError } = await getApiUser(request);
     
     if (userError || !user) {
       console.error('User authentication error:', userError);
