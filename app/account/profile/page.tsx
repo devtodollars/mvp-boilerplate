@@ -22,6 +22,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { useRouter } from "next/navigation"
 import { AccountCreationForm } from "@/components/misc/accountCreationForm"
 import { useAuth } from "@/components/providers/AuthProvider"
+import { DocumentUpload } from "@/components/profile/DocumentUpload"
 
 export default function ProfilePage() {
   const { toast } = useToast()
@@ -657,6 +658,11 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Documents Section */}
+            <DocumentUpload
+              disabled={loading}
+            />
           </form>
         </div>
       </div>
