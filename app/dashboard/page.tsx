@@ -203,12 +203,22 @@ export default function ApplicationsPage() {
   };
 
   const handleWithdrawApplication = async (applicationId: string) => {
+    if (!user) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Please sign in to withdraw your application.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setWithdrawingApplicationId(applicationId);
     try {
       const supabase = createClient();
       const api = createApiClient(supabase);
       
-      await api.withdrawApplication(applicationId);
+      console.log('Dashboard: Withdrawing application with user:', user.id); // Debug log
+      await api.withdrawApplication(applicationId, user);
 
       setApplications(prev => 
         prev.map(app => 

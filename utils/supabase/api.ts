@@ -20,7 +20,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
 
     try {
       console.log('Checking if user exists for email:', email);
-      
+
       // Use Supabase's admin API to check if user exists
       // This is a safe way to check without exposing user data
       const { data, error } = await supabase.rpc('check_user_exists', {
@@ -30,7 +30,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       if (error) {
         // If the RPC function doesn't exist, fall back to a different method
         console.log('RPC function not available, using alternative method');
-        
+
         // Alternative: Try to sign in with a dummy password to check if user exists
         // This will fail but give us info about whether the user exists
         try {
@@ -72,7 +72,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     const email = 'email' in creds ? creds.email : undefined;
     const phone = 'phone' in creds ? creds.phone : undefined;
     const password = creds.password;
-    
+
     if (!email && !phone) {
       throw new Error('Valid email or phone is required for signup');
     }
@@ -84,13 +84,13 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     if (password.length < 6) {
       throw new Error('Password must be at least 6 characters long');
     }
-    
+
     try {
       // Check if user already exists (only for email signup)
       if (email) {
         console.log('Checking if user already exists before signup...');
         const userExists = await checkUserExists(email);
-        
+
         if (userExists) {
           return {
             user: null,
@@ -98,7 +98,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
             error: { message: 'An account with this email already exists. Please sign in instead.', code: 'user_already_exists' }
           };
         }
-        
+
         console.log('User does not exist, proceeding with signup...');
       }
 
@@ -106,14 +106,14 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       const signUpData: any = { password };
       if (email) signUpData.email = email;
       if (phone) signUpData.phone = phone;
-      
+
       const res = await supabase.auth.signUp({
         ...signUpData,
         options: {
           emailRedirectTo: getURL('/api/auth_callback')
         }
       });
-      
+
       if (res.error) {
         // Handle specific error cases with better messages
         if (res.error.message.includes('User already registered')) {
@@ -128,14 +128,14 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
           throw res.error;
         }
       }
-      
+
       return res.data;
     } catch (error) {
       console.error('Error in passwordSignup:', error);
       throw error;
     }
   };
-  
+
   const verifyOtp = async (email: string, token: string) => {
     if (!email || typeof email !== 'string') {
       throw new Error('Valid email is required for OTP verification');
@@ -151,7 +151,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
         token,
         type: 'email'
       });
-      
+
       if (res.error) {
         // Handle specific error cases with better messages
         if (res.error.message.includes('Invalid OTP')) {
@@ -164,7 +164,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
           throw res.error;
         }
       }
-      
+
       return res.data;
     } catch (error) {
       console.error('Error in verifyOtp:', error);
@@ -181,7 +181,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     const email = 'email' in creds ? creds.email : undefined;
     const phone = 'phone' in creds ? creds.phone : undefined;
     const password = creds.password;
-    
+
     if (!email && !phone) {
       throw new Error('Valid email or phone is required for signin');
     }
@@ -189,13 +189,13 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     if (!password || typeof password !== 'string') {
       throw new Error('Valid password is required for signin');
     }
-    
+
     try {
       // Try to sign in the user
       const signInData: any = { password };
       if (email) signInData.email = email;
       if (phone) signInData.phone = phone;
-      
+
       const res = await supabase.auth.signInWithPassword(signInData);
       if (res.error) {
         // Handle specific error cases with better messages
@@ -316,7 +316,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
 
     console.log('createUserProfile called with:', userData);
-    
+
     try {
       // User must be provided - no fallback auth calls
       if (!user) throw new Error('User not authenticated');
@@ -337,7 +337,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
 
       if (existingProfile) {
         console.log('Profile already exists, updating:', existingProfile);
-        
+
         // If profile exists but is incomplete (only has basic fields from trigger),
         // we should still allow the update
         if (!existingProfile.first_name || !existingProfile.last_name) {
@@ -401,12 +401,12 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
         console.error('Database error:', error);
         throw new Error(`Failed to create user profile: ${error.message}`);
       }
-      
+
       if (!data || data.length === 0) {
         console.error('No data returned from upsert');
         throw new Error('Failed to create user profile: No data returned');
       }
-      
+
       console.log('Profile created successfully:', data);
       return { success: true, data: data[0] };
     } catch (error) {
@@ -423,7 +423,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
         return { completed: false };
       }
       const currentUser = user;
-      
+
       if (!currentUser) {
         return { completed: false };
       }
@@ -444,17 +444,17 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       }
 
       // Check if profile has required fields
-      const hasRequiredFields = profile && 
-        profile.first_name && 
-        profile.last_name && 
-        profile.phone && 
-        profile.bio && 
-        profile.occupation && 
+      const hasRequiredFields = profile &&
+        profile.first_name &&
+        profile.last_name &&
+        profile.phone &&
+        profile.bio &&
+        profile.occupation &&
         profile.date_of_birth;
 
-      return { 
-        completed: !!hasRequiredFields, 
-        profile: hasRequiredFields ? profile : null 
+      return {
+        completed: !!hasRequiredFields,
+        profile: hasRequiredFields ? profile : null
       };
     } catch (error) {
       console.error('Error in checkProfileCompletion:', error);
@@ -513,7 +513,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
         return { success: false, applications: [] };
       }
       const currentUser = user;
-      
+
       if (!currentUser) {
         throw new Error('User not authenticated');
       }
@@ -630,12 +630,13 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
   };
 
-  const withdrawApplication = async (applicationId: string) => {
+  const withdrawApplication = async (applicationId: string, user?: any) => {
     if (!applicationId || typeof applicationId !== 'string') {
       throw new Error('Valid application ID is required');
     }
 
-    return updateApplicationStatus(applicationId, 'withdrawn');
+    console.log('withdrawApplication called with user:', user?.id); // Debug log
+    return updateApplicationStatus(applicationId, 'withdrawn', undefined, user);
   };
 
   const checkUserApplication = async (listingId: string, user?: any) => {
@@ -709,7 +710,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       // Update user's liked listings
       const { error: updateError } = await supabase
         .from('users')
-        .update({ 
+        .update({
           liked_listings: newLikedListings,
           updated_at: new Date().toISOString()
         })
@@ -717,8 +718,8 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
 
       if (updateError) throw updateError;
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         isLiked: !isCurrentlyLiked,
         likedListings: newLikedListings
       };
@@ -737,7 +738,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
         return { success: false, listings: [] };
       }
       const currentUser = user;
-      
+
       if (!currentUser) {
         throw new Error('User not authenticated');
       }
@@ -766,19 +767,19 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
 
       // Fetch the actual listing data for liked listings
       console.log('getUserLikedListings: About to query listings with IDs:', likedListingIds);
-      
+
       // First, let's check if the listing exists at all (without the active filter)
       const { data: allListings, error: allListingsError } = await supabase
         .from('listings')
         .select('*')
         .in('id', likedListingIds);
-      
+
       console.log('getUserLikedListings: All listings found (without active filter):', allListings);
       if (allListings && allListings.length > 0) {
         console.log('getUserLikedListings: First listing active status:', allListings[0].active);
         console.log('getUserLikedListings: First listing full data:', allListings[0]);
       }
-      
+
       // Get all liked listings (both active and inactive) so users can see their favorites
       const { data: listings, error: listingsError } = await supabase
         .from('listings')
@@ -832,6 +833,153 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     }
   };
 
+  // Simplified document sharing functions
+  const submitApplicationWithDocuments = async (
+    listingId: string,
+    applicationData: { message: string },
+    documentsToShare: Array<{ filename: string; documentType: string; customName: string; originalFilename?: string; mimeType?: string; size?: number }>,
+    user?: any
+  ) => {
+    if (!listingId || typeof listingId !== 'string') {
+      throw new Error('Valid listing ID is required');
+    }
+
+    if (!applicationData.message?.trim()) {
+      throw new Error('Application message is required');
+    }
+
+    try {
+      // User must be provided - no fallback auth calls
+      if (!user) {
+        console.warn('submitApplicationWithDocuments called without user parameter');
+        throw new Error('User not authenticated');
+      }
+      const currentUser = user;
+
+      console.log('Submitting application with documents:', {
+        listingId,
+        userId: currentUser.id,
+        documentsCount: documentsToShare.length
+      });
+
+      // Check if user already has an application for this listing
+      const { data: existingApplication, error: checkError } = await supabase
+        .from('applications')
+        .select('id, status')
+        .eq('listing_id', listingId)
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.error('Error checking existing application:', checkError);
+        throw new Error(`Failed to check existing application: ${checkError.message}`);
+      }
+
+      if (existingApplication) {
+        if (existingApplication.status === 'pending') {
+          throw new Error('You have already applied to this property and your application is pending.');
+        }
+
+        // If application exists but is not pending (withdrawn/rejected), update it
+        const { data: updatedApplication, error: updateError } = await supabase
+          .from('applications')
+          .update({
+            status: 'pending',
+            notes: applicationData.message,
+            shared_documents: documentsToShare,
+            applied_at: new Date().toISOString()
+          })
+          .eq('id', existingApplication.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('Error updating application:', updateError);
+          throw new Error(`Failed to update application: ${updateError.message}`);
+        }
+
+        console.log('Application updated with shared documents:', updatedApplication.id);
+        return {
+          success: true,
+          applicationId: updatedApplication.id,
+          sharedDocumentsCount: documentsToShare.length,
+          isUpdate: true
+        };
+      }
+
+      // Get the next position for this listing
+      const { data: maxPositionData, error: positionError } = await supabase
+        .from('applications')
+        .select('position')
+        .eq('listing_id', listingId)
+        .order('position', { ascending: false })
+        .limit(1);
+
+      if (positionError) {
+        console.error('Error getting max position:', positionError);
+        throw new Error(`Failed to get application position: ${positionError.message}`);
+      }
+
+      const nextPosition = (maxPositionData?.[0]?.position || 0) + 1;
+
+      // Create the application with shared documents in one go
+      const { data: newApplication, error: applicationError } = await supabase
+        .from('applications')
+        .insert({
+          listing_id: listingId,
+          user_id: currentUser.id,
+          status: 'pending',
+          position: nextPosition,
+          notes: applicationData.message, // Use message as notes
+          shared_documents: documentsToShare, // Store documents directly in the application
+          applied_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (applicationError) {
+        console.error('Error creating application:', applicationError);
+        throw new Error(`Failed to create application: ${applicationError.message}`);
+      }
+
+      console.log('Application created with shared documents:', newApplication.id);
+
+      return {
+        success: true,
+        applicationId: newApplication.id,
+        sharedDocumentsCount: documentsToShare.length,
+        isUpdate: false
+      };
+
+    } catch (error) {
+      console.error('Error submitting application with documents:', error);
+      throw error;
+    }
+  };
+
+  const getApplicationSharedDocuments = async (applicationId: string, user?: any) => {
+    if (!applicationId || typeof applicationId !== 'string') {
+      throw new Error('Valid application ID is required');
+    }
+
+    try {
+      // User must be provided - no fallback auth calls
+      if (!user) {
+        console.warn('getApplicationSharedDocuments called without user parameter');
+        return { success: false, documents: [] };
+      }
+
+      const { DocumentSharingService } = await import('@/utils/documentSharing');
+      const sharedDocuments = await DocumentSharingService.getSharedDocuments(applicationId);
+
+      return { success: true, documents: sharedDocuments };
+
+    } catch (error) {
+      console.error('Error fetching application shared documents:', error);
+      throw error;
+    }
+  };
+
   return {
     passwordSignin,
     passwordSignup,
@@ -851,6 +999,8 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     checkUserApplication,
     toggleLikeListing,
     getUserLikedListings,
-    checkIfListingLiked
+    checkIfListingLiked,
+    submitApplicationWithDocuments,
+    getApplicationSharedDocuments
   };
 };

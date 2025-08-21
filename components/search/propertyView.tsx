@@ -30,6 +30,8 @@ import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/components/providers/AuthProvider"
 import ApplicationDialog from "@/components/misc/ApplicationDialog"
 import WithdrawConfirmationDialog from "@/components/misc/WithdrawConfirmationDialog"
+import { DocumentSelectionDialog } from "@/components/applications/DocumentSelectionDialog"
+import { SharedDocumentInfo } from "@/utils/documentSharing"
 
 interface PropertyViewProps {
   selectedProperty: any
@@ -38,6 +40,7 @@ interface PropertyViewProps {
 
 export default function PropertyView({ selectedProperty, onMediaClick }: PropertyViewProps) {
   const [showApplicationDialog, setShowApplicationDialog] = useState(false);
+  const [showDocumentSelectionDialog, setShowDocumentSelectionDialog] = useState(false);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -174,6 +177,49 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
     } catch (error) {
       console.error('Error applying:', error);
       throw error;
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleApplyWithDocuments = async (
+    selectedDocuments: SharedDocumentInfo[],
+    applicationData: { message: string }
+  ) => {
+    if (!selectedProperty || !user) return;
+    
+    setIsApplying(true);
+    try {
+      const supabase = createClient();
+      const api = createApiClient(supabase);
+      
+      // Use the new API function that handles documents
+      const result = await api.submitApplicationWithDocuments(
+        selectedProperty.id,
+        applicationData,
+        selectedDocuments,
+        user
+      );
+      
+      toast({
+        title: result.isUpdate ? 'Application Resubmitted!' : 'Application Submitted!',
+        description: `Your application${selectedDocuments.length > 0 ? ` with ${selectedDocuments.length} document${selectedDocuments.length !== 1 ? 's' : ''}` : ''} has been ${result.isUpdate ? 'updated' : 'submitted'} successfully.`,
+        variant: 'default',
+      });
+      
+      // Close the dialog
+      setShowDocumentSelectionDialog(false);
+      
+      // Refresh application status
+      const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id, user);
+      setUserApplication(application);
+    } catch (error) {
+      console.error('Error applying with documents:', error);
+      toast({
+        title: "Application Failed",
+        description: error instanceof Error ? error.message : "Failed to submit application.",
+        variant: "destructive",
+      });
     } finally {
       setIsApplying(false);
     }
@@ -619,7 +665,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
                       const currentUrl = window.location.pathname + window.location.search;
                       window.location.href = `/auth/signin?redirect=${encodeURIComponent(currentUrl)}`;
                     } else {
-                      setShowApplicationDialog(true);
+                      setShowDocumentSelectionDialog(true);
                     }
                   }}
                 >
@@ -637,7 +683,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
                   const currentUrl = window.location.pathname + window.location.search;
                   window.location.href = `/auth/signin?redirect=${encodeURIComponent(currentUrl)}`;
                 } else {
-                  setShowApplicationDialog(true);
+                  setShowDocumentSelectionDialog(true);
                 }
               }}
             >
@@ -656,6 +702,17 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
           isApplying={isApplying}
           isAuthenticated={!!user}
           isReapplication={!!(userApplication && userApplication.status !== 'pending')}
+        />
+
+        {/* Document Selection Dialog */}
+        <DocumentSelectionDialog
+          isOpen={showDocumentSelectionDialog}
+          onClose={() => setShowDocumentSelectionDialog(false)}
+          onSubmit={handleApplyWithDocuments}
+          listingId={selectedProperty.id}
+          landlordId={selectedProperty.user_id}
+          propertyName={selectedProperty.property_name}
+          loading={isApplying}
         />
 
         {/* Withdraw Confirmation Dialog */}

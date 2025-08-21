@@ -9,14 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { 
-  User, 
-  MapPin, 
-  Euro, 
-  Calendar, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
+import {
+  User,
+  MapPin,
+  Euro,
+  Calendar,
+  Clock,
+  CheckCircle,
+  XCircle,
   ArrowLeft,
   Users,
   Trash2,
@@ -36,7 +36,11 @@ import {
   LayoutGrid,
   FileSearch,
   FileX,
-  Search
+  Search,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Download
 } from 'lucide-react';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -53,11 +57,24 @@ export default function ApplicationsPage() {
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [expandedDocuments, setExpandedDocuments] = useState<Set<string>>(new Set());
   const router = useRouter();
   const { toast } = useToast();
-  
+
   // Get user from AuthProvider context at the top level
-  const { user } = useAuth();
+  const { user, isLoading: isLoadingAuth } = useAuth();
+
+  const toggleDocuments = (applicationId: string) => {
+    setExpandedDocuments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(applicationId)) {
+        newSet.delete(applicationId);
+      } else {
+        newSet.add(applicationId);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     if (!user) {
@@ -121,12 +138,12 @@ export default function ApplicationsPage() {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
-        
+
         // Set empty arrays to prevent UI issues
         setApplications([]);
         setOwnedListings([]);
         setLikedListings([]);
-        
+
         // Only show error toast if it's not an auth issue
         if (user) {
           toast({
@@ -163,16 +180,42 @@ export default function ApplicationsPage() {
   }, [user, router, toast]);
 
   const handleWithdrawApplication = async (applicationId: string) => {
+    console.log('handleWithdrawApplication called with:', { 
+      user: user?.id, 
+      isLoadingAuth, 
+      userObject: user 
+    }); // Debug log
+
+    // Check if auth is still loading
+    if (isLoadingAuth) {
+      toast({
+        title: 'Please Wait',
+        description: 'Authentication is loading, please try again in a moment.',
+        variant: 'default',
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Please sign in to withdraw your application.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setWithdrawingApplicationId(applicationId);
     try {
       const supabase = createClient();
       const api = createApiClient(supabase);
-      
-      await api.withdrawApplication(applicationId);
 
-      setApplications(prev => 
-        prev.map(app => 
-          app.id === applicationId 
+      console.log('Withdrawing application with user:', user.id); // Debug log
+      await api.withdrawApplication(applicationId, user);
+
+      setApplications(prev =>
+        prev.map(app =>
+          app.id === applicationId
             ? { ...app, status: 'withdrawn' }
             : app
         )
@@ -183,7 +226,7 @@ export default function ApplicationsPage() {
         description: 'Your application has been withdrawn successfully.',
         variant: 'default',
       });
-      
+
       setShowWithdrawDialog(false);
       setSelectedApplication(null);
     } catch (error) {
@@ -391,32 +434,32 @@ export default function ApplicationsPage() {
         {/* Main Content Tabs - Mobile Optimized */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           <TabsList className="grid w-full grid-cols-4 h-auto p-1 bg-white/80 backdrop-blur-sm shadow-lg">
-            <TabsTrigger 
-              value="overview" 
+            <TabsTrigger
+              value="overview"
               className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs sm:text-sm"
             >
               <LayoutGrid className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Overview</span>
               <span className="sm:hidden">View</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="applications" 
+            <TabsTrigger
+              value="applications"
               className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs sm:text-sm"
             >
               <FileSearch className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Applications</span>
               <span className="sm:hidden">Apps</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="listings" 
+            <TabsTrigger
+              value="listings"
               className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs sm:text-sm"
             >
               <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Listings</span>
               <span className="sm:hidden">List</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="favorites" 
+            <TabsTrigger
+              value="favorites"
               className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs sm:text-sm"
             >
               <Heart className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -440,23 +483,23 @@ export default function ApplicationsPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button 
-                    onClick={() => router.push('/search')} 
+                  <Button
+                    onClick={() => router.push('/search')}
                     className="h-20 flex flex-col items-center gap-2 bg-blue-600 hover:bg-blue-700"
                   >
                     <Home className="h-6 w-6" />
                     <span>Browse Properties</span>
                   </Button>
-                  <Button 
-                    onClick={() => router.push('/listroom')} 
+                  <Button
+                    onClick={() => router.push('/listroom')}
                     variant="outline"
                     className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
                   >
                     <Plus className="h-6 w-6" />
                     <span>List Property</span>
                   </Button>
-                  <Button 
-                    onClick={() => router.push('/account')} 
+                  <Button
+                    onClick={() => router.push('/account')}
                     variant="outline"
                     className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
                   >
@@ -497,18 +540,18 @@ export default function ApplicationsPage() {
                         <Card key={application.id} className="border shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden">
                           <div className="relative h-40 sm:h-48">
                             {application.listing?.images && application.listing.images.length > 0 ? (
-                                <Image
-                                  src={application.listing.images[0]}
-                                  alt={application.listing.property_name}
-                                  fill
-                                  className="object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                  <Building2 className="h-8 w-8 text-gray-400" />
-                                </div>
-                              )}
-                            </div>
+                              <Image
+                                src={application.listing.images[0]}
+                                alt={application.listing.property_name}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                <Building2 className="h-8 w-8 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
                           <CardContent className="p-3 sm:p-4">
                             <div className="flex items-start justify-between gap-3 mb-3">
                               <div className="flex-1 min-w-0">
@@ -543,9 +586,61 @@ export default function ApplicationsPage() {
                               </div>
                             )}
 
+                            {/* Shared Documents Section */}
+                            {application.shared_documents && application.shared_documents.length > 0 && (
+                              <div className="mb-3 sm:mb-4">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleDocuments(application.id)}
+                                  className="flex items-center gap-1 sm:gap-2 p-0 h-auto text-gray-700 hover:text-gray-900"
+                                >
+                                  {expandedDocuments.has(application.id) ? (
+                                    <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  ) : (
+                                    <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  )}
+                                  <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  <span className="text-xs sm:text-sm font-medium">
+                                    Shared Documents ({application.shared_documents.length})
+                                  </span>
+                                </Button>
+                                
+                                {expandedDocuments.has(application.id) && (
+                                  <div className="mt-2 space-y-1 pl-4 sm:pl-6">
+                                    {application.shared_documents.map((doc: any, index: number) => (
+                                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center gap-2">
+                                          <FileText className="h-3 w-3 text-gray-500" />
+                                          <div>
+                                            <p className="text-xs font-medium text-gray-900 truncate">{doc.customName}</p>
+                                            <p className="text-[10px] text-gray-500">{doc.documentType}</p>
+                                          </div>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0"
+                                          onClick={() => {
+                                            toast({
+                                              title: "Document Access",
+                                              description: "Document viewing will be available when the landlord accepts your application.",
+                                              variant: "default",
+                                            });
+                                          }}
+                                        >
+                                          <Download className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
                             <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 className="flex-1 text-xs sm:text-sm"
                                 onClick={() => router.push(`/search?id=${application.listing?.id}`)}
@@ -553,11 +648,12 @@ export default function ApplicationsPage() {
                                 View Property
                               </Button>
                               {application.status === 'pending' && (
-                                <Button 
-                                  variant="destructive" 
+                                <Button
+                                  variant="destructive"
                                   size="sm"
                                   className="flex-1 text-xs sm:text-sm"
                                   onClick={() => handleWithdrawApplication(application.id)}
+                                  disabled={isLoadingAuth || withdrawingApplicationId === application.id}
                                 >
                                   Withdraw
                                 </Button>
@@ -567,9 +663,9 @@ export default function ApplicationsPage() {
                         </Card>
                       ))}
                       {applications.length > 3 && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => setActiveTab('applications')}
                           className="w-full"
                         >
@@ -607,7 +703,7 @@ export default function ApplicationsPage() {
                       {likedListings.slice(0, 3).map((listing) => {
                         const mediaUrls = getMediaUrls(listing);
                         const firstImage = mediaUrls.length > 0 ? mediaUrls[0].url : null;
-                        
+
                         return (
                           <div key={listing.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                             <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
@@ -638,9 +734,9 @@ export default function ApplicationsPage() {
                         );
                       })}
                       {likedListings.length > 3 && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => setActiveTab('favorites')}
                           className="w-full"
                         >
@@ -682,7 +778,7 @@ export default function ApplicationsPage() {
                     </div>
                     <h3 className="text-xl font-semibold mb-3 text-gray-900">No Applications Yet</h3>
                     <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                      Start your property search and apply to places you'd love to live in. 
+                      Start your property search and apply to places you'd love to live in.
                       Your applications will appear here.
                     </p>
                     <Button onClick={() => router.push('/search')} size="lg">
@@ -752,6 +848,58 @@ export default function ApplicationsPage() {
                                   <p className="text-sm text-blue-800">
                                     <strong>Your application notes:</strong> {application.notes}
                                   </p>
+                                </div>
+                              )}
+
+                              {/* Shared Documents Section */}
+                              {application.shared_documents && application.shared_documents.length > 0 && (
+                                <div className="mb-4">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => toggleDocuments(application.id)}
+                                    className="flex items-center gap-2 p-0 h-auto text-gray-700 hover:text-gray-900"
+                                  >
+                                    {expandedDocuments.has(application.id) ? (
+                                      <ChevronUp className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronDown className="h-4 w-4" />
+                                    )}
+                                    <FileText className="h-4 w-4" />
+                                    <span className="text-sm font-medium">
+                                      Shared Documents ({application.shared_documents.length})
+                                    </span>
+                                  </Button>
+                                  
+                                  {expandedDocuments.has(application.id) && (
+                                    <div className="mt-3 space-y-2 pl-6">
+                                      {application.shared_documents.map((doc: any, index: number) => (
+                                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                          <div className="flex items-center gap-2">
+                                            <FileText className="h-4 w-4 text-gray-500" />
+                                            <div>
+                                              <p className="text-sm font-medium text-gray-900">{doc.customName}</p>
+                                              <p className="text-xs text-gray-500">{doc.documentType}</p>
+                                            </div>
+                                          </div>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0"
+                                            onClick={() => {
+                                              toast({
+                                                title: "Document Access",
+                                                description: "Document viewing will be available when the landlord accepts your application.",
+                                                variant: "default",
+                                              });
+                                            }}
+                                          >
+                                            <Download className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               )}
 
@@ -826,7 +974,7 @@ export default function ApplicationsPage() {
                     </div>
                     <h3 className="text-xl font-semibold mb-3 text-gray-900">No Listings Yet</h3>
                     <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                      Start earning by listing your property. Share your space with others and 
+                      Start earning by listing your property. Share your space with others and
                       manage everything from this dashboard.
                     </p>
                     <Button onClick={() => router.push('/listroom')} size="lg">
@@ -839,7 +987,7 @@ export default function ApplicationsPage() {
                     {ownedListings.map((listing) => {
                       const mediaUrls = getMediaUrls(listing);
                       const firstImage = mediaUrls.length > 0 ? mediaUrls[0].url : null;
-                      
+
                       return (
                         <Card key={listing.id} className="border shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden">
                           <div className="relative h-48">
@@ -900,16 +1048,16 @@ export default function ApplicationsPage() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 className="flex-1"
                                 onClick={() => router.push(`/search?id=${listing.id}`)}
                               >
                                 View
                               </Button>
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
                                 className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700"
                                 onClick={() => router.push(`/listroom?edit=${listing.id}`)}
                               >
@@ -946,7 +1094,7 @@ export default function ApplicationsPage() {
                     </div>
                     <h3 className="text-xl font-semibold mb-3 text-gray-900">No Favorites Yet</h3>
                     <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                      Start browsing properties and save the ones you like. 
+                      Start browsing properties and save the ones you like.
                       They'll appear here for easy access later.
                     </p>
                     <Button onClick={() => router.push('/search')} size="lg">
@@ -959,7 +1107,7 @@ export default function ApplicationsPage() {
                     {likedListings.map((listing) => {
                       const mediaUrls = getMediaUrls(listing);
                       const firstImage = mediaUrls.length > 0 ? mediaUrls[0].url : null;
-                      
+
                       return (
                         <Card key={listing.id} className="border shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden">
                           <div className="relative h-48">
@@ -1003,8 +1151,8 @@ export default function ApplicationsPage() {
                               <Badge variant="outline" className="text-xs">
                                 {listing.room_type}
                               </Badge>
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
                                 className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 text-xs sm:text-sm"
                                 onClick={() => router.push(`/search?id=${listing.id}`)}
                               >
@@ -1034,7 +1182,7 @@ export default function ApplicationsPage() {
                 Are you sure you want to withdraw your application? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
-            
+
             {selectedApplication && (
               <div className="space-y-4">
                 <div className="bg-gray-50 border rounded-lg p-4">
@@ -1047,7 +1195,7 @@ export default function ApplicationsPage() {
                     Current position: #{selectedApplication.position} in queue
                   </p>
                 </div>
-                
+
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                   <h4 className="font-medium text-red-800 mb-2">What happens when you withdraw:</h4>
                   <ul className="text-sm text-red-700 space-y-1">
@@ -1073,7 +1221,7 @@ export default function ApplicationsPage() {
               <Button
                 variant="destructive"
                 onClick={() => selectedApplication && handleWithdrawApplication(selectedApplication.id)}
-                disabled={withdrawingApplicationId === selectedApplication?.id}
+                disabled={isLoadingAuth || withdrawingApplicationId === selectedApplication?.id}
                 className="flex items-center gap-2"
               >
                 {withdrawingApplicationId === selectedApplication?.id ? (

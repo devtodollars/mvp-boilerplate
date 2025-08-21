@@ -39,7 +39,6 @@ npm run dev
 
 ### Bugs
 
-* Verify acount deletion deletes also the objects from buckets
 * Privacy Policy and terms of conditions
 
 NOTIFICATIONS REFRESH
