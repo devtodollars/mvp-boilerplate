@@ -9,6 +9,7 @@ import { trackListingView } from '@/utils/supabase/listings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { 
   User, 
   MapPin, 
@@ -47,12 +48,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DeleteListingDialog } from '@/components/DeleteListingDialog';
 import { PaymentStatusCard } from '@/components/PaymentStatusCard';
 
+
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<any[]>([]);
   const [ownedListings, setOwnedListings] = useState<any[]>([]);
   const [likedListings, setLikedListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [withdrawingApplicationId, setWithdrawingApplicationId] = useState<string | null>(null);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
@@ -62,137 +63,162 @@ export default function ApplicationsPage() {
   const [selectedListingForDelete, setSelectedListingForDelete] = useState<any>(null);
   const router = useRouter();
   const { toast } = useToast();
+  
+  // Get user from AuthProvider context at the top level
+  const { user } = useAuth();
 
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        const supabase = createClient();
-        const api = createApiClient(supabase);
+  const fetchAllData = async () => {
+    try {
+      const supabase = createClient();
+      const api = createApiClient(supabase);
 
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          const currentUrl = window.location.pathname + window.location.search;
-          router.push(`/auth/signin?redirect=${encodeURIComponent(currentUrl)}`);
-          return;
-        }
-        setUser(user);
+      // Check if user is available
+      if (!user) {
+        const currentUrl = window.location.pathname + window.location.search;
+        router.push(`/auth/signin?redirect=${encodeURIComponent(currentUrl)}`);
+        return;
+      }
 
-        // Get user profile
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        setUserProfile(profile);
+      // Get user profile
+      const { data: profile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      setUserProfile(profile);
 
-        // Fetch all data in parallel
-        const [applicationsResult, ownedResult, likedResult] = await Promise.allSettled([
-          api.getUserApplications().catch(error => {
-            console.error('Error fetching applications:', error);
-            return { success: false, applications: [] };
-          }),
-          fetchOwnedListings(supabase, user.id),
-          api.getUserLikedListings().catch(error => {
-            console.error('Error fetching liked listings:', error);
-            return { success: false, listings: [] };
-          })
-        ]);
+      // Fetch all data in parallel
+      const [applicationsResult, ownedResult, likedResult] = await Promise.allSettled([
+        api.getUserApplications(user).catch(error => {
+          console.error('Error fetching applications:', error);
+          return { success: false, applications: [] };
+        }),
+        fetchOwnedListings(supabase, user.id),
+        api.getUserLikedListings(user).catch(error => {
+          console.error('Error fetching liked listings:', error);
+          return { success: false, listings: [] };
+        })
+      ]);
 
-        // Handle results
-        if (applicationsResult.status === 'fulfilled' && applicationsResult.value.success) {
-          setApplications(applicationsResult.value.applications);
-        } else {
-          setApplications([]);
-        }
+      // Handle results
+      if (applicationsResult.status === 'fulfilled' && applicationsResult.value.success) {
+        setApplications(applicationsResult.value.applications);
+      } else {
+        setApplications([]);
+      }
 
-        if (ownedResult.status === 'fulfilled' && ownedResult.value.success) {
-          setOwnedListings(ownedResult.value.listings);
-        } else {
-          setOwnedListings([]);
-        }
+      if (ownedResult.status === 'fulfilled' && ownedResult.value.success) {
+        setOwnedListings(ownedResult.value.listings);
+      } else {
+        setOwnedListings([]);
+      }
 
-        if (likedResult.status === 'fulfilled' && likedResult.value.success) {
-          setLikedListings(likedResult.value.listings);
-        } else {
-          setLikedListings([]);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
+      if (likedResult.status === 'fulfilled' && likedResult.value.success) {
+        setLikedListings(likedResult.value.listings);
+      } else {
+        setLikedListings([]);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      
+      // Set empty arrays to prevent UI issues
+      setApplications([]);
+      setOwnedListings([]);
+      setLikedListings([]);
+      
+      // Only show error toast if it's not an auth issue
+      if (user) {
         toast({
           title: 'Error',
-          description: 'Failed to load your dashboard data.',
+          description: 'Some dashboard data could not be loaded. Please refresh the page.',
           variant: 'destructive',
         });
-      } finally {
-        setLoading(false);
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const fetchOwnedListings = async (supabase: any, userId: string) => {
-      try {
-        // First, fetch the listings
-        const { data: listings, error: listingsError } = await supabase
-          .from('listings')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+  useEffect(() => {
+    if (user) {
+      fetchAllData();
+    } else if (user === null) {
+      // User is explicitly null (not loading), redirect to auth
+      setLoading(false);
+    }
+  }, [user]);
 
-        if (listingsError) throw listingsError;
+  const fetchOwnedListings = async (supabase: any, userId: string) => {
+    try {
+      // First, fetch the listings
+      const { data: listings, error: listingsError } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
-        // Then, for each listing, get the applicant count using the new function
-        const listingsWithApplicants = await Promise.all(
-          (listings || []).map(async (listing: any) => {
-            try {
-              const { data: statsData, error: statsError } = await supabase.rpc('get_listing_stats', {
-                listing_uuid: listing.id
-              });
+      if (listingsError) throw listingsError;
 
-              if (statsError) {
-                console.error(`Error getting stats for listing ${listing.id}:`, statsError);
-                return {
-                  ...listing,
-                  applicants: { count: 0 },
-                  views_count: listing.views_count || 0
-                };
-              }
+      // Then, for each listing, get the applicant count using the new function
+      const listingsWithApplicants = await Promise.all(
+        (listings || []).map(async (listing: any) => {
+          try {
+            const { data: statsData, error: statsError } = await supabase.rpc('get_listing_stats', {
+              listing_uuid: listing.id
+            });
 
-              const stats = statsData && statsData.length > 0 ? statsData[0] : null;
-              return {
-                ...listing,
-                applicants: { 
-                  count: stats?.applicant_count || 0 
-                },
-                views_count: stats?.views_count || listing.views_count || 0
-              };
-            } catch (error) {
-              console.error(`Error processing listing ${listing.id}:`, error);
+            if (statsError) {
+              console.error(`Error getting stats for listing ${listing.id}:`, statsError);
               return {
                 ...listing,
                 applicants: { count: 0 },
                 views_count: listing.views_count || 0
               };
             }
-          })
-        );
 
-        return { success: true, listings: listingsWithApplicants };
-      } catch (error) {
-        console.error('Error fetching owned listings:', error);
-        return { success: false, listings: [] };
-      }
-    };
+            const stats = statsData && statsData.length > 0 ? statsData[0] : null;
+            return {
+              ...listing,
+              applicants: { 
+                count: stats?.applicant_count || 0 
+              },
+              views_count: stats?.views_count || listing.views_count || 0
+            };
+          } catch (error) {
+            console.error(`Error processing listing ${listing.id}:`, error);
+            return {
+              ...listing,
+              applicants: { count: 0 },
+              views_count: listing.views_count || 0
+            };
+          }
+        })
+      );
 
-    fetchAllData();
-  }, [router, toast]);
+      return { success: true, listings: listingsWithApplicants };
+    } catch (error) {
+      console.error('Error fetching owned listings:', error);
+      return { success: false, listings: [] };
+    }
+  };
 
   const handleWithdrawApplication = async (applicationId: string) => {
+    if (!user) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Please sign in to withdraw your application.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setWithdrawingApplicationId(applicationId);
     try {
       const supabase = createClient();
       const api = createApiClient(supabase);
       
-      await api.withdrawApplication(applicationId);
+      console.log('Dashboard: Withdrawing application with user:', user.id); // Debug log
+      await api.withdrawApplication(applicationId, user);
 
       setApplications(prev => 
         prev.map(app => 
@@ -341,7 +367,26 @@ export default function ApplicationsPage() {
               </p>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-3">
+          {/* Quick Actions + Account Settings */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/search')}
+              className="flex items-center gap-2 hover:bg-blue-50 transition-colors"
+            >
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">Browse</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/listroom')}
+              className="flex items-center gap-2 hover:bg-green-50 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">List Property</span>
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -349,7 +394,7 @@ export default function ApplicationsPage() {
               className="flex items-center gap-2 hover:bg-white/80 transition-colors"
             >
               <Settings className="h-4 w-4" />
-              Account Settings
+              <span className="hidden sm:inline">Account Settings</span>
             </Button>
           </div>
         </div>
@@ -456,46 +501,6 @@ export default function ApplicationsPage() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-8">
-            {/* Quick Actions */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Award className="h-5 w-5 text-blue-600" />
-                  Quick Actions
-                </CardTitle>
-                <CardDescription>
-                  Common tasks and navigation shortcuts
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button 
-                    onClick={() => router.push('/search')} 
-                    variant="outline"
-                    className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
-                  >
-                    <Home className="h-6 w-6" />
-                    <span>Browse Properties</span>
-                  </Button>
-                  <Button 
-                    onClick={() => router.push('/listroom')}
-                    variant="outline"
-                    className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
-                  >
-                    <Plus className="h-6 w-6" />
-                    <span>List Property</span>
-                  </Button>
-                  <Button 
-                    onClick={() => router.push('/account')} 
-                    variant="outline"
-                    className="h-20 flex flex-col items-center gap-2 hover:bg-blue-50"
-                  >
-                    <User className="h-6 w-6" />
-                    <span>Account Settings</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Recent Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -532,6 +537,7 @@ export default function ApplicationsPage() {
                                   src={application.listing.images[0]}
                                   alt={application.listing.property_name}
                                   fill
+                                  sizes="64px"
                                   className="object-cover"
                                 />
                               ) : (
@@ -663,6 +669,7 @@ export default function ApplicationsPage() {
                                     src={firstImage}
                                     alt={listing.property_name}
                                     fill
+                                    sizes="64px"
                                     className="object-cover"
                                   />
                                 ) : (
@@ -766,6 +773,7 @@ export default function ApplicationsPage() {
                                   src={application.listing.images[0]}
                                   alt={application.listing.property_name}
                                   fill
+                                  sizes="192px"
                                   className="object-cover"
                                 />
                               ) : (
@@ -936,18 +944,13 @@ export default function ApplicationsPage() {
                             {/* Left side - Image and basic info */}
                             <div className="w-full lg:w-1/2">
                               <div className="relative h-48 lg:h-48">
-                                {firstImage ? (
-                                  <Image
-                                    src={firstImage}
-                                    alt={listing.property_name}
-                                    fill
-                                    className="object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                                    <Building2 className="h-12 w-12 text-gray-400" />
-                                  </div>
-                                )}
+                                <Image
+                                  src={firstImage || '/bedroom.PNG'}
+                                  alt={listing.property_name || 'Property'}
+                                  fill
+                                  sizes="(max-width: 1024px) 100vw, 50vw"
+                                  className="object-cover"
+                                />
                                 <div className="absolute top-3 right-3">
                                   <Badge className="bg-white/95 text-gray-800 font-semibold shadow-lg">
                                     €{listing.monthly_rent}
@@ -1081,6 +1084,7 @@ export default function ApplicationsPage() {
                                 src={firstImage}
                                 alt={listing.property_name}
                                 fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                 className="object-cover"
                               />
                             ) : (
@@ -1213,6 +1217,10 @@ export default function ApplicationsPage() {
             onClose={() => {
               setShowDeleteDialog(false);
               setSelectedListingForDelete(null);
+            }}
+            onDelete={() => {
+              // Refetch the listings data after deletion
+              fetchAllData();
             }}
             listing={selectedListingForDelete}
           />

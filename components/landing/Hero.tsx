@@ -27,7 +27,7 @@ export const Hero = ({ user }: { user: User | null }) => {
     try {
       const supabase = createClient();
       const api = createApiClient(supabase);
-      const { completed } = await api.checkProfileCompletion();
+      const { completed } = await api.checkProfileCompletion(user);
       
       if (completed) {
         router.push('/listroom');

@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { createApiClient } from "@/utils/supabase/api"
 import { createClient } from "@/utils/supabase/client"
+import { useAuth } from "@/components/providers/AuthProvider"
 import { userFormSchema, type UserForm, genderEnum, maritalStatusEnum } from "@/schemas/user"
 import { ChevronLeft, ChevronRight, User, Phone, Heart, Home, CalendarIcon, Search } from "lucide-react"
 import { z } from "zod"
@@ -60,6 +61,9 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
   const router = useRouter()
   const api = createApiClient(createClient())
   const supabase = createClient()
+  
+  // Get user from AuthProvider context at the top level
+  const { user } = useAuth()
 
   const [currentStep, setCurrentStep] = useState<FormStep>("personal")
   const [loading, setLoading] = useState(false)
@@ -81,16 +85,10 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
 
   // Get user email from session if not provided
   useEffect(() => {
-    const getUserEmail = async () => {
-      if (!userEmail) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user?.email) {
-          setActualUserEmail(user.email)
-        }
-      }
+    if (!userEmail && user?.email) {
+      setActualUserEmail(user.email)
     }
-    getUserEmail()
-  }, [userEmail, supabase.auth])
+  }, [userEmail, user])
 
   const validateStep = (step: FormStep): boolean => {
     const newErrors: Record<string, string> = {}

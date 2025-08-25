@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Heart, MapPin, ArrowLeft, Trash2 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
+import { useAuth } from "@/components/providers/AuthProvider"
 import { createApiClient } from "@/utils/supabase/api"
 import { useToast } from "@/components/ui/use-toast"
 import { getListingImages } from "@/utils/supabase/storage"
@@ -18,6 +19,9 @@ export default function LikedListingsPage() {
   const [unlikingListing, setUnlikingListing] = useState<string | null>(null)
   const router = useRouter()
   const { toast } = useToast()
+  
+  // Get user from AuthProvider context at the top level
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchLikedListings = async () => {
@@ -25,13 +29,13 @@ export default function LikedListingsPage() {
         const supabase = createClient()
         const api = createApiClient(supabase)
         
-        const { data: { user } } = await supabase.auth.getUser()
+        // Check if user is available
         if (!user) {
           router.push('/auth/signin?redirect=/liked')
           return
         }
 
-        const result = await api.getUserLikedListings()
+        const result = await api.getUserLikedListings(user)
         if (result.success) {
           setListings(result.listings)
         }
@@ -47,8 +51,10 @@ export default function LikedListingsPage() {
       }
     }
 
-    fetchLikedListings()
-  }, [router, toast])
+    if (user) {
+      fetchLikedListings()
+    }
+  }, [user, router, toast])
 
   const handleUnlike = async (listingId: string) => {
     if (unlikingListing) return
@@ -59,7 +65,7 @@ export default function LikedListingsPage() {
       const supabase = createClient()
       const api = createApiClient(supabase)
       
-      const result = await api.toggleLikeListing(listingId)
+      const result = await api.toggleLikeListing(listingId, user)
       
       if (result.success) {
         setListings(prev => prev.filter(listing => listing.id !== listingId))

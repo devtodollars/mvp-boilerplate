@@ -27,8 +27,11 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { createApiClient } from "@/utils/supabase/api"
 import { useToast } from "@/components/ui/use-toast"
+import { useAuth } from "@/components/providers/AuthProvider"
 import ApplicationDialog from "@/components/misc/ApplicationDialog"
 import WithdrawConfirmationDialog from "@/components/misc/WithdrawConfirmationDialog"
+import { DocumentSelectionDialog } from "@/components/applications/DocumentSelectionDialog"
+import { SharedDocumentInfo } from "@/utils/documentSharing"
 
 interface PropertyViewProps {
   selectedProperty: any
@@ -37,15 +40,18 @@ interface PropertyViewProps {
 
 export default function PropertyView({ selectedProperty, onMediaClick }: PropertyViewProps) {
   const [showApplicationDialog, setShowApplicationDialog] = useState(false);
+  const [showDocumentSelectionDialog, setShowDocumentSelectionDialog] = useState(false);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [userApplication, setUserApplication] = useState<any>(null);
   const [isCheckingApplication, setIsCheckingApplication] = useState(false);
-  const [user, setUser] = useState<any>(null);
   const [likedListings, setLikedListings] = useState<Set<string>>(new Set());
   const [likingListing, setLikingListing] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Get user from AuthProvider context at the top level
+  const { user } = useAuth();
 
   // Check if user is authenticated and has already applied to this property
   useEffect(() => {
@@ -56,11 +62,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       try {
         const supabase = createClient();
         
-        // First check if user is authenticated
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        setUser(user);
-        
-        if (userError || !user) {
+        if (!user) {
           // User is not authenticated, don't check for applications
           setIsCheckingApplication(false);
           return;
@@ -68,7 +70,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
         
         // User is authenticated, check for existing application
         const api = createApiClient(supabase);
-        const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id);
+        const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id, user);
         setUserApplication(application);
       } catch (error) {
         console.error('Error checking user and application:', error);
@@ -86,7 +88,6 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       try {
         const supabase = createClient();
         
-        const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data: userData } = await supabase
             .from('users')
@@ -117,7 +118,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       const supabase = createClient();
       const api = createApiClient(supabase);
       
-      const result = await api.toggleLikeListing(listingId);
+      const result = await api.toggleLikeListing(listingId, user);
       
       if (result.success) {
         setLikedListings(prev => {
@@ -157,7 +158,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
     try {
       const supabase = createClient();
       const api = createApiClient(supabase);
-      await api.applyToProperty(selectedProperty.id, notes);
+      await api.applyToProperty(selectedProperty.id, notes, user);
       
       // Check if this was a re-application
       const isReapplication = userApplication && userApplication.status !== 'pending';
@@ -171,11 +172,54 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
       });
       
       // Refresh application status
-      const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id);
+      const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id, user);
       setUserApplication(application);
     } catch (error) {
       console.error('Error applying:', error);
       throw error;
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleApplyWithDocuments = async (
+    selectedDocuments: SharedDocumentInfo[],
+    applicationData: { message: string }
+  ) => {
+    if (!selectedProperty || !user) return;
+    
+    setIsApplying(true);
+    try {
+      const supabase = createClient();
+      const api = createApiClient(supabase);
+      
+      // Use the new API function that handles documents
+      const result = await api.submitApplicationWithDocuments(
+        selectedProperty.id,
+        applicationData,
+        selectedDocuments,
+        user
+      );
+      
+      toast({
+        title: result.isUpdate ? 'Application Resubmitted!' : 'Application Submitted!',
+        description: `Your application${selectedDocuments.length > 0 ? ` with ${selectedDocuments.length} document${selectedDocuments.length !== 1 ? 's' : ''}` : ''} has been ${result.isUpdate ? 'updated' : 'submitted'} successfully.`,
+        variant: 'default',
+      });
+      
+      // Close the dialog
+      setShowDocumentSelectionDialog(false);
+      
+      // Refresh application status
+      const { hasApplied, application } = await api.checkUserApplication(selectedProperty.id, user);
+      setUserApplication(application);
+    } catch (error) {
+      console.error('Error applying with documents:', error);
+      toast({
+        title: "Application Failed",
+        description: error instanceof Error ? error.message : "Failed to submit application.",
+        variant: "destructive",
+      });
     } finally {
       setIsApplying(false);
     }
@@ -621,7 +665,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
                       const currentUrl = window.location.pathname + window.location.search;
                       window.location.href = `/auth/signin?redirect=${encodeURIComponent(currentUrl)}`;
                     } else {
-                      setShowApplicationDialog(true);
+                      setShowDocumentSelectionDialog(true);
                     }
                   }}
                 >
@@ -639,7 +683,7 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
                   const currentUrl = window.location.pathname + window.location.search;
                   window.location.href = `/auth/signin?redirect=${encodeURIComponent(currentUrl)}`;
                 } else {
-                  setShowApplicationDialog(true);
+                  setShowDocumentSelectionDialog(true);
                 }
               }}
             >
@@ -658,6 +702,17 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
           isApplying={isApplying}
           isAuthenticated={!!user}
           isReapplication={!!(userApplication && userApplication.status !== 'pending')}
+        />
+
+        {/* Document Selection Dialog */}
+        <DocumentSelectionDialog
+          isOpen={showDocumentSelectionDialog}
+          onClose={() => setShowDocumentSelectionDialog(false)}
+          onSubmit={handleApplyWithDocuments}
+          listingId={selectedProperty.id}
+          landlordId={selectedProperty.user_id}
+          propertyName={selectedProperty.property_name}
+          loading={isApplying}
         />
 
         {/* Withdraw Confirmation Dialog */}

@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
+import { getApiUser } from '@/utils/supabase/serverApiAuth';
 import { extractFilePathFromUrl, deleteStorageFiles } from '@/utils/supabase/storage';
 
 export async function DELETE(request: NextRequest) {
@@ -10,8 +11,8 @@ export async function DELETE(request: NextRequest) {
     
     const supabase = await createClient();
     
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get the current user with caching
+    const { user, error: userError } = await getApiUser(request);
     
     if (userError || !user) {
       console.error('User authentication error:', userError);
@@ -23,11 +24,41 @@ export async function DELETE(request: NextRequest) {
 
     console.log('User authenticated:', user.id);
 
+    // Step 1: Check for active listings BEFORE any deletion
+    console.log('Checking for active listings...');
+    const { data: activeListings, error: activeListingsError } = await supabase
+      .from('listings')
+      .select('id, property_name, active')
+      .eq('user_id', user.id)
+      .eq('active', true);
+
+    if (activeListingsError) {
+      console.error('Error checking active listings:', activeListingsError);
+      return NextResponse.json(
+        { error: 'Failed to check active listings' },
+        { status: 500 }
+      );
+    }
+
+    if (activeListings && activeListings.length > 0) {
+      console.log(`User has ${activeListings.length} active listings - blocking deletion`);
+      return NextResponse.json(
+        { 
+          error: 'Cannot delete account with active listings',
+          activeListings: activeListings.map(l => ({ id: l.id, name: l.property_name })),
+          message: 'Please deactivate or delete all your active property listings before deleting your account.'
+        },
+        { status: 400 }
+      );
+    }
+
+    console.log('No active listings found - proceeding with account deletion');
+
     // Create admin client for admin operations
     const adminClient = createAdminClient();
     console.log('Admin client created');
 
-    // Step 1: Get all user's listings to extract image paths
+    // Step 2: Get all user's listings to extract image paths
     console.log('Fetching user listings for image cleanup...');
     const { data: userListings, error: listingsError } = await supabase
       .from('listings')
@@ -40,7 +71,7 @@ export async function DELETE(request: NextRequest) {
     } else {
       console.log(`Found ${userListings?.length || 0} listings to clean up`);
       
-      // Step 2: Delete all images and videos from storage buckets
+      // Step 3: Delete all images and videos from storage buckets
       if (userListings && userListings.length > 0) {
         const imagePaths: string[] = [];
         const videoPaths: string[] = [];
@@ -94,7 +125,7 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    // Step 3: Delete user profile from database
+    // Step 4: Delete user profile from database
     console.log('Deleting user profile for user ID:', user.id);
     
     // Try with regular client first
@@ -126,7 +157,7 @@ export async function DELETE(request: NextRequest) {
       console.log('User profile deleted successfully via regular client');
     }
 
-    // Step 4: Delete auth user
+    // Step 5: Delete auth user
     console.log('Attempting to delete auth user...');
     let authDeleted = false;
     

@@ -38,22 +38,35 @@ npm run dev
 #### Currently working on  Account page, viewing active, non active, saved, applied for listings + QUEUES
 
 ### Bugs
-* Fix address search and latlng mapping (currently incorrect) when creatign listing
-* Verify acount deletion deletes also the objects from buckets
+
 * Privacy Policy and terms of conditions
-* Creating user with existing email and passowrd reset handling
+
+NOTIFICATIONS REFRESH
+MESSAGES what ones are read á
+make notifications and messages dropdowns bigger
+Cant clear indivitaul notifications anymore
+
+Messages notification takes time or need refresh
+
+TEST FILTERS AND SEARCH THOROUGHLY
+
+MOBILE ISSUES 
+Clicking on map with no property selected error Mobile Issue
+mobile going to view property from management dashboard
+
 
 
 ### MVP Features
 
 #### WIP - Dominik
-* Account page, viewing active, non active, saved, applied for listings + QUEUES
-* Application system
-* In app chat
-* Search
-TODO
-* Notifications
 
+TODO
+
+- Notifications Testing
+- Chat read/unread fix chat top tab
+- and test Auth logging in and deletion
+
+SMTP server and sending emails??
 
 #### TODO
 * ID verification

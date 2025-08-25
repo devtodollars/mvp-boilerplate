@@ -16,40 +16,40 @@ export type Database = {
     Tables: {
       applications: {
         Row: {
+          applied_at: string | null
+          created_at: string | null
           id: string
           listing_id: string
-          user_id: string
-          status: string
-          position: number
-          applied_at: string
-          reviewed_at: string | null
           notes: string | null
-          created_at: string
-          updated_at: string
+          position: number
+          reviewed_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
+          applied_at?: string | null
+          created_at?: string | null
           id?: string
           listing_id: string
-          user_id: string
-          status?: string
-          position: number
-          applied_at?: string
-          reviewed_at?: string | null
           notes?: string | null
-          created_at?: string
-          updated_at?: string
+          position: number
+          reviewed_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
+          applied_at?: string | null
+          created_at?: string | null
           id?: string
           listing_id?: string
-          user_id?: string
-          status?: string
-          position?: number
-          applied_at?: string
-          reviewed_at?: string | null
           notes?: string | null
-          created_at?: string
-          updated_at?: string
+          position?: number
+          reviewed_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -59,13 +59,55 @@ export type Database = {
             referencedRelation: "listings"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      chat_rooms: {
+        Row: {
+          applicant_id: string
+          application_id: string
+          created_at: string | null
+          id: string
+          owner_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          applicant_id: string
+          application_id: string
+          created_at?: string | null
+          id?: string
+          owner_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          applicant_id?: string
+          application_id?: string
+          created_at?: string | null
+          id?: string
+          owner_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
           {
-            foreignKeyName: "applications_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "chat_rooms_applicant_id_fkey"
+            columns: ["applicant_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
+          {
+            foreignKeyName: "chat_rooms_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_rooms_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       customers: {
@@ -87,136 +129,315 @@ export type Database = {
         Row: {
           active: boolean
           address: string
-          amenities: Json
+          amenities: Database["public"]["Enums"]["amenity_type"][]
+          apartment_number: string | null
           applicants: Json
+          area: string
+          auto_renew: boolean | null
+          available: string | null
+          available_from: string
+          ber_cert_number: string | null
+          ber_rating: Database["public"]["Enums"]["ber_rating_enum"] | null
+          city: string
+          county: string
+          created_at: string
+          current_females: number
+          current_males: number
           description: string
           eircode: string
+          ensuite: boolean
+          house_rules: string | null
           id: string
-          occupants: number | null
+          images: Json
+          last_payment_date: string | null
+          last_viewed_at: string | null
+          lat: number | null
+          lease_duration:
+            | Database["public"]["Enums"]["lease_duration_enum"]
+            | null
+          lng: number | null
+          monthly_rent: number
+          nearby_facilities: Database["public"]["Enums"]["nearby_facility_type"][]
+          next_payment_attempt: string | null
+          owner_occupied: boolean
+          payment_amount: number | null
+          payment_attempts: number | null
+          payment_currency: string | null
+          payment_expires_at: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string | null
+          pets: boolean
           property_name: string
-          property_type: string
-          size: number
+          property_type: Database["public"]["Enums"]["property_type_enum"]
+          rent_frequency:
+            | Database["public"]["Enums"]["rent_frequency_enum"]
+            | null
+          room_type: Database["public"]["Enums"]["room_type_enum"]
+          security_deposit: number
+          size: number | null
+          updated_at: string
+          user_id: string | null
           verified: boolean
-          apartment_number?: string
-          area?: string
-          available_from?: string
-          ber_cert_number?: string
-          ber_rating?: string
-          city?: string
-          county?: string
-          created_at?: string
-          current_females?: number
-          current_males?: number
-          ensuite?: boolean
-          house_rules?: string
-          images?: Json
-          lease_duration?: string
-          monthly_rent?: number
-          nearby_facilities?: string[]
-          owner_occupied?: boolean
-          pets?: boolean
-          rent_frequency?: string
-          room_type?: string
-          security_deposit?: number
-          updated_at?: string
-          user_id?: string
-          videos?: Json
-          lat?: number
-          lng?: number
-          available?: string
-          viewing_times?: string[]
-          views_count?: number
-          last_viewed_at?: string
+          videos: Json
+          viewing_times: string[] | null
+          views_count: number | null
         }
         Insert: {
           active?: boolean
           address: string
-          amenities?: Json
+          amenities?: Database["public"]["Enums"]["amenity_type"][]
+          apartment_number?: string | null
           applicants?: Json
-          description: string
-          eircode: string
-          id?: string
-          occupants?: number | null
-          property_name: string
-          property_type: string
-          size: number
-          verified?: boolean
-          apartment_number?: string
           area?: string
+          auto_renew?: boolean | null
+          available?: string | null
           available_from?: string
-          ber_cert_number?: string
-          ber_rating?: string
+          ber_cert_number?: string | null
+          ber_rating?: Database["public"]["Enums"]["ber_rating_enum"] | null
           city?: string
           county?: string
           created_at?: string
           current_females?: number
           current_males?: number
+          description: string
+          eircode: string
           ensuite?: boolean
-          house_rules?: string
+          house_rules?: string | null
+          id?: string
           images?: Json
-          lease_duration?: string
+          last_payment_date?: string | null
+          last_viewed_at?: string | null
+          lat?: number | null
+          lease_duration?:
+            | Database["public"]["Enums"]["lease_duration_enum"]
+            | null
+          lng?: number | null
           monthly_rent?: number
-          nearby_facilities?: string[]
+          nearby_facilities?: Database["public"]["Enums"]["nearby_facility_type"][]
+          next_payment_attempt?: string | null
           owner_occupied?: boolean
+          payment_amount?: number | null
+          payment_attempts?: number | null
+          payment_currency?: string | null
+          payment_expires_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
           pets?: boolean
-          rent_frequency?: string
-          room_type?: string
+          property_name: string
+          property_type: Database["public"]["Enums"]["property_type_enum"]
+          rent_frequency?:
+            | Database["public"]["Enums"]["rent_frequency_enum"]
+            | null
+          room_type?: Database["public"]["Enums"]["room_type_enum"]
           security_deposit?: number
+          size?: number | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
+          verified?: boolean
           videos?: Json
-          lat?: number
-          lng?: number
-          available?: string
-          viewing_times?: string[]
-          views_count?: number
-          last_viewed_at?: string
+          viewing_times?: string[] | null
+          views_count?: number | null
         }
         Update: {
           active?: boolean
           address?: string
-          amenities?: Json
+          amenities?: Database["public"]["Enums"]["amenity_type"][]
+          apartment_number?: string | null
           applicants?: Json
-          description?: string
-          eircode?: string
-          id?: string
-          occupants?: number | null
-          property_name?: string
-          property_type?: string
-          size?: number
-          verified?: boolean
-          apartment_number?: string
           area?: string
+          auto_renew?: boolean | null
+          available?: string | null
           available_from?: string
-          ber_cert_number?: string
-          ber_rating?: string
+          ber_cert_number?: string | null
+          ber_rating?: Database["public"]["Enums"]["ber_rating_enum"] | null
           city?: string
           county?: string
           created_at?: string
           current_females?: number
           current_males?: number
+          description?: string
+          eircode?: string
           ensuite?: boolean
-          house_rules?: string
+          house_rules?: string | null
+          id?: string
           images?: Json
-          lease_duration?: string
+          last_payment_date?: string | null
+          last_viewed_at?: string | null
+          lat?: number | null
+          lease_duration?:
+            | Database["public"]["Enums"]["lease_duration_enum"]
+            | null
+          lng?: number | null
           monthly_rent?: number
-          nearby_facilities?: string[]
+          nearby_facilities?: Database["public"]["Enums"]["nearby_facility_type"][]
+          next_payment_attempt?: string | null
           owner_occupied?: boolean
+          payment_amount?: number | null
+          payment_attempts?: number | null
+          payment_currency?: string | null
+          payment_expires_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
           pets?: boolean
-          rent_frequency?: string
-          room_type?: string
+          property_name?: string
+          property_type?: Database["public"]["Enums"]["property_type_enum"]
+          rent_frequency?:
+            | Database["public"]["Enums"]["rent_frequency_enum"]
+            | null
+          room_type?: Database["public"]["Enums"]["room_type_enum"]
           security_deposit?: number
+          size?: number | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
+          verified?: boolean
           videos?: Json
-          lat?: number
-          lng?: number
-          available?: string
-          viewing_times?: string[]
-          views_count?: number
-          last_viewed_at?: string
+          viewing_times?: string[] | null
+          views_count?: number | null
         }
         Relationships: []
+      }
+      messages: {
+        Row: {
+          chat_room_id: string
+          content: string
+          created_at: string | null
+          id: string
+          sender_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          chat_room_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          sender_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          chat_room_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          sender_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_chat_room_id_fkey"
+            columns: ["chat_room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          message: string
+          navigation_target: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message: string
+          navigation_target?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string
+          navigation_target?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          completed_at: string | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          listing_id: string | null
+          metadata: Json | null
+          payment_method: string | null
+          payment_reference: string | null
+          status: string
+          stripe_customer_id: string | null
+          stripe_payment_intent_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          listing_id?: string | null
+          metadata?: Json | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          status: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          listing_id?: string | null
+          metadata?: Json | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       prices: {
         Row: {
@@ -260,71 +481,96 @@ export type Database = {
         }
         Relationships: []
       }
-      notifications: {
-        Row: {
-          id: string
-          user_id: string
-          type: string
-          title: string
-          message: string
-          data: Json | null
-          navigation_target: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          type: string
-          title: string
-          message: string
-          data?: Json | null
-          navigation_target?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          type?: string
-          title?: string
-          message?: string
-          data?: Json | null
-          navigation_target?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       users: {
         Row: {
+          avatar_id: string | null
           avatar_url: string | null
           billing_address: Json | null
+          bio: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          first_name: string | null
           full_name: string | null
+          gender: Database["public"]["Enums"]["gender_enum"] | null
           id: string
+          last_login: string | null
+          last_name: string | null
+          liked_listings: string[] | null
+          marital_status:
+            | Database["public"]["Enums"]["marital_status_enum"]
+            | null
+          occupation: string | null
+          owned_listings: string[] | null
           payment_method: Json | null
-          liked_listings?: string[]
+          pending_applications: string[] | null
+          pets: boolean | null
+          phone: string | null
+          rejected_applications: string[] | null
+          smoker: boolean | null
+          successful_applications: string[] | null
+          updated_at: string | null
+          uploaded_documents: string[] | null
+          verified: boolean | null
         }
         Insert: {
+          avatar_id?: string | null
           avatar_url?: string | null
           billing_address?: Json | null
+          bio?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          first_name?: string | null
           full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender_enum"] | null
           id: string
+          last_login?: string | null
+          last_name?: string | null
+          liked_listings?: string[] | null
+          marital_status?:
+            | Database["public"]["Enums"]["marital_status_enum"]
+            | null
+          occupation?: string | null
+          owned_listings?: string[] | null
           payment_method?: Json | null
-          liked_listings?: string[]
+          pending_applications?: string[] | null
+          pets?: boolean | null
+          phone?: string | null
+          rejected_applications?: string[] | null
+          smoker?: boolean | null
+          successful_applications?: string[] | null
+          updated_at?: string | null
+          uploaded_documents?: string[] | null
+          verified?: boolean | null
         }
         Update: {
+          avatar_id?: string | null
           avatar_url?: string | null
           billing_address?: Json | null
+          bio?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          first_name?: string | null
           full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender_enum"] | null
           id?: string
+          last_login?: string | null
+          last_name?: string | null
+          liked_listings?: string[] | null
+          marital_status?:
+            | Database["public"]["Enums"]["marital_status_enum"]
+            | null
+          occupation?: string | null
+          owned_listings?: string[] | null
           payment_method?: Json | null
-          liked_listings?: string[]
+          pending_applications?: string[] | null
+          pets?: boolean | null
+          phone?: string | null
+          rejected_applications?: string[] | null
+          smoker?: boolean | null
+          successful_applications?: string[] | null
+          updated_at?: string | null
+          uploaded_documents?: string[] | null
+          verified?: boolean | null
         }
         Relationships: []
       }
@@ -333,14 +579,225 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_application_to_queue: {
+        Args: {
+          listing_uuid: string
+          user_uuid: string
+          application_notes?: string
+        }
+        Returns: string
+      }
+      check_expired_listings: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      delete_all_notifications: {
+        Args: { user_uuid: string }
+        Returns: number
+      }
+      delete_auth_user: {
+        Args: { user_id: string }
+        Returns: undefined
+      }
+      delete_notification: {
+        Args: { notification_id: string }
+        Returns: boolean
+      }
+      extend_listing_payment: {
+        Args: { listing_uuid: string; days_to_add?: number }
+        Returns: boolean
+      }
+      get_listing_applicant_count: {
+        Args: { listing_uuid: string }
+        Returns: number
+      }
+      get_listing_payment_info: {
+        Args: { listing_uuid: string }
+        Returns: {
+          listing_id: string
+          payment_status: string
+          payment_expires_at: string
+          payment_amount: number
+          days_remaining: number
+          is_active: boolean
+          can_renew: boolean
+        }[]
+      }
+      get_listing_stats: {
+        Args: { listing_uuid: string }
+        Returns: {
+          applicant_count: number
+          views_count: number
+          last_viewed_at: string
+        }[]
+      }
+      get_next_application_position: {
+        Args: { listing_uuid: string }
+        Returns: number
+      }
+      get_or_create_chat_room: {
+        Args:
+          | { application_uuid: string }
+          | {
+              listing_uuid: string
+              owner_uuid: string
+              applicant_uuid: string
+              application_uuid: string
+            }
+        Returns: string
+      }
+      increment_listing_views: {
+        Args: { listing_uuid: string }
+        Returns: number
+      }
+      mark_messages_as_read: {
+        Args: { chat_room_uuid: string }
+        Returns: undefined
+      }
+      reapply_to_property: {
+        Args: {
+          listing_uuid: string
+          user_uuid: string
+          application_notes?: string
+        }
+        Returns: string
+      }
+      reorder_application_queue: {
+        Args: { listing_uuid: string }
+        Returns: undefined
+      }
+      update_application_status: {
+        Args: {
+          application_uuid: string
+          new_status: string
+          review_notes?: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      amenity_type:
+        | "Wi-Fi"
+        | "Parking"
+        | "Garden Access"
+        | "Balcony/Terrace"
+        | "Washing Machine"
+        | "Dryer"
+        | "Dishwasher"
+        | "Microwave"
+        | "TV"
+        | "Central Heating"
+        | "Fireplace"
+        | "Air Conditioning"
+        | "Gym Access"
+        | "Swimming Pool"
+        | "Storage Space"
+        | "Bike Storage"
+        | "Furnished"
+        | "Unfurnished"
+        | "Pet Friendly"
+        | "Smoking Allowed"
+      ber_rating_enum:
+        | "A1"
+        | "A2"
+        | "A3"
+        | "B1"
+        | "B2"
+        | "B3"
+        | "C1"
+        | "C2"
+        | "C3"
+        | "D1"
+        | "D2"
+        | "E1"
+        | "E2"
+        | "F"
+        | "G"
       checkout_mode: "payment" | "setup" | "subscription"
       checkout_payment_status: "paid" | "unpaid" | "no_payment_required"
       checkout_status: "complete" | "expired" | "open"
+      gender_enum: "male" | "female" | "prefer_not_to_say"
+      lease_duration_enum:
+        | "1-month"
+        | "2-months"
+        | "3-months"
+        | "6-months"
+        | "12-months"
+        | "flexible"
+      marital_status_enum:
+        | "single"
+        | "married"
+        | "living with partner"
+        | "divorced"
+        | "widowed"
+      navigation_target_type:
+        | "application_detail"
+        | "chat_room"
+        | "applications_list"
+        | "dashboard"
+        | "profile"
+      nearby_facility_type:
+        | "Bus Stop"
+        | "Train Station"
+        | "DART Station"
+        | "Luas Stop"
+        | "Airport"
+        | "Ferry Terminal"
+        | "Bike Share Station"
+        | "Taxi Rank"
+        | "Shopping Centre"
+        | "Supermarket"
+        | "Convenience Store"
+        | "Pharmacy"
+        | "Post Office"
+        | "Bank"
+        | "ATM"
+        | "Laundromat"
+        | "Dry Cleaners"
+        | "Hardware Store"
+        | "Hospital"
+        | "GP Clinic"
+        | "Dental Clinic"
+        | "Walk-in Clinic"
+        | "Veterinary Clinic"
+        | "Primary School"
+        | "Secondary School"
+        | "University/College"
+        | "Library"
+        | "Creche/Childcare"
+        | "Language School"
+        | "Restaurant/Café"
+        | "Pub"
+        | "Takeaway"
+        | "Coffee Shop"
+        | "Bakery"
+        | "Grocery Market"
+        | "Gym/Fitness Centre"
+        | "Park"
+        | "Beach"
+        | "Swimming Pool"
+        | "Sports Complex"
+        | "Cinema"
+        | "Theatre"
+        | "Museum"
+        | "Art Gallery"
+        | "Golf Course"
+        | "Tennis Courts"
+        | "Playground"
+        | "Church"
+        | "Mosque"
+        | "Temple"
+        | "Community Centre"
+        | "Garda Station"
+        | "Fire Station"
+        | "Petrol Station"
+        | "Car Park"
+        | "Electric Car Charging"
       pricing_plan_interval: "day" | "week" | "month" | "year"
       pricing_type: "one_time" | "recurring"
+      property_type_enum: "house" | "apartment" | "flat" | "studio" | "other"
+      rent_frequency_enum: "weekly" | "monthly"
+      room_type_enum: "single" | "double" | "twin" | "shared" | "digs"
       subscription_status:
         | "trialing"
         | "active"
@@ -359,7 +816,7 @@ export type Database = {
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof DatabaseWithoutInternals, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
@@ -469,15 +926,152 @@ export type CompositeTypes<
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"])[CompositeTypeName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      amenity_type: [
+        "Wi-Fi",
+        "Parking",
+        "Garden Access",
+        "Balcony/Terrace",
+        "Washing Machine",
+        "Dryer",
+        "Dishwasher",
+        "Microwave",
+        "TV",
+        "Central Heating",
+        "Fireplace",
+        "Air Conditioning",
+        "Gym Access",
+        "Swimming Pool",
+        "Storage Space",
+        "Bike Storage",
+        "Furnished",
+        "Unfurnished",
+        "Pet Friendly",
+        "Smoking Allowed",
+      ],
+      ber_rating_enum: [
+        "A1",
+        "A2",
+        "A3",
+        "B1",
+        "B2",
+        "B3",
+        "C1",
+        "C2",
+        "C3",
+        "D1",
+        "D2",
+        "E1",
+        "E2",
+        "F",
+        "G",
+      ],
+      checkout_mode: ["payment", "setup", "subscription"],
+      checkout_payment_status: ["paid", "unpaid", "no_payment_required"],
+      checkout_status: ["complete", "expired", "open"],
+      gender_enum: ["male", "female", "prefer_not_to_say"],
+      lease_duration_enum: [
+        "1-month",
+        "2-months",
+        "3-months",
+        "6-months",
+        "12-months",
+        "flexible",
+      ],
+      marital_status_enum: [
+        "single",
+        "married",
+        "living with partner",
+        "divorced",
+        "widowed",
+      ],
+      navigation_target_type: [
+        "application_detail",
+        "chat_room",
+        "applications_list",
+        "dashboard",
+        "profile",
+      ],
+      nearby_facility_type: [
+        "Bus Stop",
+        "Train Station",
+        "DART Station",
+        "Luas Stop",
+        "Airport",
+        "Ferry Terminal",
+        "Bike Share Station",
+        "Taxi Rank",
+        "Shopping Centre",
+        "Supermarket",
+        "Convenience Store",
+        "Pharmacy",
+        "Post Office",
+        "Bank",
+        "ATM",
+        "Laundromat",
+        "Dry Cleaners",
+        "Hardware Store",
+        "Hospital",
+        "GP Clinic",
+        "Dental Clinic",
+        "Walk-in Clinic",
+        "Veterinary Clinic",
+        "Primary School",
+        "Secondary School",
+        "University/College",
+        "Library",
+        "Creche/Childcare",
+        "Language School",
+        "Restaurant/Café",
+        "Pub",
+        "Takeaway",
+        "Coffee Shop",
+        "Bakery",
+        "Grocery Market",
+        "Gym/Fitness Centre",
+        "Park",
+        "Beach",
+        "Swimming Pool",
+        "Sports Complex",
+        "Cinema",
+        "Theatre",
+        "Museum",
+        "Art Gallery",
+        "Golf Course",
+        "Tennis Courts",
+        "Playground",
+        "Church",
+        "Mosque",
+        "Temple",
+        "Community Centre",
+        "Garda Station",
+        "Fire Station",
+        "Petrol Station",
+        "Car Park",
+        "Electric Car Charging",
+      ],
+      pricing_plan_interval: ["day", "week", "month", "year"],
+      pricing_type: ["one_time", "recurring"],
+      property_type_enum: ["house", "apartment", "flat", "studio", "other"],
+      rent_frequency_enum: ["weekly", "monthly"],
+      room_type_enum: ["single", "double", "twin", "shared", "digs"],
+      subscription_status: [
+        "trialing",
+        "active",
+        "canceled",
+        "incomplete",
+        "incomplete_expired",
+        "past_due",
+        "unpaid",
+        "paused",
+      ],
+    },
+  },
+} as const

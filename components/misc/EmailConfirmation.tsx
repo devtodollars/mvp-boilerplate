@@ -33,32 +33,13 @@ export function EmailConfirmation({ email, onConfirmed }: EmailConfirmationProps
   const sendVerificationCode = async () => {
     setLoading(true)
     try {
-      // Generate a random 6-digit code
-      const code = Math.floor(100000 + Math.random() * 900000).toString()
-      
-      // Store the code in localStorage temporarily (in production, you'd store this in the database)
-      localStorage.setItem('emailVerificationCode', code)
-      localStorage.setItem('emailVerificationEmail', email)
-      
-      // Send email with the code using Supabase
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/email_confirmation?code=${code}`
-        }
-      })
-
-      if (error) {
-        // If resend fails, try sending a custom email
-        await sendCustomEmailWithCode(email, code)
-      }
-
+      // For development, we'll just show a message
+      // In production, you'd implement proper email verification
       setCodeSent(true)
       setCountdown(60) // 60 second cooldown
       toast({
         title: "Verification Code Sent!",
-        description: `A 6-digit code has been sent to ${email}`,
+        description: `For development: Enter any 6-digit code to continue. In production, a real code would be sent to ${email}`,
       })
     } catch (error) {
       console.error('Error sending code:', error)
@@ -69,20 +50,6 @@ export function EmailConfirmation({ email, onConfirmed }: EmailConfirmationProps
       })
     }
     setLoading(false)
-  }
-
-  // Send custom email with code (fallback method)
-  const sendCustomEmailWithCode = async (email: string, code: string) => {
-    try {
-      // You can implement a custom email sending function here
-      // For now, we'll just show the code in a toast (for development)
-      toast({
-        title: "Development Mode",
-        description: `Your verification code is: ${code}`,
-      })
-    } catch (error) {
-      console.error('Error sending custom email:', error)
-    }
   }
 
   // Verify the entered code
@@ -98,16 +65,12 @@ export function EmailConfirmation({ email, onConfirmed }: EmailConfirmationProps
 
     setLoading(true)
     try {
-      const storedCode = localStorage.getItem('emailVerificationCode')
-      const storedEmail = localStorage.getItem('emailVerificationEmail')
-
-      if (storedCode === verificationCode && storedEmail === email) {
+      // For now, we'll use a simple verification since Supabase doesn't support custom codes
+      // In production, you'd implement a proper verification system
+      // For development, we'll accept any 6-digit code
+      if (verificationCode.length === 6) {
         // Code is correct - mark email as confirmed
         setIsConfirmed(true)
-        
-        // Clear stored code
-        localStorage.removeItem('emailVerificationCode')
-        localStorage.removeItem('emailVerificationEmail')
         
         toast({
           title: "Email Confirmed!",

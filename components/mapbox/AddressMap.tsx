@@ -10,6 +10,7 @@ interface AddressMapProps {
     height?: string;
     showMarker?: boolean;
     markerPosition?: { lat: number; lng: number };
+    satelliteMode?: boolean;
 }
 
 function AddressMap({
@@ -17,7 +18,8 @@ function AddressMap({
     onMapClick,
     height = "400px",
     showMarker = false,
-    markerPosition
+    markerPosition,
+    satelliteMode = false
 }: AddressMapProps) {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstance = useRef<mapboxgl.Map | null>(null);
@@ -29,9 +31,15 @@ function AddressMap({
         if (mapInstance.current) return;
 
         mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
+        
+        // Choose map style based on satellite mode
+        const mapStyle = satelliteMode 
+            ? "mapbox://styles/mapbox/satellite-streets-v12" // Hybrid satellite with labels
+            : "mapbox://styles/golet/cmd7nb2nn00mz01sd0h1eg9he"; // Custom style
+        
         const map = new mapboxgl.Map({
             container: mapRef.current,
-            style: "mapbox://styles/golet/cmd7nb2nn00mz01sd0h1eg9he",
+            style: mapStyle,
             center: [-7.5, 53.5], // Ireland center for stable creation
             zoom: 6,
             attributionControl: false,
@@ -53,17 +61,19 @@ function AddressMap({
             map.remove();
             mapInstance.current = null;
         };
-    }, []); // Only run once on mount
+    }, [satelliteMode]); // Re-run if satellite mode changes
 
     // Animate to correct center after map creation
     useEffect(() => {
         const map = mapInstance.current;
         if (!map) return;
 
+        console.log('🔄 Updating map center to:', center);
+
         // Animate to the provided center
         map.easeTo({
             center: [center.lng, center.lat],
-            zoom: 12,
+            zoom: 14, // Higher zoom for city/town level
             duration: 1500
         });
     }, [center]);
@@ -89,13 +99,11 @@ function AddressMap({
             // Move to marker position smoothly
             map.easeTo({
                 center: [markerPosition.lng, markerPosition.lat],
-                zoom: 12,
+                zoom: 16, // Higher zoom for exact location
                 duration: 1500
             });
         }
     }, [showMarker, markerPosition]);
-
-
 
     return (
         <div className="w-full rounded-lg relative" style={{ height }}>

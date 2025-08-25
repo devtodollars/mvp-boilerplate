@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAuth } from "@/components/providers/AuthProvider"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
@@ -50,7 +51,10 @@ export default function ChatRoom({ applicationId, listingName, applicantName, on
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const supabase = createClient()
+  
+  // Memoize the Supabase client to prevent recreation on every render
+  const supabase = useMemo(() => createClient(), [])
+  
   // Keep a reference to the realtime channel so we can clean it up
   const realtimeChannelRef = useRef<any>(null)
   const { toast } = useToast()
@@ -350,17 +354,17 @@ export default function ChatRoom({ applicationId, listingName, applicantName, on
 
 // Message Bubble Component
 function MessageBubble({ message }: { message: Message }) {
-  const supabase = createClient()
+  // Memoize the Supabase client to prevent recreation on every render
+  const supabase = useMemo(() => createClient(), [])
   const [currentUser, setCurrentUser] = useState<string | null>(null)
   const [senderProfile, setSenderProfile] = useState<any>(null)
 
+  // Use AuthProvider context instead of direct auth call
+  const { user } = useAuth()
+  
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setCurrentUser(user?.id || null)
-    }
-    getUser()
-  }, [supabase])
+    setCurrentUser(user?.id || null)
+  }, [user])
 
   useEffect(() => {
     const getSenderProfile = async () => {
@@ -379,8 +383,8 @@ function MessageBubble({ message }: { message: Message }) {
   const avatarUrl = senderProfile?.avatar_url || message.sender?.avatar_url || '/defaultAvatar.png'
 
   return (
-    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-      <div className={`flex gap-2 max-w-[70%] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} w-full`}>
+      <div className={`flex gap-2 w-full max-w-[400px] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
         <Avatar className="h-8 w-8 flex-shrink-0">
           <AvatarImage 
             src={avatarUrl} 
@@ -392,7 +396,7 @@ function MessageBubble({ message }: { message: Message }) {
         </Avatar>
         
         <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
-          <div className={`rounded-lg px-3 py-2 ${
+          <div className={`rounded-lg px-3 py-2 w-full max-w-[320px] break-words whitespace-pre-wrap ${
             isOwnMessage 
               ? 'bg-blue-600 text-white' 
               : 'bg-gray-100 text-gray-900'

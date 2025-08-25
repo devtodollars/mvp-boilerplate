@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,12 +8,14 @@ import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   MessageSquare,
   X,
-  Minimize2,
-  Maximize2,
-  Send
+  Send,
+  Search,
+  Building2,
+  Home
 } from 'lucide-react'
 
 interface ChatTab {
@@ -21,10 +23,14 @@ interface ChatTab {
   applicationId: string
   title: string
   isOpen: boolean
-  isMinimized: boolean
   unreadCount: number
   otherPartyName: string
   propertyName: string
+  role: 'applicant' | 'owner'
+  applicationStatus: string
+  lastMessage?: string
+  lastMessageTime?: string
+  propertyId?: string
 }
 
 interface Message {
@@ -32,6 +38,7 @@ interface Message {
   content: string
   sender_id: string
   created_at: string
+  read_at?: string | null
   sender?: {
     id: string
     full_name?: string
@@ -49,9 +56,8 @@ interface ChatRoom {
     status: string
     listing: {
       id: string
-      title: string
-      address: string
       property_name: string
+      address: string
     }
   }
   owner: {
@@ -66,21 +72,94 @@ interface ChatRoom {
   }
 }
 
-export default function ChatTabs() {
+interface GroupedConversation {
+  id: string
+  title: string
+  type: 'property' | 'application'
+  conversations: ChatTab[]
+  totalUnread: number
+  lastActivity: string
+  status?: string
+}
+
+export default function ChatTabs({ onUnreadCountChange }: { onUnreadCountChange?: (count: number) => void }) {
   const [chatTabs, setChatTabs] = useState<ChatTab[]>([])
   const [messages, setMessages] = useState<Record<string, Message[]>>({})
   const [newMessages, setNewMessages] = useState<Record<string, string>>({})
   const [chatRooms, setChatRooms] = useState<Record<string, ChatRoom>>({})
   const [currentUser, setCurrentUser] = useState<string | null>(null)
-  // Track which application/chat is selected to view on the right pane
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
-  // Controls visibility of the unified chat panel
   const [isPanelOpen, setIsPanelOpen] = useState(false)
-  const supabase = createClient()
-  // Keep realtime channels per chat_room_id
+  const [activeTab, setActiveTab] = useState<'properties' | 'applications'>('properties')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const supabase = useMemo(() => createClient(), [])
   const roomChannelsRef = useRef<Record<string, any>>({})
-  // Keep bottom sentinels per chat_room_id for autoscroll
   const messageEndRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  // Calculate total unread count for notifications
+  const totalUnreadCount = useMemo(() => {
+    return chatTabs.reduce((total, tab) => total + (tab.unreadCount || 0), 0)
+  }, [chatTabs])
+
+  // Notify parent of unread count changes
+  useEffect(() => {
+    if (onUnreadCountChange) {
+      onUnreadCountChange(totalUnreadCount)
+    }
+  }, [totalUnreadCount, onUnreadCountChange])
+
+  // Calculate unread count for a specific chat room from notifications table
+  const calculateUnreadCount = useCallback(async (applicationId: string, currentUserId: string) => {
+    try {
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', currentUserId)
+        .eq('type', 'message')
+        .eq('data->>application_id', applicationId)
+
+      if (error) {
+        console.error('Error counting notifications:', error)
+        return 0
+      }
+
+      return count || 0
+    } catch (error) {
+      console.error('Error calculating unread count:', error)
+      return 0
+    }
+  }, [supabase])
+
+  // Mark messages as read for a chat room
+  const markMessagesAsRead = useCallback(async (chatRoomId: string) => {
+    try {
+      const response = await fetch(`/api/chat/mark-read/${chatRoomId}`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        console.error('Failed to mark messages as read:', response.status, response.statusText)
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error)
+    }
+  }, [])
+
+  // Delete notifications for a specific chat room
+  const deleteChatNotifications = useCallback(async (chatRoomId: string) => {
+    try {
+      const response = await fetch(`/api/notifications/delete-chat/${chatRoomId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        console.error('Failed to delete chat notifications:', response.status, response.statusText)
+      }
+    } catch (error) {
+      console.error('Error deleting chat notifications:', error)
+    }
+  }, [])
 
   // Get current user
   useEffect(() => {
@@ -91,17 +170,16 @@ export default function ChatTabs() {
     return () => subscription.unsubscribe()
   }, [supabase])
 
-  // Fetch user's active applications
+  // Fetch user's active applications and chat rooms
   const fetchActiveApplications = useCallback(async (): Promise<ChatTab[]> => {
     if (!currentUser) return []
 
     try {
-      // Step 1: applicant-side applications (no joins to avoid RLS/filters issues)
       const [{ data: applicantApps, error: applicantError }, { data: ownedListings, error: listingsError }] = await Promise.all([
         supabase
           .from('applications')
           .select('id,status,user_id,listing_id')
-          .eq('status', 'accepted')
+          .in('status', ['pending', 'accepted', 'rejected', 'withdrawn'])
           .eq('user_id', currentUser),
         supabase
           .from('listings')
@@ -109,93 +187,86 @@ export default function ChatTabs() {
           .eq('user_id', currentUser)
       ])
 
-      if (applicantError) {
-        console.error('Error fetching applications (applicant):', applicantError)
-      }
-      if (listingsError) {
-        console.error('Error fetching owned listings:', listingsError)
+      if (applicantError || listingsError) {
+        console.error('Error fetching data:', { applicantError, listingsError })
       }
 
-      // Step 2: owner-side applications for owned listing ids
       let ownerApps: any[] = []
       const ownedListingIds = (ownedListings || []).map((l: any) => l.id)
       if (ownedListingIds.length > 0) {
         const { data: ownerAppsData, error: ownerError } = await supabase
           .from('applications')
           .select('id,status,user_id,listing_id')
-          .eq('status', 'accepted')
+          .in('status', ['pending', 'accepted', 'rejected', 'withdrawn'])
           .in('listing_id', ownedListingIds)
 
         if (ownerError) {
-          console.error('Error fetching applications (owner):', ownerError)
+          console.error('Error fetching owner applications:', ownerError)
         }
         ownerApps = ownerAppsData || []
       }
 
-      const allApps: any[] = [...(applicantApps || []), ...ownerApps]
+      const allApps = [...(applicantApps || []), ...ownerApps]
       if (allApps.length === 0) return []
 
-      // Step 3: fetch listing details for involved listing_ids (for property name and owner id)
-      const allListingIds = Array.from(new Set(allApps.map(a => a.listing_id)))
-      const { data: listingDetails, error: listingDetailsError } = await supabase
-        .from('listings')
-        .select('id, user_id, property_name, address')
-        .in('id', allListingIds)
-
-      if (listingDetailsError) {
-        console.error('Error fetching listing details:', listingDetailsError)
-      }
-
-      const listingMap: Record<string, any> = {}
-        ; (listingDetails || []).forEach((l: any) => { listingMap[l.id] = l })
-
-      // Attach listing info to apps
-      const applications = allApps.map(app => ({
-        ...app,
-        listing: listingMap[app.listing_id] || null,
-      }))
-
-      // Create tabs for each application
-      const newTabs: ChatTab[] = applications.map(app => {
-        const isOwner = app.listing?.user_id === currentUser
-        const otherPartyName = isOwner
-          ? 'Applicant'
-          : (app.listing?.user_id ? 'Property Owner' : 'Owner')
-        const propertyName = app.listing?.property_name || 'Property'
-
-        return {
-          id: `tab-${app.id}`,
-          applicationId: app.id,
-          title: `${otherPartyName} - ${propertyName}`,
-          isOpen: false,
-          isMinimized: false,
-          unreadCount: 0,
-          otherPartyName,
-          propertyName
+      // Get chat rooms for all applications
+      const chatRoomPromises = allApps.map(async (app) => {
+        try {
+          const response = await fetch(`/api/chat/rooms/${app.id}`)
+          const data = await response.json()
+          if (data.error) return null
+          return { applicationId: app.id, chatRoom: data.chatRoom }
+        } catch (error) {
+          console.error('Error fetching chat room for app:', app.id, error)
+          return null
         }
       })
 
-      setChatTabs(prev => {
-        // Merge with existing tabs, preserving state
-        const existingTabs = new Map(prev.map(tab => [tab.id, tab]))
+      const chatRoomResults = await Promise.all(chatRoomPromises)
+      const validChatRooms = chatRoomResults.filter(result => result !== null)
 
-        // Merge existing state with new data
-        const mergedTabs = newTabs
-          .filter((tab, index, arr) => arr.findIndex(t => t.id === tab.id) === index) // dedupe by id
+      // Create tabs with unread counts
+      const newTabsPromises = validChatRooms.map(async ({ applicationId, chatRoom }) => {
+        const isOwner = chatRoom.owner_id === currentUser
+        const otherPartyName = isOwner
+          ? (chatRoom.applicant?.full_name || 'New Applicant')
+          : (chatRoom.owner?.full_name || 'Property Owner')
+        const propertyName = chatRoom.application?.listing?.property_name || 'Property'
+        const unreadCount = await calculateUnreadCount(applicationId, currentUser)
+
+        return {
+          id: `tab-${applicationId}`,
+          applicationId,
+          title: `${otherPartyName} - ${propertyName}`,
+          isOpen: false,
+          unreadCount,
+          otherPartyName,
+          propertyName,
+          role: (isOwner ? 'owner' : 'applicant') as 'owner' | 'applicant',
+          applicationStatus: chatRoom.application?.status || 'pending',
+          propertyId: chatRoom.application?.listing?.id
+        }
+      })
+
+      const finalTabs = await Promise.all(newTabsPromises)
+
+      // Update state efficiently
+      setChatTabs(prev => {
+        const existingTabs = new Map(prev.map(tab => [tab.id, tab]))
+        return finalTabs
+          .filter((tab, index, arr) => arr.findIndex(t => t.id === tab.id) === index)
           .map(tab => ({
             ...tab,
             ...existingTabs.get(tab.id)
           }))
-
-        return mergedTabs
       })
 
-      return newTabs
+      return finalTabs
     } catch (error) {
       console.error('Error in fetchActiveApplications:', error)
       return []
     }
-  }, [currentUser, supabase])
+  }, [currentUser, calculateUnreadCount])
 
   // Fetch applications when user changes
   useEffect(() => {
@@ -204,26 +275,244 @@ export default function ChatTabs() {
     } else {
       setChatTabs([])
     }
-  }, [currentUser, fetchActiveApplications])
+  }, [currentUser]) // Remove fetchActiveApplications from dependencies to prevent infinite loops
 
-  // Load messages for a chat room
-  const loadMessages = useCallback(async (chatRoomId: string) => {
+  // Prevent body scroll when chat panel is open
+  // Event handlers to prevent scroll conflicts
+  const handleWheelEvent = (e: React.WheelEvent) => {
+    // Stop wheel events from bubbling to the main page
+    e.stopPropagation()
+  }
+
+  const handleTouchEvent = (e: React.TouchEvent) => {
+    // Stop touch events from bubbling to the main page
+    e.stopPropagation()
+  }
+
+  // Track which rooms we've already loaded messages for
+  const loadedRoomsRef = useRef<Set<string>>(new Set())
+
+  // Reset loaded rooms when user changes
+  useEffect(() => {
+    loadedRoomsRef.current.clear()
+  }, [currentUser])
+
+  // Smart message loading: Only load when needed and prevent infinite loops
+  const loadMessagesForTab = useCallback(async (applicationId: string) => {
+    const chatRoom = chatRooms[applicationId]
+    if (!chatRoom || loadedRoomsRef.current.has(chatRoom.id)) {
+      return
+    }
+
+    loadedRoomsRef.current.add(chatRoom.id)
+    console.log(`📥 Loading messages for tab: ${applicationId}, room: ${chatRoom.id}`)
+
     try {
-      const response = await fetch(`/api/chat/messages/${chatRoomId}`)
+      const response = await fetch(`/api/chat/messages/${chatRoom.id}`)
       const data = await response.json()
-
-      if (data.error) {
-        console.error('Error loading messages:', data.error)
-        return
+      if (data.messages && data.messages.length > 0) {
+        setMessages(prev => ({
+          ...prev,
+          [chatRoom.id]: data.messages
+        }))
       }
-
-      setMessages(prev => ({
-        ...prev,
-        [chatRoomId]: data.messages || []
-      }))
     } catch (error) {
       console.error('Error loading messages:', error)
     }
+  }, [chatRooms])
+
+  // Load messages for a specific room ID
+  const loadMessagesForRoom = useCallback(async (roomId: string) => {
+    if (loadedRoomsRef.current.has(roomId)) {
+      return
+    }
+
+    loadedRoomsRef.current.add(roomId)
+    console.log(`📥 Loading messages for room: ${roomId}`)
+
+    try {
+      const response = await fetch(`/api/chat/messages/${roomId}`)
+      const data = await response.json()
+      if (data.messages && data.messages.length > 0) {
+        setMessages(prev => ({
+          ...prev,
+          [roomId]: data.messages
+        }))
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error)
+    }
+  }, [])
+
+  // Load messages for existing chats when they become available
+  useEffect(() => {
+    if (!currentUser || chatTabs.length === 0 || Object.keys(chatRooms).length === 0) {
+      return
+    }
+
+    // Only load messages for tabs that don't have them yet
+    chatTabs.forEach(tab => {
+      const chatRoom = chatRooms[tab.applicationId]
+      if (chatRoom && !loadedRoomsRef.current.has(chatRoom.id)) {
+        // Load messages in background without blocking
+        void loadMessagesForTab(tab.applicationId)
+      }
+    })
+  }, [currentUser, chatTabs.length, Object.keys(chatRooms).length]) // Simplified dependencies to prevent infinite loops
+
+  // Send message
+  const sendMessage = useCallback(async (chatRoomId: string, content: string): Promise<Message | null> => {
+    try {
+      const response = await fetch(`/api/chat/messages/${chatRoomId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      })
+
+      const data = await response.json()
+
+      if (data.error) {
+        console.error('Error sending message:', data.error)
+        return null
+      }
+
+      return data.message
+    } catch (error) {
+      console.error('Error sending message:', error)
+      return null
+    }
+  }, [])
+
+
+
+  // Clear new message input
+  const clearNewMessage = useCallback((applicationId: string) => {
+    setNewMessages(prev => ({
+      ...prev,
+      [applicationId]: ''
+    }))
+  }, [])
+
+  // Update new message input
+  const updateNewMessage = useCallback((applicationId: string, value: string) => {
+    setNewMessages(prev => ({
+      ...prev,
+      [applicationId]: value
+    }))
+  }, [])
+
+  // Subscribe to room
+  const subscribeToRoom = useCallback((roomId: string) => {
+    if (!roomId || roomChannelsRef.current[roomId]) return
+
+    const channel = supabase
+      .channel(`messages-room:${roomId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_room_id=eq.${roomId}` },
+        async (payload) => {
+          const newMessage = payload.new as any
+
+          // Check if message already exists to prevent duplicates
+          setMessages(prev => {
+            const existing = prev[roomId] || []
+            if (existing.some(m => m.id === newMessage.id)) return prev
+
+            // Add the new message
+            const updatedMessages = [...existing, { ...newMessage }]
+
+            // Try to enrich sender immediately
+            if (!newMessage.sender) {
+              // Enrich sender in background
+              void supabase
+                .from('users')
+                .select('id, full_name, avatar_url')
+                .eq('id', newMessage.sender_id)
+                .single()
+                .then(({ data: sender, error }) => {
+                  if (error) {
+                    console.warn('Failed to enrich sender:', error)
+                    return
+                  }
+                  if (sender) {
+                    setMessages(prev => {
+                      const current = prev[roomId] || []
+                      return {
+                        ...prev,
+                        [roomId]: current.map(m =>
+                          m.id === newMessage.id
+                            ? { ...m, sender: { id: sender.id, full_name: sender.full_name ?? undefined, avatar_url: sender.avatar_url ?? undefined } }
+                            : m
+                        )
+                      }
+                    })
+                  }
+                })
+            }
+
+            return {
+              ...prev,
+              [roomId]: updatedMessages
+            }
+          })
+
+          // If this is the first message for this room, load existing messages
+          if (!loadedRoomsRef.current.has(roomId)) {
+            console.log(`🔄 First message received for room ${roomId}, loading existing messages...`)
+            void loadMessagesForRoom(roomId)
+          }
+
+          // Update unread count for the chat tab if message is from someone else
+          if (newMessage.sender_id !== currentUser) {
+            // Find the application ID for this chat room
+            const applicationId = Object.keys(chatRooms).find(key =>
+              chatRooms[key].id === roomId
+            )
+
+            if (applicationId) {
+              setChatTabs(prev => prev.map(tab => {
+                if (tab.applicationId === applicationId) {
+                  return {
+                    ...tab,
+                    unreadCount: tab.unreadCount + 1,
+                    lastMessage: newMessage.content,
+                    lastMessageTime: newMessage.created_at
+                  }
+                }
+                return tab
+              }))
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    roomChannelsRef.current[roomId] = channel
+  }, [supabase, currentUser, chatRooms, loadMessagesForRoom])
+
+  // Unsubscribe from room
+  const unsubscribeFromRoom = useCallback((roomId: string) => {
+    if (roomChannelsRef.current[roomId]) {
+      try {
+        supabase.removeChannel(roomChannelsRef.current[roomId])
+      } catch (e) {
+        console.warn('Failed to remove channel for room', roomId, e)
+      }
+      delete roomChannelsRef.current[roomId]
+    }
+  }, [supabase])
+
+  // Cleanup function
+  const cleanup = useCallback(() => {
+    Object.values(roomChannelsRef.current).forEach(channel => {
+      try { supabase.removeChannel(channel) } catch { }
+    })
+    roomChannelsRef.current = {}
+  }, [supabase])
+
+  // Update chat tabs
+  const updateChatTabs = useCallback((updater: (prev: ChatTab[]) => ChatTab[]) => {
+    setChatTabs(updater)
   }, [])
 
   // Get or create chat room
@@ -250,184 +539,179 @@ export default function ChatTabs() {
     }
   }, [])
 
-  // Open chat tab
+  // Load messages for a chat room
+  const loadMessages = useCallback(async (chatRoomId: string): Promise<Message[]> => {
+    try {
+      const response = await fetch(`/api/chat/messages/${chatRoomId}`)
+      const data = await response.json()
+
+      if (data.error) {
+        console.error('Error loading messages:', data.error)
+        return []
+      }
+
+      return data.messages || []
+    } catch (error) {
+      console.error('Error loading messages:', error)
+      return []
+    }
+  }, [])
+
+
+
+
+
+  // Update messages state
+  const updateMessages = useCallback((roomId: string, newMessages: Message[]) => {
+    setMessages(prev => ({
+      ...prev,
+      [roomId]: newMessages
+    }))
+  }, [])
+
+  // Open chat functionality
   const openChat = useCallback(async (applicationId: string) => {
-    console.log('Opening chat for application:', applicationId)
+    if (!currentUser) return
 
-    if (!currentUser) {
-      console.log('Current user not loaded yet, waiting...')
-      return
+    let chatRoom = chatRooms[applicationId]
+    let chatRoomId: string
+
+    if (chatRoom) {
+      chatRoomId = chatRoom.id
+    } else {
+      const result = await getChatRoom(applicationId)
+      if (!result) return
+      chatRoom = result.chatRoom
+      chatRoomId = result.id
+      setChatRooms(prev => ({ ...prev, [applicationId]: chatRoom }))
     }
 
-    // First, get or create the chat room to ensure we have the data
-    const result = await getChatRoom(applicationId)
-    if (!result) {
-      console.error('Failed to get chat room for application:', applicationId)
-      return
-    }
+    const existingTab = chatTabs.find(tab => tab.applicationId === applicationId)
 
-    const { id: chatRoomId, chatRoom } = result
-    console.log('Chat room data:', chatRoom)
+    if (existingTab) {
+      setSelectedApplicationId(applicationId)
+      setChatTabs(prev => prev.map(tab =>
+        tab.applicationId === applicationId
+          ? { ...tab, isOpen: true }
+          : { ...tab, isOpen: false }
+      ))
 
-    // Determine the other party's name
-    const isOwner = chatRoom.owner_id === currentUser
-    const otherPartyName = isOwner
-      ? (chatRoom.applicant?.full_name || 'Applicant')
-      : (chatRoom.owner?.full_name || 'Property Owner')
-    const propertyName = chatRoom.application?.listing?.property_name || 'Property'
+      // Load messages if needed
+      if (!messages[chatRoomId] || messages[chatRoomId].length === 0) {
+        const messagesData = await loadMessages(chatRoomId)
+        updateMessages(chatRoomId, messagesData)
+      }
 
-    console.log('Chat title will be:', `${otherPartyName} - ${propertyName}`)
+      // Handle unread messages
+      if (existingTab.unreadCount > 0) {
+        await markMessagesAsRead(chatRoomId)
+        await deleteChatNotifications(chatRoomId)
+      }
 
-    // Ensure panel is visible. Mark selected and ensure only this tab is open
-    setIsPanelOpen(true)
-    setSelectedApplicationId(applicationId)
-    setChatTabs(prev => {
-      const existingTab = prev.find(tab => tab.applicationId === applicationId)
-      if (existingTab) {
-        return prev.map(tab =>
-          tab.applicationId === applicationId
-            ? {
-                ...tab,
-                isOpen: true,
-                isMinimized: false,
-                title: `${otherPartyName} - ${propertyName}`,
-                otherPartyName,
-                propertyName,
-              }
-            : { ...tab, isOpen: false }
-        )
-      } else {
+      setChatTabs(prev => prev.map(tab =>
+        tab.applicationId === applicationId
+          ? { ...tab, unreadCount: 0 }
+          : tab
+      ))
+
+      subscribeToRoom(chatRoomId)
+    } else {
+      // Handle new chat creation
+      const isOwner = chatRoom.owner_id === currentUser
+      const otherPartyName = isOwner
+        ? (chatRoom.applicant?.full_name || 'Unknown Applicant')
+        : (chatRoom.owner?.full_name || 'Unknown Property Owner')
+      const propertyName = chatRoom.application?.listing?.property_name || 'Unknown Property'
+
+      setSelectedApplicationId(applicationId)
+      setChatTabs(prev => {
         const newTab: ChatTab = {
           id: `tab-${applicationId}`,
           applicationId,
           title: `${otherPartyName} - ${propertyName}`,
           isOpen: true,
-          isMinimized: false,
           unreadCount: 0,
           otherPartyName,
           propertyName,
+          role: isOwner ? 'owner' : 'applicant',
+          applicationStatus: 'pending',
+          propertyId: chatRoom.application?.listing?.id
         }
         return prev.map(t => ({ ...t, isOpen: false })).concat(newTab)
+      })
+
+      if (!messages[chatRoomId] || messages[chatRoomId].length === 0) {
+        const messagesData = await loadMessages(chatRoomId)
+        updateMessages(chatRoomId, messagesData)
       }
-    })
 
-    // Load messages
-    await loadMessages(chatRoomId)
+      subscribeToRoom(chatRoomId)
+    }
+  }, [currentUser, chatRooms, chatTabs, getChatRoom, setChatRooms, updateChatTabs, updateMessages, loadMessages, markMessagesAsRead, deleteChatNotifications, subscribeToRoom])
 
-    // Subscribe to realtime for this room
-    subscribeToRoom(chatRoomId)
-  }, [getChatRoom, currentUser, loadMessages])
-
-  // Listen for open chat events
+  // Handle open chat events
   useEffect(() => {
     const handleOpenChat = (event: CustomEvent) => {
-      const { applicationId } = event.detail
-      console.log('Received openChat event for application:', applicationId)
+      const { applicationId, showPanel } = event.detail
 
-      // If user isn't loaded yet, retry after a short delay
-      if (!currentUser) {
-        console.log('User not loaded, retrying in 1 second...')
-        setTimeout(() => {
-          if (currentUser) {
-            openChat(applicationId)
-          } else {
-            console.error('User still not loaded after retry')
-          }
-        }, 1000)
-        return
+      // Always open the panel when this event is received
+      setIsPanelOpen(true)
+
+      // If specific application is provided, open it
+      if (applicationId) {
+        if (!currentUser) {
+          // If user isn't loaded yet, retry after a short delay
+          setTimeout(() => {
+            if (currentUser) {
+              openChat(applicationId)
+            }
+          }, 1000)
+          return
+        }
+        openChat(applicationId)
+      } else if (chatTabs.length > 0 && !selectedApplicationId) {
+        // If just opening panel and no chat selected, select the first available one
+        setSelectedApplicationId(chatTabs[0].applicationId)
+        openChat(chatTabs[0].applicationId)
       }
-
-      openChat(applicationId)
     }
 
     window.addEventListener('openChat' as any, handleOpenChat)
     return () => window.removeEventListener('openChat' as any, handleOpenChat)
-  }, [currentUser, openChat])
+  }, [currentUser, openChat, chatTabs.length, selectedApplicationId])
 
-  // Send message
-  const sendMessage = useCallback(async (applicationId: string) => {
+  // Handle message sending
+  const handleSendMessage = useCallback(async (applicationId: string) => {
     const messageContent = newMessages[applicationId]?.trim()
     if (!messageContent) return
 
     const chatRoom = chatRooms[applicationId]
     if (!chatRoom) return
 
-    try {
-      const response = await fetch(`/api/chat/messages/${chatRoom.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: messageContent })
-      })
-
-      const data = await response.json()
-
-      if (data.error) {
-        console.error('Error sending message:', data.error)
-        return
-      }
-
-      // Add message to local state
-      setMessages(prev => ({
-        ...prev,
-        [chatRoom.id]: [...(prev[chatRoom.id] || []), data.message]
-      }))
-
-      // Clear input
-      setNewMessages(prev => ({
-        ...prev,
-        [applicationId]: ''
-      }))
-    } catch (error) {
-      console.error('Error sending message:', error)
-    }
-  }, [newMessages, chatRooms])
+    // Send the message - it will appear via the realtime subscription
+    await sendMessage(chatRoom.id, messageContent)
+    clearNewMessage(applicationId)
+  }, [newMessages, chatRooms, sendMessage, clearNewMessage])
 
   // Handle key press
   const handleKeyPress = useCallback((e: React.KeyboardEvent, applicationId: string) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      sendMessage(applicationId)
+      handleSendMessage(applicationId)
     }
-  }, [sendMessage])
-
-  // Toggle minimize - FIXED: Now properly toggles between minimized and open states
-  const toggleMinimize = useCallback((tabId: string) => {
-    console.log('Toggling minimize for tab:', tabId)
-    setChatTabs(prev => {
-      const updatedTabs = prev.map(tab => {
-        if (tab.id === tabId) {
-          const newMinimized = !tab.isMinimized
-          const newOpen = tab.isMinimized // When we toggle minimize, isOpen becomes the OLD minimized state
-          console.log(`Tab ${tabId}: isMinimized ${tab.isMinimized} -> ${newMinimized}, isOpen ${tab.isOpen} -> ${newOpen}`)
-          return {
-            ...tab,
-            isMinimized: newMinimized,
-            isOpen: newOpen
-          }
-        }
-        return tab
-      })
-      return updatedTabs
-    })
-  }, [])
+  }, [handleSendMessage])
 
   // Close chat
   const closeChat = useCallback((tabId: string) => {
-    // Unsubscribe if we know the room
-    setChatTabs(prev => prev.filter(tab => tab.id !== tabId))
-    // Try to find applicationId for this tab and unsubscribe its room channel
     const tab = chatTabs.find(t => t.id === tabId)
     if (tab) {
       const chatRoom = chatRooms[tab.applicationId]
-      if (chatRoom && roomChannelsRef.current[chatRoom.id]) {
-        try {
-          supabase.removeChannel(roomChannelsRef.current[chatRoom.id])
-        } catch (e) {
-          console.warn('Failed to remove channel for room', chatRoom.id, e)
-        }
-        delete roomChannelsRef.current[chatRoom.id]
+      if (chatRoom) {
+        unsubscribeFromRoom(chatRoom.id)
       }
-      // If we closed the selected tab, select the next available (if any)
+
+      updateChatTabs(prev => prev.filter(t => t.id !== tabId))
+
       setSelectedApplicationId(prevSelected => {
         if (prevSelected === tab.applicationId) {
           const remaining = chatTabs.filter(t => t.id !== tabId)
@@ -436,322 +720,417 @@ export default function ChatTabs() {
         return prevSelected
       })
     }
-  }, [])
+  }, [chatTabs, chatRooms, unsubscribeFromRoom, updateChatTabs])
 
-  // Subscribe helper
-  const subscribeToRoom = useCallback((roomId: string) => {
-    if (!roomId) return
-    if (roomChannelsRef.current[roomId]) return
-
-    const channel = supabase
-      .channel(`messages-room:${roomId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_room_id=eq.${roomId}` },
-        async (payload) => {
-          const newMessage = payload.new as any
-          // Append immediately for instant UI update
-          setMessages(prev => {
-            const existing = prev[roomId] || []
-            if (existing.some(m => m.id === newMessage.id)) return prev
-            return {
-              ...prev,
-              [roomId]: [...existing, { ...newMessage }]
-            }
-          })
-
-          // Try to enrich sender but don't block UI
-          try {
-            const { data: sender } = await supabase
-              .from('users')
-              .select('id, full_name, avatar_url')
-              .eq('id', newMessage.sender_id)
-              .single()
-            if (sender) {
-              setMessages(prev => {
-                const existing = prev[roomId] || []
-                return {
-                  ...prev,
-                  [roomId]: existing.map(m => m.id === newMessage.id ? { ...m, sender: { id: sender.id, full_name: sender.full_name ?? undefined, avatar_url: sender.avatar_url ?? undefined } } : m)
-                }
-              })
-            }
-          } catch (e) {
-            // ignore enrichment errors
-          }
-        }
-      )
-      .subscribe()
-
-    roomChannelsRef.current[roomId] = channel
-  }, [supabase])
-
-  // When chatRooms map changes, ensure subscriptions exist for rooms with open tabs
+  // Auto-scroll to bottom when messages update
   useEffect(() => {
-    chatTabs.forEach(tab => {
-      const room = chatRooms[tab.applicationId]
-      if (room) {
-        subscribeToRoom(room.id)
-      }
-    })
-  }, [chatRooms, chatTabs, subscribeToRoom])
-
-  // Cleanup all subscriptions on unmount
-  useEffect(() => {
-    return () => {
-      Object.values(roomChannelsRef.current).forEach(channel => {
-        try { supabase.removeChannel(channel) } catch { }
-      })
-      roomChannelsRef.current = {}
-    }
-  }, [supabase])
-
-  // Auto-scroll to bottom when messages update for a room
-  useEffect(() => {
-    // Only scroll open, non-minimized tabs
+    const openTabs = chatTabs.filter(tab => tab.isOpen)
     openTabs.forEach(tab => {
       const room = chatRooms[tab.applicationId]
-      if (!room) return
-      const endRef = messageEndRefs.current[room.id]
-      if (endRef) {
-        endRef.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      if (room) {
+        const endRef = messageEndRefs.current[room.id]
+        if (endRef) {
+          endRef.scrollIntoView({ behavior: 'smooth', block: 'end' })
+        }
       }
     })
-  }, [messages, chatRooms])
+  }, [messages, chatRooms, chatTabs])
 
-  const openTabs = chatTabs.filter(tab => tab.isOpen && !tab.isMinimized)
-  const minimizedTabs = chatTabs.filter(tab => tab.isMinimized)
+  // Cleanup subscriptions
+  useEffect(() => {
+    return cleanup
+  }, [cleanup])
+
+  // Group conversations by property or application
+  const groupedConversations = useMemo(() => {
+    if (activeTab === 'properties') {
+      // Group by property for owners
+      const propertyGroups = new Map<string, GroupedConversation>()
+
+      chatTabs
+        .filter(tab => tab.role === 'owner')
+        .forEach(tab => {
+          const propertyId = tab.propertyId || tab.applicationId
+          if (!propertyGroups.has(propertyId)) {
+            propertyGroups.set(propertyId, {
+              id: propertyId,
+              title: `Property: ${tab.propertyName.split(' ').slice(0, 3).join(' ')}...`,
+              type: 'property',
+              conversations: [],
+              totalUnread: 0,
+              lastActivity: tab.lastMessageTime || '1970-01-01'
+            })
+          }
+
+          const group = propertyGroups.get(propertyId)!
+          group.conversations.push(tab)
+          group.totalUnread += tab.unreadCount
+
+          if (tab.lastMessageTime && tab.lastMessageTime > group.lastActivity) {
+            group.lastActivity = tab.lastMessageTime
+          }
+        })
+
+      return Array.from(propertyGroups.values())
+        .sort((a, b) => {
+          // Sort by unread count first, then by last activity
+          if (a.totalUnread !== b.totalUnread) {
+            return b.totalUnread - a.totalUnread
+          }
+          return new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
+        })
+    } else {
+      // Group by application for applicants (only show accepted applications)
+      const applicationGroups = new Map<string, GroupedConversation>()
+
+      chatTabs
+        .filter(tab => tab.role === 'applicant' && tab.applicationStatus === 'accepted')
+        .forEach(tab => {
+          const groupId = tab.applicationId
+          if (!applicationGroups.has(groupId)) {
+            applicationGroups.set(groupId, {
+              id: groupId,
+              title: `Listing: ${tab.propertyName.split(' ').slice(0, 3).join(' ')}...`,
+              type: 'application',
+              conversations: [tab],
+              totalUnread: tab.unreadCount,
+              lastActivity: tab.lastMessageTime || '1970-01-01',
+              status: tab.applicationStatus
+            })
+          }
+        })
+
+      return Array.from(applicationGroups.values())
+        .sort((a, b) => {
+          // Sort by unread count first, then by last activity
+          if (a.totalUnread !== b.totalUnread) {
+            return b.totalUnread - a.totalUnread
+          }
+          return new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
+        })
+    }
+  }, [chatTabs, activeTab])
+
+  // Filter conversations based on search
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery) return groupedConversations
+
+    return groupedConversations.filter(group =>
+      group.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      group.conversations.some(tab =>
+        tab.otherPartyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tab.applicationStatus.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    )
+  }, [groupedConversations, searchQuery])
+
+  const openTabs = chatTabs.filter(tab => tab.isOpen)
   const selectedTab = selectedApplicationId
     ? chatTabs.find(t => t.applicationId === selectedApplicationId)
     : openTabs[0]
 
-  console.log('Chat tabs state:', {
-    total: chatTabs.length,
-    open: openTabs.length,
-    minimized: minimizedTabs.length,
-    tabs: chatTabs.map(tab => ({
-      id: tab.id,
-      title: tab.title,
-      isOpen: tab.isOpen,
-      isMinimized: tab.isMinimized,
-      wouldBeOpen: tab.isOpen && !tab.isMinimized,
-      wouldBeMinimized: tab.isMinimized
-    }))
-  })
-
-  // Floating launcher click: ensure there is at least one visible chat
-  const handleLauncherClick = useCallback(async () => {
-    // Open the unified panel
-    setIsPanelOpen(true)
-    if (selectedApplicationId || openTabs.length > 0) return
-    if (minimizedTabs.length > 0) {
-      const firstMin = minimizedTabs[0]
-      await openChat(firstMin.applicationId)
-      return
-    }
-    // No tabs yet – fetch and open the first available chat
-    const tabs = await fetchActiveApplications()
-    const first = tabs && tabs[0]
-    if (first) {
-      await openChat(first.applicationId)
-    }
-  }, [openTabs.length, minimizedTabs, selectedApplicationId, fetchActiveApplications, openChat])
+  // Don't render if user is not authenticated
+  if (!currentUser) return null
 
   return (
     <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 z-50">
-      {/* Floating chat launcher - visible only when panel is closed */}
-      {!isPanelOpen && (
-        <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4">
-          <Button
-            size="icon"
-            className="rounded-full h-12 w-12 shadow-lg bg-blue-600 hover:bg-blue-700 text-white"
-            onClick={handleLauncherClick}
-            aria-label="Open chat"
-          >
-            <MessageSquare className="h-5 w-5" />
-          </Button>
-        </div>
-      )}
-      {/* Minimized Tabs */}
-      {minimizedTabs.length > 0 && (
-        <div className="flex flex-col gap-2 mb-2">
-          {minimizedTabs.map((tab) => (
-            <Button
-              key={tab.id}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 min-w-0 bg-white shadow-lg"
-              onClick={() => toggleMinimize(tab.id)}
-            >
-              <MessageSquare className="h-4 w-4" />
-              <span className="truncate max-w-20">{tab.title}</span>
-              {tab.unreadCount > 0 && (
-                <Badge variant="destructive" className="h-5 w-5 p-0 text-xs">
-                  {tab.unreadCount}
-                </Badge>
-              )}
-              <X
-                className="h-4 w-4 ml-1"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  closeChat(tab.id)
-                }}
-              />
-            </Button>
-          ))}
-        </div>
-      )}
-
-      {/* Single Chat Window with Conversation List */}
       {isPanelOpen && (
-        <Card className="w-[90vw] sm:w-[600px] md:w-[720px] h-[360px] sm:h-[460px] flex flex-col shadow-xl border-0">
-          <CardHeader className="p-3 pb-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-            <div className="flex items-center justify-between gap-2 min-w-0">
-              <CardTitle className="text-sm font-medium truncate flex-1 min-w-0 max-w-full">
-                {selectedTab?.title || 'Chats'}
-              </CardTitle>
-              {selectedTab && (
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 hover:bg-blue-100"
-                    onClick={() => setIsPanelOpen(false)}
-                  >
-                    <Minimize2 className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 hover:bg-red-100"
-                    onClick={() => setIsPanelOpen(false)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-0 flex-1 min-h-0 flex">
-            {/* Left: conversation list */}
-            <div className="w-36 sm:w-48 md:w-56 border-r h-full flex flex-col">
-              <ScrollArea className="flex-1">
-                <div className="p-2 space-y-1">
-                  {chatTabs.map(item => (
-                    <button
-                      key={item.id}
-                      className={`w-full text-left px-2 py-2 rounded-md text-sm hover:bg-zinc-100 ${item.applicationId === selectedApplicationId ? 'bg-zinc-100 font-medium' : ''}`}
-                      onClick={() => openChat(item.applicationId)}
-                    >
-                      <div className="truncate">{item.otherPartyName}</div>
-                      <div className="text-xs text-zinc-500 truncate">{item.propertyName}</div>
-                    </button>
-                  ))}
-                  {chatTabs.length === 0 && (
-                    <div className="text-xs text-zinc-500 p-2">No conversations</div>
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
-
-            {/* Right: message thread */}
-            <div className="flex-1 flex flex-col min-h-0">
-              <div className="p-3 pb-0 text-sm font-medium truncate min-w-0 max-w-full">
-                {selectedTab?.title || 'Select a conversation'}
+        <div
+          className="overscroll-contain"
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
+          <Card
+            className="w-[95vw] sm:w-[800px] md:w-[900px] lg:w-[1000px] h-[500px] sm:h-[600px] max-h-[80vh] flex flex-col shadow-xl border-0 overflow-hidden"
+            onWheel={handleWheelEvent}
+            onTouchMove={handleTouchEvent}
+            onTouchStart={handleTouchEvent}
+          >
+            <CardHeader className="p-3 pb-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <CardTitle className="text-sm font-medium truncate flex-1 min-w-0 max-w-full">
+                  {selectedTab?.title || 'Chats'}
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 hover:bg-red-100"
+                  onClick={() => setIsPanelOpen(false)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
               </div>
-              <div className="p-3 pt-0 flex-1 min-h-0 flex flex-col">
+            </CardHeader>
+
+            <CardContent className="p-0 flex-1 min-h-0 flex flex-col sm:flex-row">
+              {/* Left: conversation list with tabs */}
+              <div className="w-full sm:w-80 sm:border-r border-b sm:border-b-0 bg-gray-50 h-full flex flex-col flex-shrink-0 min-w-0 max-w-80">
+                <div className="p-3 border-b bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-semibold text-gray-700">Conversations</h3>
+                    <p className="text-xs text-gray-500">
+                      {searchQuery ? `${filteredGroups.length} of ${groupedConversations.length}` : `${groupedConversations.length} total`}
+                    </p>
+                  </div>
+
+                  {/* Role-based tabs */}
+                  <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'properties' | 'applications')} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 h-8">
+                      <TabsTrigger value="properties" className="text-xs flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        My Listings
+                      </TabsTrigger>
+                      <TabsTrigger value="applications" className="text-xs flex items-center gap-1">
+                        <Home className="h-3 w-3" />
+                        My Applications
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+
+
+                </div>
+
                 <ScrollArea className="flex-1">
-                  <div className="space-y-2 pr-2">
-                    {(() => {
-                      const chatRoom = selectedTab ? chatRooms[selectedTab.applicationId] : undefined
-                      const chatMessages = chatRoom ? (messages[chatRoom.id] || []) : []
-                      return chatMessages.length > 0 ? (
-                        chatMessages.map((message: Message) => (
-                          <MessageBubble
-                            key={message.id}
-                            message={message}
-                            isOwnMessage={currentUser === message.sender_id}
-                          />
-                        ))
-                      ) : (
-                        <div className="text-center py-8 text-gray-500 text-sm">
-                          <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          {selectedTab ? 'No messages yet' : 'Choose a chat to start'}
+                  <div className="p-2 space-y-3">
+                    {filteredGroups.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">
+                          {searchQuery ? 'No conversations found' : 'No conversations yet'}
+                        </p>
+                        <p className="text-xs">
+                          {searchQuery ? 'Try adjusting your search terms' : 'Start chatting with applicants or property owners'}
+                        </p>
+                      </div>
+                    ) : (
+                      filteredGroups.map((group) => (
+                        <div key={group.id} className="space-y-1">
+                          {/* Group Header */}
+                          <div className="px-2 py-1">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                {/* Unread indicator for group */}
+                                {group.totalUnread > 0 && (
+                                  <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
+                                )}
+                                <h4 className="text-xs font-semibold text-gray-600 truncate">
+                                  {group.title}
+                                </h4>
+                              </div>
+                              {group.totalUnread > 0 && (
+                                <Badge variant="destructive" className="h-4 w-4 p-0 text-xs flex-shrink-0">
+                                  {group.totalUnread > 9 ? '9+' : group.totalUnread}
+                                </Badge>
+                              )}
+                            </div>
+                            {group.type === 'application' && group.status && (
+                              <Badge
+                                variant={group.status === 'accepted' ? 'default' :
+                                  group.status === 'pending' ? 'secondary' :
+                                    group.status === 'rejected' ? 'destructive' : 'outline'}
+                                className="text-xs h-3 px-1 mt-1"
+                              >
+                                {group.status}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Conversations in this group */}
+                          <div className="space-y-1">
+                            {group.conversations
+                              .sort((a, b) => {
+                                // Sort by unread count first, then by last message time
+                                if (a.unreadCount !== b.unreadCount) {
+                                  return b.unreadCount - a.unreadCount
+                                }
+                                const aTime = a.lastMessageTime || '1970-01-01'
+                                const bTime = b.lastMessageTime || '1970-01-01'
+                                return new Date(bTime).getTime() - new Date(aTime).getTime()
+                              })
+                              .map((tab) => (
+                                <button
+                                  key={tab.id}
+                                  className={`w-full text-left p-2 rounded-lg text-xs transition-all duration-200 hover:bg-white hover:shadow-sm relative ${tab.applicationId === selectedApplicationId
+                                    ? 'bg-white shadow-sm border-l-4 border-blue-500'
+                                    : tab.unreadCount > 0
+                                      ? 'bg-blue-50 border-l-2 border-blue-300 hover:bg-blue-100'
+                                      : 'hover:border-l-2 hover:border-gray-200'
+                                    }`}
+                                  onClick={() => openChat(tab.applicationId)}
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      {/* Unread indicator - standard filled circle */}
+                                      {tab.unreadCount > 0 && (
+                                        <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
+                                      )}
+                                      <div className={`truncate ${tab.unreadCount > 0 ? 'font-semibold text-blue-900' : 'font-medium text-gray-900'}`}>
+                                        {tab.otherPartyName}
+                                      </div>
+                                    </div>
+                                    {tab.unreadCount > 0 && (
+                                      <Badge variant="destructive" className="h-4 w-4 p-0 text-xs flex-shrink-0">
+                                        {tab.unreadCount}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-gray-500 truncate leading-tight mb-1">
+                                    {tab.propertyName}
+                                  </div>
+                                  {tab.lastMessage && (
+                                    <div className="text-xs text-gray-600 truncate leading-tight">
+                                      {tab.lastMessage}
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                          </div>
                         </div>
-                      )
-                    })()}
-                    <div ref={(el) => {
-                      const room = selectedTab ? chatRooms[selectedTab.applicationId] : undefined
-                      if (room) messageEndRefs.current[room.id] = el
-                    }} />
+                      ))
+                    )}
                   </div>
                 </ScrollArea>
-
-                {/* Message input */}
-                {selectedTab && (
-                  <div className="flex gap-2 mt-2 px-1 pb-2">
-                    <Input
-                      value={newMessages[selectedTab.applicationId] || ''}
-                      onChange={(e) => setNewMessages(prev => ({
-                        ...prev,
-                        [selectedTab.applicationId]: e.target.value
-                      }))}
-                      onKeyPress={(e) => handleKeyPress(e, selectedTab.applicationId)}
-                      placeholder="Type a message..."
-                      className="flex-1 text-sm"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => sendMessage(selectedTab.applicationId)}
-                      disabled={!newMessages[selectedTab.applicationId]?.trim()}
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+
+              {/* Right: message thread */}
+              <div className="w-full sm:w-[calc(100%-20rem)] lg:w-[calc(100%-22rem)] flex flex-col min-h-0 flex-shrink-0">
+                <div className="p-3 pb-0 text-sm font-medium truncate min-w-0 max-w-full border-b">
+                  {selectedTab?.title || 'Select a conversation'}
+                </div>
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <ScrollArea className="flex-1 p-3">
+                    <div className="space-y-3 pr-2 min-w-0">
+                      <MessageList
+                        selectedTab={selectedTab}
+                        chatRooms={chatRooms}
+                        messages={messages}
+                        currentUser={currentUser}
+                        messageEndRefs={messageEndRefs}
+                      />
+                    </div>
+                  </ScrollArea>
+
+                  {/* Message input */}
+                  {selectedTab && (
+                    <MessageInput
+                      selectedTab={selectedTab}
+                      newMessages={newMessages}
+                      onMessageChange={updateNewMessage}
+                      onKeyPress={handleKeyPress}
+                      onSend={handleSendMessage}
+                    />
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )
 }
 
-// Message Bubble Component
-function MessageBubble({
-  message,
-  isOwnMessage
+// Extracted components for better organization
+function MessageList({
+  selectedTab,
+  chatRooms,
+  messages,
+  currentUser,
+  messageEndRefs
 }: {
-  message: Message
-  isOwnMessage: boolean
+  selectedTab: ChatTab | undefined
+  chatRooms: Record<string, ChatRoom>
+  messages: Record<string, Message[]>
+  currentUser: string | null
+  messageEndRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>
 }) {
+  const chatRoom = selectedTab ? chatRooms[selectedTab.applicationId] : undefined
+  const chatMessages = chatRoom ? (messages[chatRoom.id] || []) : []
+
+  if (chatMessages.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500 text-sm">
+        <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        {selectedTab ? 'No messages yet' : 'Choose a chat to start'}
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {chatMessages.map((message: Message) => (
+        <MessageBubble
+          key={message.id}
+          message={message}
+          isOwnMessage={currentUser === message.sender_id}
+        />
+      ))}
+      <div ref={(el) => {
+        if (chatRoom) messageEndRefs.current[chatRoom.id] = el
+      }} />
+    </>
+  )
+}
+
+function MessageInput({
+  selectedTab,
+  newMessages,
+  onMessageChange,
+  onKeyPress,
+  onSend
+}: {
+  selectedTab: ChatTab
+  newMessages: Record<string, string>
+  onMessageChange: (applicationId: string, value: string) => void
+  onKeyPress: (e: React.KeyboardEvent, applicationId: string) => void
+  onSend: (applicationId: string) => void
+}) {
+  return (
+    <div className="flex gap-2 p-3 border-t bg-gray-50">
+      <Input
+        value={newMessages[selectedTab.applicationId] || ''}
+        onChange={(e) => onMessageChange(selectedTab.applicationId, e.target.value)}
+        onKeyPress={(e) => onKeyPress(e, selectedTab.applicationId)}
+        placeholder="Type a message..."
+        className="flex-1 text-sm"
+      />
+      <Button
+        size="sm"
+        onClick={() => onSend(selectedTab.applicationId)}
+        disabled={!newMessages[selectedTab.applicationId]?.trim()}
+      >
+        <Send className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
+function MessageBubble({ message, isOwnMessage }: { message: Message; isOwnMessage: boolean }) {
   const senderName = message.sender?.full_name || `User ${message.sender_id.slice(0, 8)}`
   const avatarUrl = message.sender?.avatar_url || '/defaultAvatar.png'
 
   return (
-    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-      <div className={`flex items-start gap-2 max-w-full overflow-hidden ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-        <Avatar className="h-6 w-6 flex-shrink-0">
-          <AvatarImage
-            src={avatarUrl}
-            alt={senderName}
-          />
-          <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
-            {senderName.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
-        <div className={`rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap max-w-[70%] sm:max-w-[75%] md:max-w-[80%] ${isOwnMessage
-            ? 'bg-blue-500 text-white'
-            : 'bg-gray-100 text-gray-900'
-          }`}>
-          <div className="font-medium text-xs mb-1">
-            {senderName}
+    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} w-full`}>
+      <div className={`flex items-start gap-2 w-full max-w-[400px] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+        {/* Only show avatar for messages from other person */}
+        {!isOwnMessage && (
+          <Avatar className="h-6 w-6 flex-shrink-0">
+            <AvatarImage src={avatarUrl} alt={senderName} />
+            <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
+              {senderName.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+        )}
+        <div className={`flex flex-col min-w-0 flex-1 ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+          <div className={`rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap w-full max-w-[320px] ${isOwnMessage ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'
+            }`}>
+            <div className="font-medium text-xs mb-1 opacity-80">
+              {senderName}
+            </div>
+            <div className="break-words whitespace-pre-wrap leading-relaxed">{message.content}</div>
           </div>
-          <div className="break-words">{message.content}</div>
         </div>
       </div>
     </div>
   )
-} 
+}

@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { createApiClient } from "@/utils/supabase/api"
 import { useRouter, usePathname } from "next/navigation"
+import { useAuth } from "@/components/providers/AuthProvider"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -12,7 +13,7 @@ import { User, X, ArrowRight } from "lucide-react"
 export default function ProfileNotification() {
   const [showNotification, setShowNotification] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
-  const [user, setUser] = useState<any>(null)
+  const { user } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   
@@ -21,15 +22,11 @@ export default function ProfileNotification() {
 
   useEffect(() => {
     const checkProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      
       if (!user) return
-
-      setUser(user)
 
       try {
         const api = createApiClient(supabase)
-        const { completed } = await api.checkProfileCompletion()
+        const { completed } = await api.checkProfileCompletion(user)
         
         if (!completed) {
           // Show dialog on listroom page, notification elsewhere
@@ -73,7 +70,7 @@ export default function ProfileNotification() {
     }
 
     checkProfile()
-  }, [pathname, supabase])
+  }, [user, pathname, supabase])
 
   const handleCompleteProfile = () => {
     setShowDialog(false)

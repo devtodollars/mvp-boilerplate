@@ -5,7 +5,8 @@ export enum AuthState {
   ForgotPassword = 'forgot_password',
   Signup = 'signup',
   UpdatePassword = 'update_password',
-  ProfileSetup = 'profile_setup'
+  ProfileSetup = 'profile_setup',
+  EmailVerification = 'email_verification'
 }
 
 export type StateInfo = {

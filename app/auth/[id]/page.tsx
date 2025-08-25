@@ -1,8 +1,9 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/landing/Navbar';
-import { AuthForm } from '@/components/misc/AuthForm';
+import { EnhancedAuthForm } from '@/components/misc/enhancedAuthForm';
 import { AuthState } from '@/utils/types';
+import { getCachedUser } from '@/utils/supabase/serverAuth';
 
 export default async function SignIn(
   props: {
@@ -17,10 +18,7 @@ export default async function SignIn(
   const currState = params.id as AuthState;
 
   // Check if the user is already logged in and redirect to the account page if so
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const user = await getCachedUser();
 
   if (user && currState !== AuthState.ProfileSetup) {
     return redirect('/');
@@ -29,8 +27,10 @@ export default async function SignIn(
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <AuthForm state={currState} />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <EnhancedAuthForm state={currState} />
+      </div>
     </div>
   );
 }

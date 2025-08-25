@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useEffect, useState } from "react"
@@ -13,7 +13,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { AuthState, type StateInfo } from "@/utils/types"
 import SiGoogle from "@icons-pack/react-simple-icons/icons/SiGoogle"
 import { AccountCreationForm } from "./accountCreationForm"
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, Github } from "lucide-react"
+import { OtpVerification } from "./OtpVerification"
 
 export function EnhancedAuthForm({ state }: { state: AuthState }) {
   const { toast } = useToast()
@@ -21,7 +22,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  const [authState, setAuthState] = useState(state)
+  const [authState, setAuthState] = useState<AuthState>(state)
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -34,10 +35,13 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!email) {
-      newErrors.email = "Email is required"
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Please enter a valid email address"
+    // Only validate email if the current state has an email field
+    if (authState === AuthState.Signin || authState === AuthState.Signup || authState === AuthState.ForgotPassword) {
+      if (!email) {
+        newErrors.email = "Email is required"
+      } else if (!/\S+@\S+\.\S+/.test(email)) {
+        newErrors.email = "Please enter a valid email address"
+      }
     }
 
     if (!password) {
@@ -46,7 +50,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
       newErrors.password = "Password must be at least 6 characters"
     }
 
-    if (authState === "signup" && password !== confirmPassword) {
+    if ((authState === AuthState.Signup || authState === AuthState.UpdatePassword) && password !== confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match"
     }
 
@@ -66,25 +70,55 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
 
         setLoading(true)
         try {
-          await api.passwordSignup({ email, password })
-          
-          toast({
-            title: 'Account Already Created!',
-            description: 'Please sign in to continue. Or forgot your password?',
-          })
-          
-          // Redirect to signin page after successful signup
-          router.push('/auth/signin')
-        } catch (e) {
-          if (e instanceof Error) {
+          console.log('Starting signup process for email:', email)
+
+          const result = await api.passwordSignup({ email, password })
+
+          console.log('Signup result:', result) // Debug log
+          console.log('Signup result.user:', result?.user) // Debug log
+          console.log('Signup result.session:', result?.session) // Debug log
+
+          // Check if signup was successful or if there's an error
+          if (result && result.error) {
+            // Handle API-level errors (like user already exists)
+            console.log('Signup error from API:', result.error)
             toast({
-              title: "Signup Error",
-              description: e.message,
-              variant: "destructive",
+              title: 'Signup Error',
+              description: result.error.message,
+              variant: 'destructive',
+            })
+          } else if (result && result.user) {
+            // Successful signup
+            console.log('Signup successful, proceeding to email verification')
+
+            toast({
+              title: 'Account Created Successfully! 🎉',
+              description: 'Please check your email and enter the verification code to complete your registration.',
+            })
+
+            // Show email verification component
+            setAuthState(AuthState.EmailVerification)
+            console.log('Auth state changed to EmailVerification') // Debug log
+          } else {
+            // Unexpected result
+            console.error('Unexpected signup result:', result)
+            toast({
+              title: 'Signup Error',
+              description: 'An unexpected error occurred during signup. Please try again.',
+              variant: 'destructive',
             })
           }
+        } catch (error) {
+          console.error('Signup error:', error)
+
+          toast({
+            title: 'Signup Error',
+            description: error instanceof Error ? error.message : 'An error occurred during signup',
+            variant: 'destructive',
+          })
+        } finally {
+          setLoading(false)
         }
-        setLoading(false)
       },
     },
     signin: {
@@ -128,9 +162,18 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
         try {
           await api.passwordReset(email)
           toast({
-            title: "Email Sent!",
-            description: "Check your email to reset your password",
+            title: "Reset Email Sent! 📧",
+            description: "We've sent you an email with a link to reset your password. Please check your inbox (and spam folder).",
           })
+          // Clear the email field after successful send
+          setEmail("")
+          // Show additional info
+          setTimeout(() => {
+            toast({
+              title: "Next Steps",
+              description: "Click the link in your email to continue. The link will expire in 1 hour.",
+            })
+          }, 2000)
         } catch (e) {
           if (e instanceof Error) {
             toast({
@@ -159,6 +202,10 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
             title: "Password Updated",
             description: "Your password has been updated successfully.",
           })
+          // Redirect to dashboard after successful password update
+          setTimeout(() => {
+            router.push('/dashboard')
+          }, 1500)
         } catch (e) {
           if (e instanceof Error) {
             toast({
@@ -181,6 +228,16 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
         // This will be handled by the AccountCreationForm
       },
     },
+    [AuthState.EmailVerification]: {
+      title: "Email Verification",
+      submitText: "Verify Email",
+      hasEmailField: false,
+      hasPasswordField: false,
+      hasOAuth: false,
+      onSubmit: async () => {
+        // This will be handled by the EmailConfirmation component
+      },
+    },
   }
 
   // Handle toast messages from URL params
@@ -201,7 +258,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
         100,
       )
     }
-  }, [])
+  }, [searchParams, toast])
 
   const currState = stateInfo[authState]
 
@@ -213,190 +270,217 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
         userPassword={userPassword}
         onComplete={() => {
           setShowAccountCreation(false)
-          // No redirect - let the form handle navigation
+          // Redirect to home after successful profile creation
+          router.push('/')
+        }}
+      />
+    )
+  }
+
+  // Show email verification component
+  if (authState === AuthState.EmailVerification) {
+    return (
+      <OtpVerification
+        email={email}
+        onComplete={() => {
+          // After email verification, show profile setup
+          setShowAccountCreation(true)
+        }}
+        onBack={() => {
+          setAuthState(AuthState.Signup)
         }}
       />
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="bg-primary/10 p-3 rounded-full w-fit mx-auto mb-4">
-            <User className="h-8 w-8 text-primary" />
-          </div>
-          <CardTitle className="text-2xl">{currState.title}</CardTitle>
-          <CardDescription>
-            {authState === "signin" && "Sign in to your account to continue"}
-            {authState === "signup" && "Create your account to get started"}
-            {authState === "forgot_password" && "Enter your email to reset your password"}
-            {authState === "update_password" && "Enter your new password"}
-          </CardDescription>
-        </CardHeader>
+    <Card className="w-full max-w-md">
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        currState.onSubmit();
+      }}>
+          <CardHeader className="text-center">
+            <div className="bg-primary/10 p-3 rounded-full w-fit mx-auto mb-4">
+              <User className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-2xl">{currState.title}</CardTitle>
+            <CardDescription>
+              {authState === AuthState.Signin && "Sign in to your account to continue"}
+              {authState === AuthState.Signup && "Create your account to get started"}
+              {authState === AuthState.ForgotPassword && "Enter your email to reset your password"}
+              {authState === AuthState.UpdatePassword && "Enter your new password"}
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent>
-          <div className="space-y-4">
-            {currState.hasEmailField && (
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="john@example.com"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value)
-                      if (errors.email) setErrors((prev) => ({ ...prev, email: "" }))
-                    }}
-                    disabled={loading}
-                    className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
-                    required
-                  />
-                </div>
-                {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-              </div>
-            )}
-
-            {currState.hasPasswordField && (
-              <>
+          <CardContent>
+            <div className="space-y-4">
+              {currState.hasEmailField && (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    {authState === "signin" && (
-                      <Link
-                        href="#"
-                        onClick={() => setAuthState(AuthState.ForgotPassword)}
-                        className="text-sm text-primary hover:underline"
-                      >
-                        Forgot password?
-                      </Link>
-                    )}
-                  </div>
+                  <Label htmlFor="email">Email Address</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
+                      id="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={email}
                       onChange={(e) => {
-                        setPassword(e.target.value)
-                        if (errors.password) setErrors((prev) => ({ ...prev, password: "" }))
+                        setEmail(e.target.value)
+                        if (errors.email) setErrors((prev) => ({ ...prev, email: "" }))
                       }}
                       disabled={loading}
-                      className={`pl-10 pr-10 ${errors.password ? "border-red-500" : ""}`}
+                      className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
                       required
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
                   </div>
-                  {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+                  {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                 </div>
+              )}
 
-                {authState === "signup" && (
+              {currState.hasPasswordField && (
+                <>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      {authState === AuthState.Signin && (
+                        <Link
+                          href="#"
+                          onClick={() => setAuthState(AuthState.ForgotPassword)}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          Forgot password?
+                        </Link>
+                      )}
+                    </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="confirmPassword"
+                        id="password"
                         type={showPassword ? "text" : "password"}
-                        value={confirmPassword}
+                        value={password}
                         onChange={(e) => {
-                          setConfirmPassword(e.target.value)
-                          if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: "" }))
+                          setPassword(e.target.value)
+                          if (errors.password) setErrors((prev) => ({ ...prev, password: "" }))
                         }}
                         disabled={loading}
-                        className={`pl-10 ${errors.confirmPassword ? "border-red-500" : ""}`}
+                        className={`pl-10 pr-10 ${errors.password ? "border-red-500" : ""}`}
                         required
                       />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
                     </div>
-                    {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+                    {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
                   </div>
-                )}
-              </>
-            )}
 
-            <Button type="submit" className="w-full" onClick={currState.onSubmit} disabled={loading}>
-              {loading ? "Please wait..." : currState.submitText}
-            </Button>
+                  {(authState === AuthState.Signup || authState === AuthState.UpdatePassword) && (
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="confirmPassword"
+                          type={showPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => {
+                            setConfirmPassword(e.target.value)
+                            if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: "" }))
+                          }}
+                          disabled={loading}
+                          className={`pl-10 ${errors.confirmPassword ? "border-red-500" : ""}`}
+                          required
+                        />
+                      </div>
+                      {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+                    </div>
+                  )}
+                </>
+              )}
 
-            {currState.hasOAuth && (
-              <>
-                <div className="relative my-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
+              {/* Show OAuth buttons if enabled for current state */}
+              {currState.hasOAuth && (
+                <div className="space-y-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                    </div>
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => api.oauthSignin("google")}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      <SiGoogle className="mr-2 h-4 w-4" />
+                      Continue with Google
+                    </Button>
                   </div>
                 </div>
-
-                <Button
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  onClick={() => api.oauthSignin("google")}
-                  disabled={loading}
-                >
-                  <SiGoogle className="h-4 w-4 mr-2" />
-                  Google
-                </Button>
-              </>
-            )}
-
-            {/* Navigation Links */}
-            <div className="text-center text-sm space-y-2">
-              {authState === "signin" && (
-                <p>
-                  Don't have an account?{" "}
-                  <Link
-                    href="#"
-                    className="text-primary hover:underline"
-                    onClick={() => setAuthState(AuthState.Signup)}
-                  >
-                    Sign up
-                  </Link>
-                </p>
-              )}
-
-              {authState === "signup" && (
-                <p>
-                  Already have an account?{" "}
-                  <Link
-                    href="#"
-                    className="text-primary hover:underline"
-                    onClick={() => setAuthState(AuthState.Signin)}
-                  >
-                    Sign in
-                  </Link>
-                </p>
-              )}
-
-              {authState === "forgot_password" && (
-                <p>
-                  Remember your password?{" "}
-                  <Link
-                    href="#"
-                    className="text-primary hover:underline"
-                    onClick={() => setAuthState(AuthState.Signin)}
-                  >
-                    Sign in
-                  </Link>
-                </p>
               )}
             </div>
+          </CardContent>
+
+          <CardFooter>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Please wait..." : currState.submitText}
+            </Button>
+          </CardFooter>
+
+          {/* Show state switching links */}
+          <div className="px-6 pb-6 text-center space-y-2">
+
+            {authState === AuthState.Signin && (
+              <p className="text-sm text-muted-foreground">
+                Don't have an account?{" "}
+                <Link
+                  href="#"
+                  onClick={() => setAuthState(AuthState.Signup)}
+                  className="text-primary hover:underline"
+                >
+                  Sign up
+                </Link>
+              </p>
+            )}
+
+            {authState === AuthState.Signup && (
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link
+                  href="#"
+                  onClick={() => setAuthState(AuthState.Signin)}
+                  className="text-primary hover:underline"
+                >
+                  Sign in
+                </Link>
+              </p>
+            )}
+
+            {authState === AuthState.ForgotPassword && (
+              <p className="text-sm text-muted-foreground">
+                Remember your password?{" "}
+                <Link
+                  href="#"
+                  onClick={() => setAuthState(AuthState.Signin)}
+                  className="text-primary hover:underline"
+                >
+                  Sign in
+                </Link>
+              </p>
+            )}
           </div>
-        </CardContent>
+        </form>
       </Card>
-    </div>
   )
 }

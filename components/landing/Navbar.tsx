@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sheet';
 
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import { HouseIcon, Menu } from 'lucide-react';
 import { ModeToggle } from './mode-toggle';
 import { LogoIcon } from './Icons';
 import { createApiClient } from '@/utils/supabase/api';
@@ -26,6 +26,8 @@ import { usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/components/providers/AuthProvider';
 import NotificationBell from '@/components/NotificationBell';
+import ChatNotificationBell from '@/components/ChatNotificationBell';
+import { DashboardIcon } from '@radix-ui/react-icons';
 
 interface RouteProps {
   href: string;
@@ -56,8 +58,26 @@ export const Navbar = () => {
   const { toast } = useToast();
   const api = createApiClient(createClient());
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
   const pathname = usePathname();
   const { user } = useAuth();
+
+  // Handle window resize for better responsive behavior
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
   const handleAuth = async () => {
     if (user) {
       return router.push('/dashboard');
@@ -98,8 +118,7 @@ export const Navbar = () => {
           </NavigationMenuItem>
 
           {/* mobile */}
-          {pathname === '/' && (
-          <span className="flex md:hidden"> 
+          <span className="flex md:hidden">
             {/* <ModeToggle /> */}
 
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -116,19 +135,28 @@ export const Navbar = () => {
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col justify-center items-center gap-2 mt-4">
-                  {routeList.map(({ href, label }: RouteProps) => (
-                    <a
-                      rel="noreferrer noopener"
-                      key={label}
-                      href={href}
-                      onClick={() => setIsOpen(false)}
-                      className={buttonVariants({ variant: 'ghost' })}
-                    >
-                      {label}
-                    </a>
-                  ))}
+                  {pathname === '/' && (
+                    <>
+                      {routeList.map(({ href, label }: RouteProps) => (
+                        <a
+                          rel="noreferrer noopener"
+                          key={label}
+                          href={href}
+                          onClick={() => setIsOpen(false)}
+                          className={buttonVariants({ variant: 'ghost' })}
+                        >
+                          {label}
+                        </a>
+                      ))}
+                    </>
+                  )}
                   {user ? (
                     <div className="flex flex-col gap-2">
+                      {/* Mobile Notifications */}
+                      <div className="flex justify-center gap-2 mb-2">
+                        <NotificationBell />
+                        <ChatNotificationBell />
+                      </div>
                       <Button
                         variant="ghost"
                         onClick={handleAuth}
@@ -155,24 +183,23 @@ export const Navbar = () => {
               </SheetContent>
             </Sheet>
           </span>
-           )}
 
           {/* desktop */}
           {pathname === '/' && (
-          <nav className="hidden md:flex gap-2">
-            {routeList.map((route: RouteProps, i) => (
-              <a
-                rel="noreferrer noopener"
-                href={route.href}
-                key={i}
-                className={`text-[17px] ${buttonVariants({
-                  variant: 'ghost'
-                })}`}
-              >
-                {route.label}
-              </a>
-            ))}
-          </nav>
+            <nav className="hidden md:flex gap-2">
+              {routeList.map((route: RouteProps, i) => (
+                <a
+                  rel="noreferrer noopener"
+                  href={route.href}
+                  key={i}
+                  className={`text-[17px] ${buttonVariants({
+                    variant: 'ghost'
+                  })}`}
+                >
+                  {route.label}
+                </a>
+              ))}
+            </nav>
           )}
 
 
@@ -193,11 +220,12 @@ export const Navbar = () => {
             {user ? (
               <div className="flex items-center gap-2">
                 <NotificationBell />
+                <ChatNotificationBell />
                 <Button
                   onClick={handleAuth}
                   variant="ghost"
                 >
-                  Hello {user.email?.split('@')[0]} 👋
+                  <HouseIcon></HouseIcon>
                 </Button>
                 <Button
                   onClick={handleSignOut}

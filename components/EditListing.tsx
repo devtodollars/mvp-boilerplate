@@ -30,6 +30,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { format, isBefore, startOfDay } from "date-fns";
 import { cn } from "@/utils/cn";
 import { useRouter } from 'next/navigation';
+import { useAuth } from "@/components/providers/AuthProvider";
 import type { Database } from '@/types_db';
 
 const IRISH_COUNTIES = [
@@ -111,6 +112,9 @@ export default function EditListing({ listing }: EditListingProps) {
     const [existingVideos, setExistingVideos] = useState<string[]>([])
     const { toast } = useToast();
     const router = useRouter();
+    
+    // Get user from AuthProvider context at the top level
+    const { user } = useAuth();
 
     // Initialize state from listing data
     useEffect(() => {
@@ -269,8 +273,6 @@ export default function EditListing({ listing }: EditListingProps) {
     const onSubmit = async (data: UpdateListing) => {
         try {
             const supabase = createClient();
-            const { data: userData } = await supabase.auth.getUser();
-            const user = userData?.user;
             if (!user) {
                 toast({ title: 'Error', description: 'You must be signed in to edit a listing.', variant: 'destructive' });
                 return;

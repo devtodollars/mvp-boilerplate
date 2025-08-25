@@ -71,44 +71,83 @@ interface AdvancedSearchFiltersProps {
   onFiltersChange: (filters: SearchFilters) => void
   onClearFilters: () => void
   totalResults: number
+  hideMobileButton?: boolean
 }
 
 const COUNTIES = [
-  "Dublin", "Cork", "Galway", "Limerick", "Waterford", "Kilkenny", 
-  "Wicklow", "Wexford", "Carlow", "Kildare", "Laois", "Offaly",
-  "Westmeath", "Longford", "Meath", "Louth", "Monaghan", "Cavan",
-  "Leitrim", "Sligo", "Mayo", "Roscommon", "Clare", "Tipperary",
-  "Kerry", "Donegal"
+  { value: "Dublin", label: "Dublin" },
+  { value: "Cork", label: "Cork" },
+  { value: "Galway", label: "Galway" },
+  { value: "Limerick", label: "Limerick" },
+  { value: "Waterford", label: "Waterford" },
+  { value: "Kilkenny", label: "Kilkenny" },
+  { value: "Wicklow", label: "Wicklow" },
+  { value: "Wexford", label: "Wexford" },
+  { value: "Carlow", label: "Carlow" },
+  { value: "Kildare", label: "Kildare" },
+  { value: "Laois", label: "Laois" },
+  { value: "Offaly", label: "Offaly" },
+  { value: "Westmeath", label: "Westmeath" },
+  { value: "Longford", label: "Longford" },
+  { value: "Meath", label: "Meath" },
+  { value: "Louth", label: "Louth" },
+  { value: "Monaghan", label: "Monaghan" },
+  { value: "Cavan", label: "Cavan" },
+  { value: "Leitrim", label: "Leitrim" },
+  { value: "Sligo", label: "Sligo" },
+  { value: "Mayo", label: "Mayo" },
+  { value: "Roscommon", label: "Roscommon" },
+  { value: "Clare", label: "Clare" },
+  { value: "Tipperary", label: "Tipperary" },
+  { value: "Kerry", label: "Kerry" },
+  { value: "Donegal", label: "Donegal" }
 ]
 
 const PROPERTY_TYPES = [
-  "Apartment", "House", "Studio", "Townhouse", "Duplex", "Penthouse"
+  { value: "house", label: "House" },
+  { value: "apartment", label: "Apartment" },
+  { value: "flat", label: "Flat" },
+  { value: "studio", label: "Studio" },
+  { value: "other", label: "Other" }
 ]
 
 const ROOM_TYPES = [
-  "Single", "Double", "Twin", "Triple", "Quad"
+  { value: "single", label: "Single Room" },
+  { value: "double", label: "Double Room" },
+  { value: "twin", label: "Twin Room" },
+  { value: "shared", label: "Shared Room" },
+  { value: "digs", label: "Digs" }
 ]
 
 const AMENITIES = [
-  { id: "wifi", label: "WiFi", icon: Wifi },
-  { id: "parking", label: "Parking", icon: Car },
-  { id: "kitchen", label: "Kitchen", icon: Utensils },
-  { id: "gym", label: "Gym", icon: Dumbbell },
-  { id: "pets", label: "Pet Friendly", icon: PawPrint },
-  { id: "ensuite", label: "Ensuite", icon: Home },
-  { id: "balcony", label: "Balcony", icon: Home },
-  { id: "garden", label: "Garden", icon: Home },
-  { id: "washing_machine", label: "Washing Machine", icon: Home },
-  { id: "dishwasher", label: "Dishwasher", icon: Home },
-  { id: "air_conditioning", label: "Air Conditioning", icon: Home },
-  { id: "heating", label: "Heating", icon: Home }
+  { id: "Wi-Fi", label: "Wi-Fi", icon: Wifi },
+  { id: "Parking", label: "Parking", icon: Car },
+  { id: "Garden Access", label: "Garden Access", icon: Home },
+  { id: "Balcony/Terrace", label: "Balcony/Terrace", icon: Home },
+  { id: "Washing Machine", label: "Washing Machine", icon: Home },
+  { id: "Dryer", label: "Dryer", icon: Home },
+  { id: "Dishwasher", label: "Dishwasher", icon: Home },
+  { id: "Microwave", label: "Microwave", icon: Home },
+  { id: "TV", label: "TV", icon: Home },
+  { id: "Central Heating", label: "Central Heating", icon: Home },
+  { id: "Fireplace", label: "Fireplace", icon: Home },
+  { id: "Air Conditioning", label: "Air Conditioning", icon: Home },
+  { id: "Gym Access", label: "Gym Access", icon: Dumbbell },
+  { id: "Swimming Pool", label: "Swimming Pool", icon: Home },
+  { id: "Storage Space", label: "Storage Space", icon: Home },
+  { id: "Bike Storage", label: "Bike Storage", icon: Home },
+  { id: "Furnished", label: "Furnished", icon: Home },
+  { id: "Unfurnished", label: "Unfurnished", icon: Home },
+  { id: "Pet Friendly", label: "Pet Friendly", icon: PawPrint },
+  { id: "Smoking Allowed", label: "Smoking Allowed", icon: Home }
 ]
 
 export default function AdvancedSearchFilters({
   filters,
   onFiltersChange,
   onClearFilters,
-  totalResults
+  totalResults,
+  hideMobileButton = false
 }: AdvancedSearchFiltersProps) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -134,32 +173,33 @@ export default function AdvancedSearchFilters({
 
   return (
     <>
-      {/* Mobile Filter Button */}
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>
-          <Button variant="outline" className="lg:hidden gap-2">
-            <Filter className="h-4 w-4" />
-            Filters
-            {activeFiltersCount > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {activeFiltersCount}
-              </Badge>
-            )}
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-[400px] sm:w-[540px]">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <SlidersHorizontal className="h-5 w-5" />
-              Search Filters
+      {/* Mobile Filter Button - Only show if not hidden */}
+      {!hideMobileButton && (
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" className="lg:hidden gap-2">
+              <Filter className="h-4 w-4" />
+              Filters
               {activeFiltersCount > 0 && (
-                <Badge variant="secondary">
-                  {activeFiltersCount} active
+                <Badge variant="secondary" className="ml-1">
+                  {activeFiltersCount}
                 </Badge>
+              )}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[400px] sm:w-[540px] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <SlidersHorizontal className="h-5 w-5" />
+                Search Filters
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary">
+                    {activeFiltersCount} active
+                  </Badge>
               )}
             </SheetTitle>
           </SheetHeader>
-          <div className="mt-6 space-y-6 overflow-y-auto max-h-[calc(100vh-120px)]">
+          <div className="mt-6 space-y-6 overflow-y-auto max-h-[calc(100vh-120px)] pb-6">
             <FilterContent 
               filters={filters} 
               onFiltersChange={onFiltersChange}
@@ -169,6 +209,7 @@ export default function AdvancedSearchFilters({
           </div>
         </SheetContent>
       </Sheet>
+      )}
 
       {/* Desktop Filters */}
       <div className="hidden lg:block">
@@ -197,6 +238,18 @@ export default function AdvancedSearchFilters({
           </CardContent>
         </Card>
       </div>
+
+      {/* Mobile Filter Content - Show when hideMobileButton is true */}
+      {hideMobileButton && (
+        <div className="lg:hidden">
+          <FilterContent 
+            filters={filters} 
+            onFiltersChange={onFiltersChange}
+            onClearFilters={clearFilters}
+            totalResults={totalResults}
+          />
+        </div>
+      )}
     </>
   )
 }
@@ -228,7 +281,7 @@ function FilterContent({
   }).length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-1">
       {/* Results Count */}
       <div className="text-sm text-muted-foreground">
         {totalResults} properties found
@@ -252,8 +305,8 @@ function FilterContent({
             </SelectTrigger>
             <SelectContent>
               {COUNTIES.map((county) => (
-                <SelectItem key={county} value={county}>
-                  {county}
+                <SelectItem key={county.value} value={county.value}>
+                  {county.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -311,9 +364,9 @@ function FilterContent({
         </Label>
         <RadioGroup value={filters.propertyType} onValueChange={(value) => updateFilter('propertyType', value)}>
           {PROPERTY_TYPES.map((type) => (
-            <div key={type} className="flex items-center space-x-2">
-              <RadioGroupItem value={type} id={type} />
-              <Label htmlFor={type}>{type}</Label>
+            <div key={type.value} className="flex items-center space-x-2">
+              <RadioGroupItem value={type.value} id={type.value} />
+              <Label htmlFor={type.value}>{type.label}</Label>
             </div>
           ))}
         </RadioGroup>
@@ -329,9 +382,9 @@ function FilterContent({
         </Label>
         <RadioGroup value={filters.roomType} onValueChange={(value) => updateFilter('roomType', value)}>
           {ROOM_TYPES.map((type) => (
-            <div key={type} className="flex items-center space-x-2">
-              <RadioGroupItem value={type} id={type} />
-              <Label htmlFor={type}>{type}</Label>
+            <div key={type.value} className="flex items-center space-x-2">
+              <RadioGroupItem value={type.value} id={type.value} />
+              <Label htmlFor={type.value}>{type.label}</Label>
             </div>
           ))}
         </RadioGroup>
@@ -342,7 +395,7 @@ function FilterContent({
       {/* Amenities */}
       <div className="space-y-3">
         <Label>Amenities</Label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
           {AMENITIES.map((amenity) => {
             const Icon = amenity.icon
             const isSelected = filters.amenities.includes(amenity.id)
@@ -438,10 +491,16 @@ function FilterContent({
 
       {/* Clear Filters Button */}
       {activeFiltersCount > 0 && (
-        <Button variant="outline" onClick={onClearFilters} className="w-full">
-          <X className="h-4 w-4 mr-2" />
-          Clear All Filters
-        </Button>
+        <div className="pt-4 border-t">
+          <Button 
+            variant="outline" 
+            onClick={onClearFilters}
+            className="w-full"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Clear All Filters ({activeFiltersCount})
+          </Button>
+        </div>
       )}
     </div>
   )

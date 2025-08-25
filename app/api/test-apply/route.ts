@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { getApiUser } from '@/utils/supabase/serverApiAuth';
 import { createAdminClient } from '@/utils/supabase/admin';
 
 export async function GET(request: NextRequest) {
@@ -7,8 +8,8 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const adminClient = createAdminClient();
     
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get the current user with caching
+    const { user, error: userError } = await getApiUser(request);
     
     if (userError || !user) {
       return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });

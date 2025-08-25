@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Search, Sparkles, X, MapPin, Euro, Home, Users } from "lucide-react"
-import { parseNaturalLanguageQuery, getSearchSuggestions } from "./AISearchLogic"
+import { parseNaturalLanguageQuery } from "./AISearchLogic"
 import { SearchFilters } from "./AdvancedSearchFilters"
 
 interface EnhancedSearchBarProps {
@@ -23,9 +23,8 @@ export default function EnhancedSearchBar({
   initialValue = ""
 }: EnhancedSearchBarProps) {
   const [query, setQuery] = useState(initialValue)
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeFilters, setActiveFilters] = useState<Partial<SearchFilters>>({})
+  const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Update query when initialValue changes
@@ -33,28 +32,11 @@ export default function EnhancedSearchBar({
     setQuery(initialValue)
   }, [initialValue])
 
-  // Debounced search suggestions
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (query.length > 2) {
-        const newSuggestions = getSearchSuggestions(query)
-        setSuggestions(newSuggestions)
-        setShowSuggestions(true)
-      } else {
-        setSuggestions([])
-        setShowSuggestions(false)
-      }
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [query])
-
   const handleSearch = () => {
     if (query.trim()) {
       const parsedFilters = parseNaturalLanguageQuery(query)
       setActiveFilters(parsedFilters)
       onSearch(query, parsedFilters)
-      setShowSuggestions(false)
     }
   }
 
@@ -67,8 +49,6 @@ export default function EnhancedSearchBar({
   const clearSearch = () => {
     setQuery("")
     setActiveFilters({})
-    setSuggestions([])
-    setShowSuggestions(false)
     onSearch("", {})
     inputRef.current?.focus()
   }
@@ -101,8 +81,9 @@ export default function EnhancedSearchBar({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyPress={handleKeyPress}
-          onFocus={() => setShowSuggestions(true)}
-          className="pl-10 pr-20"
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className="pl-10 pr-20 h-12 text-base"
         />
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
           {query && (
@@ -110,71 +91,54 @@ export default function EnhancedSearchBar({
               variant="ghost"
               size="sm"
               onClick={clearSearch}
-              className="h-6 w-6 p-0"
+              className="h-8 w-8 p-0"
             >
-              <X className="h-3 w-3" />
+              <X className="h-4 w-4" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSearch}
-            className="h-6 px-2 text-xs"
-          >
-            <Sparkles className="h-3 w-3 mr-1" />
-            AI
-          </Button>
         </div>
       </div>
 
       {/* Active Filters Display */}
       {activeFiltersDisplay.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="mt-3 flex flex-wrap gap-2">
           {activeFiltersDisplay.map((filter, index) => (
-            <Badge key={index} variant="secondary" className="text-xs">
+            <Badge key={index} variant="secondary" className="text-sm px-3 py-1">
               {filter}
             </Badge>
           ))}
         </div>
       )}
 
-      {/* Search Suggestions */}
-      {showSuggestions && suggestions.length > 0 && (
-        <Card className="absolute top-full left-0 right-0 mt-1 z-50 shadow-lg">
-          <CardContent className="p-3">
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-muted-foreground mb-2">
-                Search Tips:
-              </div>
-              {suggestions.map((suggestion, index) => (
-                <div
-                  key={index}
-                  className="text-sm text-muted-foreground cursor-pointer hover:text-foreground p-1 rounded"
-                  onClick={() => {
-                    setQuery(suggestion)
-                    setShowSuggestions(false)
-                  }}
-                >
-                  💡 {suggestion}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Example Queries */}
-      {!query && !activeFiltersDisplay.length && (
-        <div className="mt-2 text-xs text-muted-foreground">
-          <div className="mb-1">Try: "cheap apartment in Dublin" or "pet friendly under €1000"</div>
-          <div className="flex flex-wrap gap-1">
-            <Badge variant="outline" className="text-xs cursor-pointer hover:bg-primary/10" onClick={() => setQuery("cheap apartment in Dublin")}>
+      {/* Example Queries - Show on all screen sizes when focused */}
+      {!query && !activeFiltersDisplay.length && isFocused && (
+        <div className="mt-3 text-sm text-muted-foreground bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+          <div className="mb-2 font-medium text-gray-700">Try these searches:</div>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline" className="text-sm cursor-pointer hover:bg-primary/10 px-3 py-1" onClick={() => {
+              const query = "cheap apartment in Dublin"
+              setQuery(query)
+              const parsedFilters = parseNaturalLanguageQuery(query)
+              setActiveFilters(parsedFilters)
+              onSearch(query, parsedFilters)
+            }}>
               Cheap apartment in Dublin
             </Badge>
-            <Badge variant="outline" className="text-xs cursor-pointer hover:bg-primary/10" onClick={() => setQuery("pet friendly under €1000")}>
+            <Badge variant="outline" className="text-sm cursor-pointer hover:bg-primary/10 px-3 py-1" onClick={() => {
+              const query = "pet friendly under €1000"
+              setQuery(query)
+              const parsedFilters = parseNaturalLanguageQuery(query)
+              setActiveFilters(parsedFilters)
+              onSearch(query, parsedFilters)
+            }}>
               Pet friendly under €1000
             </Badge>
-            <Badge variant="outline" className="text-xs cursor-pointer hover:bg-primary/10" onClick={() => setQuery("ensuite room with parking")}>
+            <Badge variant="outline" className="text-sm cursor-pointer hover:bg-primary/10 px-3 py-1" onClick={() => {
+              const query = "ensuite room with parking"
+              setQuery(query)
+              const parsedFilters = parseNaturalLanguageQuery(query)
+              onSearch(query, parsedFilters)
+            }}>
               Ensuite room with parking
             </Badge>
           </div>

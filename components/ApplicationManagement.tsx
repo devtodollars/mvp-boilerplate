@@ -39,6 +39,8 @@ import {
 import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/utils/supabase/client"
 import { createApiClient } from "@/utils/supabase/api"
+import { ApplicationDocumentViewer } from "@/components/applications/ApplicationDocumentViewer"
+import { ChevronDown, ChevronUp } from "lucide-react"
 import Image from "next/image"
 
 
@@ -60,6 +62,14 @@ interface Application {
   applied_at: string
   reviewed_at?: string
   notes?: string
+  shared_documents?: Array<{
+    filename: string
+    documentType: string
+    customName: string
+    originalFilename?: string
+    mimeType?: string
+    size?: number
+  }>
   created_at: string
   updated_at: string
   user: {
@@ -113,7 +123,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
     try {
       const supabase = createClient()
 
-      // First, get the applications
+      // First, get the applications (including shared_documents)
       const { data: applicationsData, error: applicationsError } = await supabase
         .from('applications')
         .select('*')
@@ -159,6 +169,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
         applied_at: item.applied_at,
         reviewed_at: item.reviewed_at,
         notes: item.notes,
+        shared_documents: item.shared_documents || [],
         created_at: item.created_at,
         updated_at: item.updated_at,
         user: {
@@ -361,7 +372,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Application Management</h1>
+              <h1 className="text-3xl font-bold  bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">Application Management</h1>
               <p className="text-gray-600">{listing.property_name}</p>
             </div>
           </div>
@@ -649,8 +660,14 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
                     )}
                   </div>
 
-                  {/* User Preferences */}
+                  {/* User Preferences and Documents */}
                   <div className="flex flex-wrap gap-2 mt-4">
+                    {selectedApplication.shared_documents && selectedApplication.shared_documents.length > 0 && (
+                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                        <FileText className="h-3 w-3 mr-1" />
+                        {selectedApplication.shared_documents.length} Document{selectedApplication.shared_documents.length !== 1 ? 's' : ''}
+                      </Badge>
+                    )}
                     {selectedApplication.user.smoking && (
                       <Badge variant="outline" className="text-xs">
                         Smoking
@@ -683,6 +700,15 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
                       {selectedApplication.message}
                     </p>
                   </div>
+                )}
+
+                {/* Shared Documents */}
+                {selectedApplication.shared_documents && selectedApplication.shared_documents.length > 0 && (
+                  <ApplicationDocumentViewer
+                    applicationId={selectedApplication.id}
+                    sharedDocuments={selectedApplication.shared_documents}
+                    applicantUserId={selectedApplication.user_id}
+                  />
                 )}
 
                 {/* Action Warnings - Only show for accept/reject actions */}
@@ -812,6 +838,7 @@ function ApplicationCard({
   onChat: (app: Application) => void
 }) {
   const [showFullMessage, setShowFullMessage] = useState(false)
+  const [showDocuments, setShowDocuments] = useState(false)
   return (
     <Card className="border shadow-md hover:shadow-lg transition-all duration-300">
       <CardHeader className="pb-4">
@@ -881,8 +908,48 @@ function ApplicationCard({
           </div>
         )}
 
-        {/* User Preferences */}
+        {/* Shared Documents - Collapsible */}
+        {application.shared_documents && application.shared_documents.length > 0 && (
+          <div className="border rounded-lg">
+            <Button
+              variant="ghost"
+              className="w-full justify-between p-3 h-auto"
+              onClick={() => setShowDocuments(!showDocuments)}
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-green-600" />
+                <span className="font-medium text-gray-900">
+                  Shared Documents ({application.shared_documents.length})
+                </span>
+              </div>
+              {showDocuments ? (
+                <ChevronUp className="h-4 w-4 text-gray-500" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-gray-500" />
+              )}
+            </Button>
+            
+            {showDocuments && (
+              <div className="border-t p-3">
+                <ApplicationDocumentViewer
+                  applicationId={application.id}
+                  sharedDocuments={application.shared_documents}
+                  applicantUserId={application.user_id}
+                  className="border-0 shadow-none"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* User Preferences and Documents */}
         <div className="flex flex-wrap gap-2">
+          {application.shared_documents && application.shared_documents.length > 0 && (
+            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+              <FileText className="h-3 w-3 mr-1" />
+              {application.shared_documents.length} Document{application.shared_documents.length !== 1 ? 's' : ''}
+            </Badge>
+          )}
           {application.user.smoking && (
             <Badge variant="outline" className="text-xs">
               Smoking
