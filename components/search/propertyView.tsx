@@ -2,6 +2,7 @@
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import VerifiedBadge from "@/components/misc/VerifiedBadge"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import {
   MapPin,
@@ -414,18 +415,25 @@ export default function PropertyView({ selectedProperty, onMediaClick }: Propert
           <div className="flex items-start justify-between">
             <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
+                {selectedProperty.owner?.verified ? (
+                  <Badge className="bg-green-100 text-green-800 text-xs border-green-200">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Owner Verified
+                  </Badge>
+                ) : (
+                  <Badge className="bg-amber-100 text-amber-800 text-xs border-amber-200">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Owner Not Verified
+                  </Badge>
+                )}
                 <Badge variant="secondary" className="text-xs">{formatPropertyType(selectedProperty.property_type)}</Badge>
                 <Badge variant="outline" className="text-xs">{formatRoomType(selectedProperty.room_type)}</Badge>
                 {selectedProperty.ensuite && <Badge className="bg-blue-500 text-xs">Ensuite</Badge>}
-                {selectedProperty.verified && (
-                  <Badge className="bg-green-500 text-xs">
-                    <Shield className="h-3 w-3 mr-1" />
-                    Verified
-                  </Badge>
-                )}
               </div>
 
-              <h1 className="text-xl font-bold text-gray-900">{selectedProperty.property_name}</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-bold text-gray-900">{selectedProperty.property_name}</h1>
+              </div>
 
               <div className="space-y-1">
                 <div className="flex items-center gap-1 text-gray-600 text-sm">

@@ -14,7 +14,7 @@ import { createClient } from "@/utils/supabase/client"
 import { UserForm, userFormSchema, genderEnum, maritalStatusEnum } from "@/schemas/user"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import { User, Phone, Briefcase, Heart, CalendarIcon, Edit, Save, X, ArrowLeft, Loader2 } from "lucide-react"
+import { User, Phone, Briefcase, Heart, CalendarIcon, Edit, Save, X, ArrowLeft, Loader2, Shield } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/utils/cn"
 import { format } from "date-fns"
@@ -23,6 +23,8 @@ import { useRouter } from "next/navigation"
 import { AccountCreationForm } from "@/components/misc/accountCreationForm"
 import { useAuth } from "@/components/providers/AuthProvider"
 import { DocumentUpload } from "@/components/profile/DocumentUpload"
+import DiditVerification from "@/components/misc/DiditVerification"
+import VerifiedBadge from "@/components/misc/VerifiedBadge"
 
 export default function ProfilePage() {
   const { toast } = useToast()
@@ -33,6 +35,7 @@ export default function ProfilePage() {
   const [userProfile, setUserProfile] = useState<any>(null)
   const [showProfileCreation, setShowProfileCreation] = useState(false)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const [showVerification, setShowVerification] = useState(false)
   
   // Get user from AuthProvider context at the top level
   const { user } = useAuth()
@@ -60,6 +63,53 @@ export default function ProfilePage() {
       setIsLoadingProfile(false)
     }
   }, [user])
+
+  // Handle verification success callback from Didit
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const verification = searchParams.get('verification')
+    const callbackUserId = searchParams.get('userId')
+    
+    if (verification === 'success' && callbackUserId && user?.id === callbackUserId) {
+      // Clear the URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname)
+      
+      // Show success message
+      toast({
+        title: "Verification Complete!",
+        description: "Your identity has been verified successfully. You now have a verified badge!",
+        variant: "default",
+      })
+      
+      // Force update verification status in database
+      updateVerificationStatus()
+    }
+  }, [user])
+
+  // Function to update verification status
+  const updateVerificationStatus = async () => {
+    if (!user?.id) return
+    
+    try {
+      const supabase = createClient()
+      
+      // Update user verification status
+      const { error } = await supabase
+        .from('users')
+        .update({ verified: true })
+        .eq('id', user.id)
+      
+      if (error) {
+        console.error('Failed to update verification status:', error)
+      } else {
+        console.log('Verification status updated successfully')
+        // Refresh profile to show updated verification status
+        fetchUserProfile()
+      }
+    } catch (error) {
+      console.error('Error updating verification status:', error)
+    }
+  }
 
   const fetchUserProfile = async () => {
     try {
@@ -354,7 +404,10 @@ export default function ProfilePage() {
                   Back to Account
                 </Button>
                 <div>
-                  <h1 className="text-3xl font-bold">Edit Profile</h1>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-bold">Edit Profile</h1>
+                    <VerifiedBadge verified={userProfile?.verified || false} size="md" />
+                  </div>
                   <p className="text-muted-foreground mt-2">Update your personal information and preferences</p>
                 </div>
               </div>
@@ -399,7 +452,10 @@ export default function ProfilePage() {
                     <User className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle>Personal Information</CardTitle>
+                    <div className="flex items-center gap-3">
+                      <CardTitle>Personal Information</CardTitle>
+                      <VerifiedBadge verified={userProfile?.verified || false} size="sm" />
+                    </div>
                     <CardDescription>
                       Your basic personal details
                     </CardDescription>
@@ -659,6 +715,47 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
+            {/* Identity Verification Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-100 p-2 rounded-lg">
+                    <Shield className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Identity Verification</CardTitle>
+                    <CardDescription>
+                      Verify your identity with Didit to build trust and unlock additional features
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Shield className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Verification Status</p>
+                      <p className="text-sm text-muted-foreground">
+                        {userProfile?.verified ? 'Your identity is verified' : 'Your identity is not verified'}
+                      </p>
+                    </div>
+                  </div>
+                  {!userProfile?.verified && (
+                    <Button 
+                      onClick={() => setShowVerification(true)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Get Verified
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Documents Section */}
             <DocumentUpload
               disabled={loading}
@@ -666,6 +763,31 @@ export default function ProfilePage() {
           </form>
         </div>
       </div>
+
+      {/* Didit Verification Dialog */}
+      {showVerification && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <DiditVerification
+              isOpen={showVerification}
+              onVerificationComplete={(verified: boolean) => {
+                setShowVerification(false)
+                if (verified) {
+                  // Refresh user profile to show updated verification status
+                  fetchUserProfile()
+                  toast({
+                    title: "Verification Complete!",
+                    description: "Your identity has been verified successfully.",
+                    variant: "default",
+                  })
+                }
+              }}
+              userId={user?.id || ''}
+              userEmail={user?.email || ''}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

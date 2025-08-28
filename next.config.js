@@ -1,7 +1,13 @@
-module.exports = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   images: {
-    domains: [
-      'pypzcnsltqjbnjjohplo.supabase.co',
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'pypzcnsltqjbnjjohplo.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
     ],
   },
   rewrites: async () => {
@@ -13,3 +19,5 @@ module.exports = {
     ];
   }
 };
+
+module.exports = nextConfig;

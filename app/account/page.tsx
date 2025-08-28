@@ -182,7 +182,27 @@ export default function AccountPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return { success: true, listings: data || [] };
+      
+      // Fetch owner information for each listing
+      const listingsWithOwners = await Promise.all(
+        (data || []).map(async (listing: any) => {
+          if (listing.user_id) {
+            const { data: ownerData } = await supabase
+              .from('users')
+              .select('id, full_name, verified')
+              .eq('id', listing.user_id)
+              .single();
+            
+            return {
+              ...listing,
+              owner: ownerData || null
+            };
+          }
+          return listing;
+        })
+      );
+      
+      return { success: true, listings: listingsWithOwners || [] };
     } catch (error) {
       console.error('Error fetching owned listings:', error);
       return { success: false, listings: [] };

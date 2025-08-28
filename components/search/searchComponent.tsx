@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Search, SlidersHorizontal, Heart, MapPin, List, Map, X, ChevronLeft, ChevronRight, Play, ArrowLeft, Filter } from "lucide-react"
+import { Search, SlidersHorizontal, Heart, MapPin, List, Map, X, ChevronLeft, ChevronRight, Play, ArrowLeft, Filter, CheckCircle, Shield } from "lucide-react"
 import PropertyView from "./propertyView"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import { fetchListings, debugListings, trackListingView } from "@/utils/supabase/listings"
@@ -995,13 +995,6 @@ export default function Component({
                               <span className="text-sm text-gray-600"> / {property.rent_frequency || "month"}</span>
                             </div>
 
-                            {/* Verified Badge */}
-                            {property.verified && (
-                              <Badge className="absolute top-3 left-3 bg-green-500 text-white">
-                                Verified
-                              </Badge>
-                            )}
-
                             {/* Media Count */}
                             {mediaUrls.length > 1 && (
                               <div className="absolute bottom-3 right-3 bg-black/70 text-white text-sm px-2 py-1 rounded-full">
@@ -1019,7 +1012,15 @@ export default function Component({
 
                             {/* Badges and amenities in one row - Mobile */}
                             <div className="flex items-center gap-2 overflow-hidden">
-                              {property.verified && <Badge className="bg-green-500 text-white text-xs flex-shrink-0">Verified</Badge>}
+                              {property.owner?.verified ? (
+                                <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <CheckCircle className="h-2.5 w-2.5 text-green-600" />
+                                </div>
+                              ) : (
+                                <div className="w-4 h-4 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <Shield className="h-2.5 w-2.5 text-amber-600" />
+                                </div>
+                              )}
                               {property.amenities && property.amenities.length > 0 && (
                                 <>
                                   {property.amenities.slice(0, 3).map((amenity: string) => (
@@ -1110,8 +1111,11 @@ export default function Component({
                               />
                             )}
 
-                            {property.verified && (
-                              <Badge className="absolute bottom-2 left-2 bg-green-500">Verified</Badge>
+                            {property.owner?.verified && (
+                              <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                                <CheckCircle className="h-3 w-3" />
+                                Owner Verified
+                              </span>
                             )}
 
                             {mediaUrls.length > 1 && (
@@ -1124,9 +1128,11 @@ export default function Component({
                           <div className="flex-1 space-y-3 min-w-0 overflow-hidden">
                             {/* Property name takes full width at top */}
                             <div className="flex items-start justify-between">
-                              <h3 className="font-semibold text-lg leading-tight line-clamp-2 break-words flex-1 pr-2">
-                                {property.property_name}
-                              </h3>
+                              <div className="flex items-center gap-2 flex-1 pr-2">
+                                <h3 className="font-semibold text-lg leading-tight line-clamp-2 break-words">
+                                  {property.property_name}
+                                </h3>
+                              </div>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1139,10 +1145,18 @@ export default function Component({
                                 />
                               </Button>
                             </div>
-
+                            
                             {/* Badges and amenities in one row - Desktop */}
                             <div className="flex items-center gap-2 overflow-hidden">
-                              {property.verified && <Badge className="bg-green-500 text-white text-xs flex-shrink-0">Verified</Badge>}
+                              {property.owner?.verified ? (
+                                <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <CheckCircle className="h-2.5 w-2.5 text-green-600" />
+                                </div>
+                              ) : (
+                                <div className="w-4 h-4 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <Shield className="h-2.5 w-2.5 text-amber-600" />
+                                </div>
+                              )}
                               {property.amenities && property.amenities.length > 0 && (
                                 <>
                                   {property.amenities.slice(0, 3).map((amenity: string) => (

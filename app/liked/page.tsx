@@ -6,7 +6,7 @@ import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Heart, MapPin, ArrowLeft, Trash2 } from "lucide-react"
+import { Heart, MapPin, ArrowLeft, Trash2, CheckCircle, Shield } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { useAuth } from "@/components/providers/AuthProvider"
 import { createApiClient } from "@/utils/supabase/api"
@@ -220,11 +220,19 @@ export default function LikedListingsPage() {
                         <span className="text-sm text-gray-600"> / {property.rent_frequency || "month"}</span>
                       </div>
 
-                      {/* Verified Badge */}
-                      {property.verified && (
-                        <Badge className="absolute top-3 left-3 bg-green-500 text-white">
-                          Verified
-                        </Badge>
+                      {/* Owner Verification Status - Small and clean */}
+                      {property.owner?.verified ? (
+                        <div className="absolute top-3 left-3">
+                          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="absolute top-3 left-3">
+                          <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center">
+                            <Shield className="h-3 w-3 text-amber-600" />
+                          </div>
+                        </div>
                       )}
                     </div>
 

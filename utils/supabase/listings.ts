@@ -101,7 +101,26 @@ export const fetchListings = async () => {
       return { data: null, error };
     }
 
-    return { data: data || [], error: null };
+    // Fetch owner information for each listing
+    const listingsWithOwners = await Promise.all(
+      (data || []).map(async (listing) => {
+        if (listing.user_id) {
+          const { data: ownerData } = await supabase
+            .from('users')
+            .select('id, full_name, verified')
+            .eq('id', listing.user_id)
+            .single();
+          
+          return {
+            ...listing,
+            owner: ownerData || null
+          };
+        }
+        return listing;
+      })
+    );
+
+    return { data: listingsWithOwners || [], error: null };
   } catch (error) {
     console.error('Unexpected error fetching listings:', error);
     return { data: null, error };

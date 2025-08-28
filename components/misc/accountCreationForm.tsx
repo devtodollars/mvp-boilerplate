@@ -15,11 +15,12 @@ import { createApiClient } from "@/utils/supabase/api"
 import { createClient } from "@/utils/supabase/client"
 import { useAuth } from "@/components/providers/AuthProvider"
 import { userFormSchema, type UserForm, genderEnum, maritalStatusEnum } from "@/schemas/user"
-import { ChevronLeft, ChevronRight, User, Phone, Heart, Home, CalendarIcon, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, User, Phone, Heart, Home, CalendarIcon, Search, Shield, Loader2, SkipForward } from "lucide-react"
 import { z } from "zod"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/utils/cn"
 import { format } from "date-fns"
+import DiditVerification from "@/components/misc/DiditVerification"
 
 interface AccountCreationFormProps {
   userEmail?: string
@@ -27,26 +28,32 @@ interface AccountCreationFormProps {
   onComplete: () => void
 }
 
-type FormStep = "personal" | "contact" | "preferences" | "complete"
+type FormStep = "personal" | "contact" | "preferences" | "verification" | "complete"
 
 const stepConfig = {
   personal: {
     title: "Personal Information",
     description: "Tell us a bit about yourself",
     icon: User,
-    progress: 25,
+    progress: 20,
   },
   contact: {
     title: "Contact & Professional",
     description: "How can we reach you?",
     icon: Phone,
-    progress: 50,
+    progress: 40,
   },
   preferences: {
     title: "Living Preferences",
     description: "Help us match you better",
     icon: Home,
-    progress: 75,
+    progress: 60,
+  },
+  verification: {
+    title: "Identity Verification",
+    description: "Verify your identity with Didit",
+    icon: Shield,
+    progress: 80,
   },
   complete: {
     title: "All Set!",
@@ -147,7 +154,7 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
   const handleNext = () => {
     if (!validateStep(currentStep)) return
 
-    const steps: FormStep[] = ["personal", "contact", "preferences", "complete"]
+    const steps: FormStep[] = ["personal", "contact", "preferences", "verification", "complete"]
     const currentIndex = steps.indexOf(currentStep)
     if (currentIndex < steps.length - 1) {
       setCurrentStep(steps[currentIndex + 1])
@@ -155,7 +162,7 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
   }
 
   const handlePrevious = () => {
-    const steps: FormStep[] = ["personal", "contact", "preferences", "complete"]
+    const steps: FormStep[] = ["personal", "contact", "preferences", "verification", "complete"]
     const currentIndex = steps.indexOf(currentStep)
     if (currentIndex > 0) {
       setCurrentStep(steps[currentIndex - 1])
@@ -210,15 +217,11 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
 
       toast({
         title: "Profile Created!",
-        description: "Welcome to our platform. You can now start browsing properties.",
+        description: "Your profile has been created. Now let's verify your identity.",
       })
 
-      setCurrentStep("complete")
-
-      // Call onComplete to handle next step (no redirect)
-      setTimeout(() => {
-        onComplete()
-      }, 2000)
+      // Move to verification step after profile creation
+      setCurrentStep("verification")
     } catch (error) {
       console.error('Error in handleSubmit:', error)
       if (error instanceof z.ZodError) {
@@ -470,6 +473,33 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
             </div>
           )}
 
+          {currentStep === "verification" && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <p className="text-muted-foreground">
+                  Verify your identity to build trust and unlock additional features.
+                </p>
+              </div>
+              
+              <DiditVerification
+                isOpen={true}
+                onVerificationComplete={(verified) => {
+                  // Handle verification completion
+                  if (verified) {
+                    setCurrentStep("complete")
+                  }
+                }}
+                onSkip={() => {
+                  setCurrentStep("complete")
+                }}
+                userId={user?.id}
+                userEmail={actualUserEmail}
+                userFirstName={formData.first_name}
+                userLastName={formData.last_name}
+              />
+            </div>
+          )}
+
           {currentStep === "complete" && (
             <div className="text-center space-y-6">
               <div className="bg-green-50 p-6 rounded-lg">
@@ -515,8 +545,13 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
 
               {currentStep === "preferences" ? (
                 <Button onClick={handleSubmit} disabled={loading} className="flex items-center gap-2 order-1 sm:order-2">
-                  {loading ? "Creating Profile..." : "Complete Setup"}
+                  {loading ? "Creating Profile..." : "Create Profile"}
                   <Heart className="h-4 w-4" />
+                </Button>
+              ) : currentStep === "verification" ? (
+                <Button onClick={handleNext} disabled={loading} className="flex items-center gap-2 order-1 sm:order-2">
+                  Skip Verification
+                  <SkipForward className="h-4 w-4" />
                 </Button>
               ) : (
                 <Button onClick={handleNext} className="flex items-center gap-2 order-1 sm:order-2">
