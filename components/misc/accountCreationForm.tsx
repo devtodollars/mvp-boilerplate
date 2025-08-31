@@ -35,25 +35,25 @@ const stepConfig = {
     title: "Personal Information",
     description: "Tell us a bit about yourself",
     icon: User,
-    progress: 20,
+    progress: 17,
   },
   contact: {
     title: "Contact & Professional",
     description: "How can we reach you?",
     icon: Phone,
-    progress: 40,
+    progress: 33,
   },
   preferences: {
     title: "Living Preferences",
     description: "Help us match you better",
     icon: Home,
-    progress: 60,
+    progress: 50,
   },
   verification: {
     title: "Identity Verification",
-    description: "Verify your identity with Didit",
+    description: "Verify your identity with Didit (Optional)",
     icon: Shield,
-    progress: 80,
+    progress: 67,
   },
   complete: {
     title: "All Set!",
@@ -212,7 +212,7 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
       }
       console.log('Profile data being sent:', profileData)
       
-      const profileResult = await api.createUserProfile(profileData)
+      const profileResult = await api.createUserProfile(profileData, user)
       console.log('Profile creation result:', profileResult)
 
       toast({
@@ -479,6 +479,9 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
                 <p className="text-muted-foreground">
                   Verify your identity to build trust and unlock additional features.
                 </p>
+                <p className="text-sm text-amber-600 mt-2">
+                  💡 This step is optional and can be completed later from your profile.
+                </p>
               </div>
               
               <DiditVerification
@@ -492,10 +495,8 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
                 onSkip={() => {
                   setCurrentStep("complete")
                 }}
-                userId={user?.id}
+                userId={user?.id || ''}
                 userEmail={actualUserEmail}
-                userFirstName={formData.first_name}
-                userLastName={formData.last_name}
               />
             </div>
           )}
@@ -510,6 +511,9 @@ export function AccountCreationForm({ userEmail, userPassword, onComplete }: Acc
                 <p className="text-green-700">
                   Your profile has been created successfully. You can now start browsing properties and connecting with
                   potential roommates.
+                </p>
+                <p className="text-sm text-amber-600 mt-2">
+                  💡 You can complete identity verification later from your profile to unlock additional features.
                 </p>
               </div>
               

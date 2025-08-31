@@ -9,11 +9,12 @@ import { useToast } from '@/components/ui/use-toast'
 interface DiditVerificationProps {
   isOpen: boolean
   onVerificationComplete: (verified: boolean) => void
+  onSkip?: () => void
   userId: string
   userEmail?: string
 }
 
-export default function DiditVerification({ isOpen, onVerificationComplete, userId, userEmail }: DiditVerificationProps) {
+export default function DiditVerification({ isOpen, onVerificationComplete, onSkip, userId, userEmail }: DiditVerificationProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isVerified, setIsVerified] = useState(false)
   const { toast } = useToast()
@@ -118,6 +119,17 @@ export default function DiditVerification({ isOpen, onVerificationComplete, user
                   'Start Verification'
                 )}
               </Button>
+              
+              {onSkip && (
+                <Button 
+                  variant="outline"
+                  onClick={onSkip}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  Skip for Now
+                </Button>
+              )}
             </div>
           ) : (
             <div className="text-center space-y-4">
@@ -137,6 +149,27 @@ export default function DiditVerification({ isOpen, onVerificationComplete, user
           <div className="text-xs text-gray-500 text-center">
             Verification is powered by Didit, a secure identity verification service.
           </div>
+          
+          {onSkip && (
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={onSkip}
+                disabled={isLoading}
+                className="flex-1"
+              >
+                Skip for Now
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={handleClose}
+                disabled={isLoading}
+                className="flex-1"
+              >
+                Close
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
