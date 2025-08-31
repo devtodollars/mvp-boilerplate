@@ -1,58 +1,94 @@
-import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
+import { createClient } from '@/utils/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    console.log('Testing database connection...');
+    
+    const supabase = await createClient();
+    console.log('Supabase client created');
     
     // Test basic connection
     const { data: testData, error: testError } = await supabase
-      .from('users')
-      .select('id')
-      .limit(1)
+      .from('listings')
+      .select('id, property_name')
+      .limit(1);
     
     if (testError) {
+      console.error('Error testing listings table:', testError);
       return NextResponse.json({ 
         error: 'Database connection failed', 
         details: testError 
-      }, { status: 500 })
+      }, { status: 500 });
     }
     
-    // Test applications table access
-    const { data: appsData, error: appsError } = await supabase
-      .from('applications')
-      .select('id')
-      .limit(1)
+    console.log('Listings table accessible, sample data:', testData);
     
-    if (appsError) {
+    // Test payments table
+    const { data: paymentsData, error: paymentsError } = await supabase
+      .from('payments')
+      .select('id, listing_id, user_id, amount, status')
+      .limit(1);
+    
+    if (paymentsError) {
+      console.error('Error testing payments table:', paymentsError);
       return NextResponse.json({ 
-        error: 'Applications table access failed', 
-        details: appsError 
-      }, { status: 500 })
+        error: 'Payments table access failed', 
+        details: paymentsError 
+      }, { status: 500 });
     }
     
-    // Test listings table access
-    const { data: listingsData, error: listingsError } = await supabase
-      .from('listings')
-      .select('id')
-      .limit(1)
+    console.log('Payments table accessible, sample data:', paymentsData);
     
-    if (listingsError) {
+    // Test inserting a payment record
+    const testPayment = {
+      listing_id: '00000000-0000-0000-0000-000000000000', // dummy UUID
+      user_id: '00000000-0000-0000-0000-000000000000', // dummy UUID
+      amount: 5.00,
+      currency: 'EUR',
+      status: 'pending',
+      payment_method: 'test',
+      description: 'Test payment',
+      metadata: { test: true }
+    };
+    
+    const { data: insertData, error: insertError } = await supabase
+      .from('payments')
+      .insert([testPayment])
+      .select();
+    
+    if (insertError) {
+      console.error('Error testing payment insert:', insertError);
       return NextResponse.json({ 
-        error: 'Listings table access failed', 
-        details: listingsError 
-      }, { status: 500 })
+        error: 'Payment insert test failed', 
+        details: insertError,
+        testPayment
+      }, { status: 500 });
     }
     
-    return NextResponse.json({
-      success: true,
-      usersCount: testData?.length || 0,
-      applicationsCount: appsData?.length || 0,
-      listingsCount: listingsData?.length || 0
-    })
+    console.log('Payment insert test successful:', insertData);
+    
+    // Clean up test data
+    if (insertData && insertData[0]) {
+      await supabase
+        .from('payments')
+        .delete()
+        .eq('id', insertData[0].id);
+    }
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Database connection and table access working correctly',
+      listingsSample: testData,
+      paymentsSample: paymentsData,
+      insertTest: 'Passed'
+    });
     
   } catch (error) {
-    console.error('Test DB error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Unexpected error in database test:', error);
+    return NextResponse.json(
+      { error: 'Database test failed', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
   }
 } 

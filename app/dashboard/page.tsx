@@ -74,6 +74,15 @@ export default function ApplicationsPage() {
 
       // Check if user is available
       if (!user) {
+        // Check if we're returning from a payment (don't redirect in this case)
+        const searchParams = new URLSearchParams(window.location.search);
+        const paymentStatus = searchParams.get('payment');
+        
+        if (paymentStatus === 'success' || paymentStatus === 'cancelled') {
+          console.log('Returning from payment, not redirecting to auth');
+          return;
+        }
+        
         const currentUrl = window.location.pathname + window.location.search;
         router.push(`/auth/signin?redirect=${encodeURIComponent(currentUrl)}`);
         return;
@@ -147,6 +156,114 @@ export default function ApplicationsPage() {
       setLoading(false);
     }
   }, [user]);
+
+  // Handle payment success/cancellation from URL params
+  useEffect(() => {
+    console.log('Dashboard useEffect running, checking URL params...');
+    console.log('Current URL:', window.location.href);
+    
+    const searchParams = new URLSearchParams(window.location.search);
+    const paymentStatus = searchParams.get('payment');
+    const sessionId = searchParams.get('session_id');
+    const paymentId = searchParams.get('payment_id');
+    
+    console.log('URL params found:', { paymentStatus, sessionId, paymentId });
+    
+    if (paymentStatus === 'success' && sessionId && paymentId) {
+      console.log('Payment success detected, checking status...');
+      
+      // Wait a bit for user state to be loaded
+      setTimeout(() => {
+        // Check payment status with Stripe and update database
+        checkPaymentStatus(sessionId, paymentId);
+        
+        // Set active tab to listings
+        setActiveTab('listings');
+        
+        // Clean up URL params but stay on dashboard
+        const newUrl = '/dashboard?tab=listings';
+        console.log('Replacing URL with:', newUrl);
+        window.history.replaceState({}, '', newUrl);
+      }, 1000); // Wait 1 second for user state to load
+    } else if (paymentStatus === 'cancelled') {
+      console.log('Payment cancelled detected');
+      
+      toast({
+        title: 'Payment Cancelled',
+        description: 'Your payment was cancelled. You can try again anytime.',
+        variant: 'destructive',
+      });
+      
+      // Set active tab to listings
+      setActiveTab('listings');
+      
+      // Clean up URL params but stay on dashboard
+      const newUrl = '/dashboard?tab=listings';
+      console.log('Replacing URL with:', newUrl);
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
+
+  const checkPaymentStatus = async (sessionId: string, paymentId: string) => {
+    try {
+      // Find the listing ID from the payment record
+      const supabase = createClient();
+      const { data: payment } = await supabase
+        .from('payments')
+        .select('listing_id')
+        .eq('id', paymentId)
+        .single();
+
+      if (!payment?.listing_id) {
+        console.error('Could not find listing for payment:', paymentId);
+        return;
+      }
+
+      // Check payment status with Stripe
+      const response = await fetch('/api/stripe/check-payment-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId,
+          paymentId,
+          listingId: payment.listing_id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to check payment status');
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.payment_status === 'paid') {
+        toast({
+          title: 'Payment Successful!',
+          description: 'Your listing is now active for 30 days. You can view it in the search results.',
+          variant: 'default',
+        });
+        
+        // Refresh data to show updated payment status
+        fetchAllData();
+      } else {
+        toast({
+          title: 'Payment Issue',
+          description: 'Payment was not completed successfully. Please try again.',
+          variant: 'destructive',
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+      toast({
+        title: 'Payment Verification Error',
+        description: 'Could not verify payment status. Please refresh the page.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const fetchOwnedListings = async (supabase: any, userId: string) => {
     try {
