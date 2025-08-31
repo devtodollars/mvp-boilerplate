@@ -150,7 +150,7 @@ export default function ApplicationsPage() {
 
   const fetchOwnedListings = async (supabase: any, userId: string) => {
     try {
-      // First, fetch the listings
+      // First, fetch the listings with owner information
       const { data: listings, error: listingsError } = await supabase
         .from('listings')
         .select('*')
@@ -159,9 +159,28 @@ export default function ApplicationsPage() {
 
       if (listingsError) throw listingsError;
 
+      // Fetch owner information for each listing
+      const listingsWithOwners = await Promise.all(
+        (listings || []).map(async (listing: any) => {
+          if (listing.user_id) {
+            const { data: ownerData } = await supabase
+              .from('users')
+              .select('id, full_name, verified')
+              .eq('id', listing.user_id)
+              .single();
+            
+            return {
+              ...listing,
+              owner: ownerData || null
+            };
+          }
+          return listing;
+        })
+      );
+
       // Then, for each listing, get the applicant count using the new function
       const listingsWithApplicants = await Promise.all(
-        (listings || []).map(async (listing: any) => {
+        (listingsWithOwners || []).map(async (listing: any) => {
           try {
             const { data: statsData, error: statsError } = await supabase.rpc('get_listing_stats', {
               listing_uuid: listing.id

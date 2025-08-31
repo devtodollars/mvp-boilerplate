@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const supabase = await createClient()
     
-    // Fetch all listings
+    // Fetch all listings with owner information
     const { data: listings, error } = await supabase
       .from('listings')
       .select('*')
@@ -16,9 +16,28 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // Fetch owner information for each listing
+    const listingsWithOwners = await Promise.all(
+      (listings || []).map(async (listing) => {
+        if (listing.user_id) {
+          const { data: ownerData } = await supabase
+            .from('users')
+            .select('id, full_name, verified')
+            .eq('id', listing.user_id)
+            .single();
+          
+          return {
+            ...listing,
+            owner: ownerData || null
+          };
+        }
+        return listing;
+      })
+    );
+
     // Add applicant counts and views to each listing
     const listingsWithStats = await Promise.all(
-      (listings || []).map(async (listing) => {
+      (listingsWithOwners || []).map(async (listing) => {
         try {
           const { data: statsData, error: statsError } = await supabase.rpc('get_listing_stats', {
             listing_uuid: listing.id

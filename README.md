@@ -59,6 +59,7 @@ mobile going to view property from management dashboard
 ### MVP Features
 
 #### WIP - Dominik
+ID verification
 
 TODO
 
@@ -66,10 +67,10 @@ TODO
 - Chat read/unread fix chat top tab
 - and test Auth logging in and deletion
 
-SMTP server and sending emails??
+SMTP server and sending emails using... I forgot lol
 
 #### TODO
-* ID verification
+
 * Stripe set up 
 
 

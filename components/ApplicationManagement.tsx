@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import VerifiedBadge from '@/components/misc/VerifiedBadge'
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -87,6 +88,7 @@ interface Application {
     references?: string
     bio?: string
     created_at: string
+    verified?: boolean
   }
 }
 
@@ -186,7 +188,8 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
           pets: item.user?.pets || false,
           references: '', // Not in the schema
           bio: item.user?.bio || '',
-          created_at: item.user?.created_at || ''
+          created_at: item.user?.created_at || '',
+          verified: item.user?.verified || false
         }
       }))
       setApplications(transformedData)
@@ -854,9 +857,12 @@ function ApplicationCard({
               </AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="text-xl font-semibold text-gray-900">
-                {application.user.full_name}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {application.user.full_name}
+                </h3>
+                <VerifiedBadge verified={application.user.verified || false} size="sm" />
+              </div>
               <p className="text-gray-600">{application.user.occupation}</p>
               <div className="flex items-center gap-2 mt-1">
                 <Badge className={`${statusInfo.color} flex items-center gap-1`}>

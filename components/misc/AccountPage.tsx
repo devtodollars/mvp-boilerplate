@@ -12,8 +12,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/landing/Navbar';
 import { User } from '@supabase/supabase-js';
+import { Shield } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getURL } from '@/utils/helpers';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
@@ -29,6 +30,35 @@ export default function AccountPage({
   const { toast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  // Fetch user profile to get verification status
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const { data: profile, error } = await supabase
+          .from('users')
+          .select('verified')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user profile:', error);
+        } else {
+          setUserProfile(profile);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    if (user) {
+      fetchUserProfile();
+    }
+  }, [user, supabase]);
 
 
 
@@ -85,6 +115,42 @@ export default function AccountPage({
                   Edit Profile
                 </Button>
               </CardFooter>
+            </Card>
+
+            <Card x-chunk="dashboard-04-chunk-3">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-blue-600" />
+                  Identity Verification
+                </CardTitle>
+                <CardDescription>
+                  Verify your identity to build trust and unlock additional features
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Shield className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Verification Status</p>
+                      <p className="text-sm text-muted-foreground">
+                        {isLoadingProfile ? 'Loading...' : (userProfile?.verified ? 'Verified' : 'Not verified')}
+                      </p>
+                    </div>
+                  </div>
+                  {!userProfile?.verified && (
+                    <Button 
+                      onClick={() => router.push('/account/profile?verification=true')} 
+                      variant="outline"
+                      size="sm"
+                    >
+                      Get Verified
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
             </Card>
             <Card x-chunk="dashboard-04-chunk-3">
               <CardHeader>
