@@ -13,7 +13,8 @@ import {
   AlertTriangle, 
   Calendar,
   Euro,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/components/providers/AuthProvider"
@@ -42,10 +43,14 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
   // Calculate days remaining
   useEffect(() => {
     if (listing.payment_expires_at) {
+      console.log('Payment expires at:', listing.payment_expires_at);
       const expiryDate = new Date(listing.payment_expires_at)
       const now = new Date()
+      console.log('Expiry date:', expiryDate);
+      console.log('Current date:', now);
       const diffTime = expiryDate.getTime() - now.getTime()
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      console.log('Days remaining:', diffDays);
       setDaysRemaining(diffDays > 0 ? diffDays : 0)
     }
   }, [listing.payment_expires_at])
@@ -128,14 +133,13 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
 
       if (!paymentResponse.ok) {
         const errorData = await paymentResponse.json();
-        console.error('Payment creation failed:', errorData);
-        throw new Error(`Failed to create payment record: ${errorData.error || 'Unknown error'}`);
+        throw new Error(`Payment creation failed: ${errorData.error || 'Unknown error'}`);
       }
 
       const paymentData = await paymentResponse.json()
       console.log('Payment created successfully:', paymentData);
       
-      // Redirect to Stripe checkout
+      // Create checkout session
       const checkoutResponse = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
@@ -150,8 +154,7 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
 
       if (!checkoutResponse.ok) {
         const errorData = await checkoutResponse.json();
-        console.error('Checkout creation failed:', errorData);
-        throw new Error(`Failed to create checkout session: ${errorData.error || 'Unknown error'}`);
+        throw new Error(`Checkout creation failed: ${errorData.error || 'Unknown error'}`);
       }
 
       const { checkoutUrl } = await checkoutResponse.json()
@@ -194,7 +197,7 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
             {statusInfo.label}
           </Badge>
           <div className="flex items-center gap-1 text-sm text-gray-600">
-            <Euro className="h-4 w-4" />
+    
             <span className="font-medium">€5.00</span>
             <span>/30 days</span>
           </div>
@@ -279,6 +282,25 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
               )}
             </Button>
           )}
+        </div>
+
+        {/* Refresh Button */}
+        <div className="mt-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              console.log('Manual refresh requested');
+              if (onStatusUpdate) {
+                onStatusUpdate();
+              }
+              window.location.reload();
+            }}
+            className="w-full text-xs"
+          >
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Refresh Status
+          </Button>
         </div>
 
         {/* Additional Info */}

@@ -75,16 +75,23 @@ export default function ApplicationsPage() {
       // Check if user is available
       if (!user) {
         // Check if we're returning from a payment (don't redirect in this case)
-        const searchParams = new URLSearchParams(window.location.search);
-        const paymentStatus = searchParams.get('payment');
-        
-        if (paymentStatus === 'success' || paymentStatus === 'cancelled') {
-          console.log('Returning from payment, not redirecting to auth');
-          return;
+        if (typeof window !== 'undefined') {
+          const searchParams = new URLSearchParams(window.location.search);
+          const paymentStatus = searchParams.get('payment');
+          
+          if (paymentStatus === 'success' || paymentStatus === 'cancelled') {
+            console.log('Returning from payment, not redirecting to auth - waiting for user state');
+            // Don't return early, just skip the data fetching but don't redirect
+            setLoading(false);
+            return;
+          }
         }
         
-        const currentUrl = window.location.pathname + window.location.search;
-        router.push(`/auth/signin?redirect=${encodeURIComponent(currentUrl)}`);
+        // Only redirect to auth if we're not in a payment flow and payment processing is complete
+        if (typeof window !== 'undefined' && paymentProcessingComplete && !isProcessingPayment) {
+          const currentUrl = window.location.pathname + window.location.search;
+          router.push(`/auth/signin?redirect=${encodeURIComponent(currentUrl)}`);
+        }
         return;
       }
 
@@ -110,21 +117,32 @@ export default function ApplicationsPage() {
       ]);
 
       // Handle results
+      console.log('=== HANDLING FETCH RESULTS ===');
+      console.log('Applications result:', applicationsResult);
+      console.log('Owned listings result:', ownedResult);
+      console.log('Liked listings result:', likedResult);
+
       if (applicationsResult.status === 'fulfilled' && applicationsResult.value.success) {
+        console.log('Setting applications:', applicationsResult.value.applications);
         setApplications(applicationsResult.value.applications);
       } else {
+        console.log('Applications failed, setting empty array');
         setApplications([]);
       }
 
       if (ownedResult.status === 'fulfilled' && ownedResult.value.success) {
+        console.log('Setting owned listings:', ownedResult.value.listings);
         setOwnedListings(ownedResult.value.listings);
       } else {
+        console.log('Owned listings failed, setting empty array');
         setOwnedListings([]);
       }
 
       if (likedResult.status === 'fulfilled' && likedResult.value.success) {
+        console.log('Setting liked listings:', likedResult.value.listings);
         setLikedListings(likedResult.value.listings);
       } else {
+        console.log('Liked listings failed, setting empty array');
         setLikedListings([]);
       }
     } catch (error) {
@@ -159,6 +177,9 @@ export default function ApplicationsPage() {
 
   // Handle payment success/cancellation from URL params
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+    
     console.log('Dashboard useEffect running, checking URL params...');
     console.log('Current URL:', window.location.href);
     
@@ -170,55 +191,55 @@ export default function ApplicationsPage() {
     console.log('URL params found:', { paymentStatus, sessionId, paymentId });
     
     if (paymentStatus === 'success' && sessionId && paymentId) {
-      console.log('Payment success detected, checking status...');
+      console.log('Payment success detected, processing...');
       
-      // Wait a bit for user state to be loaded
-      setTimeout(() => {
-        // Check payment status with Stripe and update database
-        checkPaymentStatus(sessionId, paymentId);
-        
-        // Set active tab to listings
-        setActiveTab('listings');
-        
-        // Clean up URL params but stay on dashboard
-        const newUrl = '/dashboard?tab=listings';
-        console.log('Replacing URL with:', newUrl);
-        window.history.replaceState({}, '', newUrl);
-      }, 1000); // Wait 1 second for user state to load
+      // Set active tab to listings immediately
+      setActiveTab('listings');
+      
+      // Clean up URL params immediately to prevent redirect issues
+      const newUrl = '/dashboard?tab=listings';
+      console.log('Replacing URL with:', newUrl);
+      window.history.replaceState({}, '', newUrl);
+      
+      // Process payment verification
+      processPaymentVerification(sessionId, paymentId);
+      
     } else if (paymentStatus === 'cancelled') {
       console.log('Payment cancelled detected');
+      
+      // Set active tab to listings immediately
+      setActiveTab('listings');
+      
+      // Clean up URL params immediately
+      const newUrl = '/dashboard?tab=listings';
+      console.log('Replacing URL with:', newUrl);
+      window.history.replaceState({}, '', newUrl);
+      
+      // Mark payment processing as complete
+      setPaymentProcessingComplete(true);
+      setIsProcessingPayment(false);
       
       toast({
         title: 'Payment Cancelled',
         description: 'Your payment was cancelled. You can try again anytime.',
         variant: 'destructive',
       });
-      
-      // Set active tab to listings
-      setActiveTab('listings');
-      
-      // Clean up URL params but stay on dashboard
-      const newUrl = '/dashboard?tab=listings';
-      console.log('Replacing URL with:', newUrl);
-      window.history.replaceState({}, '', newUrl);
     }
-  }, []);
+  }, []); // Remove user dependency to avoid re-running
 
-  const checkPaymentStatus = async (sessionId: string, paymentId: string) => {
+  const processPaymentVerification = async (sessionId: string, paymentId: string) => {
     try {
-      // Find the listing ID from the payment record
-      const supabase = createClient();
-      const { data: payment } = await supabase
-        .from('payments')
-        .select('listing_id')
-        .eq('id', paymentId)
-        .single();
-
-      if (!payment?.listing_id) {
-        console.error('Could not find listing for payment:', paymentId);
-        return;
-      }
-
+      console.log('=== PROCESSING PAYMENT VERIFICATION ===');
+      console.log('Session ID:', sessionId);
+      console.log('Payment ID:', paymentId);
+      
+      // Show loading state
+      setIsProcessingPayment(true);
+      
+      // Wait a moment for user state to potentially load
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('Calling payment status check API...');
       // Check payment status with Stripe
       const response = await fetch('/api/stripe/check-payment-status', {
         method: 'POST',
@@ -227,52 +248,86 @@ export default function ApplicationsPage() {
         },
         body: JSON.stringify({
           sessionId,
-          paymentId,
-          listingId: payment.listing_id
+          paymentId
         }),
       });
 
+      console.log('Payment status check response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to check payment status');
+        const errorData = await response.json();
+        console.error('Payment status check failed:', errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('Payment status result:', result);
       
       if (result.success && result.payment_status === 'paid') {
+        console.log('Payment confirmed as successful');
+        
+        // Show success message
         toast({
-          title: 'Payment Successful!',
-          description: 'Your listing is now active for 30 days. You can view it in the search results.',
+          title: 'Payment Successful! 🎉',
+          description: 'Your listing is now active for 30 days. Refreshing your listings...',
           variant: 'default',
         });
         
-        // Refresh data to show updated payment status
-        fetchAllData();
+        // Mark payment processing as complete
+        setPaymentProcessingComplete(true);
+        setIsProcessingPayment(false);
+        
+        // Simple refresh: force data reload
+        console.log('Refreshing page data after successful payment...');
+        
+        // Wait a moment for database to update
+        setTimeout(async () => {
+          console.log('Forcing data refresh...');
+          await fetchAllData();
+          setRefreshTrigger(prev => prev + 1);
+        }, 2000);
+        
       } else {
+        console.log('Payment not successful:', result);
         toast({
           title: 'Payment Issue',
-          description: 'Payment was not completed successfully. Please try again.',
+          description: result.message || 'Payment was not completed successfully. Please try again.',
           variant: 'destructive',
         });
+        
+        // Mark payment processing as complete even if failed
+        setPaymentProcessingComplete(true);
+        setIsProcessingPayment(false);
       }
       
     } catch (error) {
-      console.error('Error checking payment status:', error);
+      console.error('Error processing payment verification:', error);
       toast({
         title: 'Payment Verification Error',
-        description: 'Could not verify payment status. Please refresh the page.',
+        description: error instanceof Error ? error.message : 'Could not verify payment status. Please refresh the page.',
         variant: 'destructive',
       });
+      
+      // Mark payment processing as complete even on error
+      setPaymentProcessingComplete(true);
+      setIsProcessingPayment(false);
     }
   };
 
   const fetchOwnedListings = async (supabase: any, userId: string) => {
     try {
+      console.log('=== FETCHING OWNED LISTINGS ===');
+      console.log('User ID:', userId);
+      
       // First, fetch the listings with owner information
       const { data: listings, error: listingsError } = await supabase
         .from('listings')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
+
+      console.log('Raw listings from database:', listings);
+      console.log('Listings error:', listingsError);
 
       if (listingsError) throw listingsError;
 
@@ -331,9 +386,12 @@ export default function ApplicationsPage() {
         })
       );
 
+      console.log('Final listings with applicants:', listingsWithApplicants);
+      console.log('Returning success with', listingsWithApplicants.length, 'listings');
       return { success: true, listings: listingsWithApplicants };
     } catch (error) {
       console.error('Error fetching owned listings:', error);
+      console.log('Returning failure with empty array');
       return { success: false, listings: [] };
     }
   };
@@ -463,15 +521,64 @@ export default function ApplicationsPage() {
     return stats;
   };
 
-  if (loading) {
+  // Check if we're processing a payment (client-side only)
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentProcessingComplete, setPaymentProcessingComplete] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const paymentStatus = searchParams.get('payment');
+      const isPaymentFlow = paymentStatus === 'success' || paymentStatus === 'cancelled';
+      setIsProcessingPayment(isPaymentFlow);
+      
+      // If no payment params, mark processing as complete
+      if (!isPaymentFlow) {
+        setPaymentProcessingComplete(true);
+      }
+    }
+  }, []);
+
+  // Refresh data when user becomes available after payment processing
+  useEffect(() => {
+    if (user && paymentProcessingComplete && isProcessingPayment === false) {
+      console.log('User became available after payment processing, refreshing data...');
+      fetchAllData();
+    }
+  }, [user, paymentProcessingComplete, isProcessingPayment]);
+
+  if (loading || isProcessingPayment) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="text-center">
-              <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Your Dashboard</h3>
-              <p className="text-gray-600">Gathering your applications, listings, and favorites...</p>
+            <div className="text-center max-w-md">
+              <div className="relative mb-6">
+                <Loader2 className="h-16 w-16 animate-spin text-blue-600 mx-auto" />
+                {isProcessingPayment && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-8 w-8 bg-green-500 rounded-full animate-pulse"></div>
+                  </div>
+                )}
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                {isProcessingPayment ? 'Processing Your Payment...' : 'Loading Your Dashboard'}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {isProcessingPayment 
+                  ? 'We\'re confirming your payment with Stripe and updating your listing status. This usually takes just a few seconds.'
+                  : 'Gathering your applications, listings, and favorites...'
+                }
+              </p>
+              {isProcessingPayment && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                  <div className="flex items-center gap-2 text-blue-800 text-sm">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span>Verifying payment with Stripe...</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1161,10 +1268,13 @@ export default function ApplicationsPage() {
                             {/* Right side - Payment status */}
                             <div className="w-full lg:w-1/2 p-4">
                               <PaymentStatusCard 
+                                key={`${listing.id}-${refreshTrigger}`}
                                 listing={listing}
-                                onStatusUpdate={() => {
-                                  // Refresh the page to update listing data
-                                  window.location.reload();
+                                onStatusUpdate={async () => {
+                                  // Refresh the data to update listing status
+                                  console.log('PaymentStatusCard requesting data refresh...');
+                                  await fetchAllData();
+                                  setRefreshTrigger(prev => prev + 1);
                                 }}
                               />
                             </div>
