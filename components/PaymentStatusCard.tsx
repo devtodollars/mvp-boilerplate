@@ -13,10 +13,11 @@ import {
   AlertTriangle, 
   Calendar,
   Euro,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { simulatePaymentCompletion } from "@/utils/supabase/payments"
+import { useAuth } from "@/components/providers/AuthProvider"
 
 interface PaymentStatusCardProps {
   listing: {
@@ -37,14 +38,19 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
   const [isProcessing, setIsProcessing] = useState(false)
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null)
   const { toast } = useToast()
+  const { user } = useAuth()
 
   // Calculate days remaining
   useEffect(() => {
     if (listing.payment_expires_at) {
+      console.log('Payment expires at:', listing.payment_expires_at);
       const expiryDate = new Date(listing.payment_expires_at)
       const now = new Date()
+      console.log('Expiry date:', expiryDate);
+      console.log('Current date:', now);
       const diffTime = expiryDate.getTime() - now.getTime()
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      console.log('Days remaining:', diffDays);
       setDaysRemaining(diffDays > 0 ? diffDays : 0)
     }
   }, [listing.payment_expires_at])
@@ -91,29 +97,77 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
     return Math.max(0, Math.min(100, ((totalDays - remainingDays) / totalDays) * 100))
   }
 
-  const handleTestPayment = async () => {
+  const handleStripePayment = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to make a payment.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsProcessing(true)
     try {
-      const success = await simulatePaymentCompletion(listing.id)
+      console.log('Creating payment for listing:', listing.id, 'user:', user.id);
       
-      if (success) {
-        toast({
-          title: "Payment Successful",
-          description: "Your listing is now active for 30 days!",
-          variant: "default",
-        })
-        onStatusUpdate?.()
-      } else {
-        toast({
-          title: "Payment Failed",
-          description: "Failed to process payment. Please try again.",
-          variant: "destructive",
-        })
+      // Create a payment record first
+      const paymentResponse = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          listingId: listing.id,
+          userId: user.id,
+          amount: 500, // €5.00 in cents
+          currency: 'EUR',
+          description: `Room listing fee for ${listing.property_name}`,
+          metadata: {
+            listing_id: listing.id,
+            listing_name: listing.property_name,
+            payment_type: 'room_listing_fee'
+          }
+        }),
+      })
+
+      if (!paymentResponse.ok) {
+        const errorData = await paymentResponse.json();
+        throw new Error(`Payment creation failed: ${errorData.error || 'Unknown error'}`);
       }
+
+      const paymentData = await paymentResponse.json()
+      console.log('Payment created successfully:', paymentData);
+      
+      // Create checkout session
+      const checkoutResponse = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          listingId: listing.id,
+          paymentId: paymentData.id,
+          returnUrl: `${window.location.origin}/dashboard?tab=listings`,
+        }),
+      })
+
+      if (!checkoutResponse.ok) {
+        const errorData = await checkoutResponse.json();
+        throw new Error(`Checkout creation failed: ${errorData.error || 'Unknown error'}`);
+      }
+
+      const { checkoutUrl } = await checkoutResponse.json()
+      console.log('Redirecting to Stripe checkout:', checkoutUrl);
+      
+      // Redirect to Stripe checkout
+      window.location.href = checkoutUrl
+      
     } catch (error) {
+      console.error('Payment error:', error)
       toast({
-        title: "Error",
-        description: "An error occurred while processing payment.",
+        title: "Payment Error",
+        description: error instanceof Error ? error.message : "Failed to process payment. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -143,8 +197,8 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
             {statusInfo.label}
           </Badge>
           <div className="flex items-center gap-1 text-sm text-gray-600">
-            <Euro className="h-4 w-4" />
-            <span className="font-medium">{listing.payment_amount || 5.00}</span>
+    
+            <span className="font-medium">€5.00</span>
             <span>/30 days</span>
           </div>
         </div>
@@ -170,14 +224,14 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
         <div className="space-y-2">
           {listing.payment_status === 'unpaid' && (
             <Button 
-              onClick={handleTestPayment}
+              onClick={handleStripePayment}
               disabled={isProcessing}
               className="w-full"
             >
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing Payment...
+                  Redirecting to Payment...
                 </>
               ) : (
                 <>
@@ -190,14 +244,14 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
 
           {listing.payment_status === 'expired' && (
             <Button 
-              onClick={handleTestPayment}
+              onClick={handleStripePayment}
               disabled={isProcessing}
               className="w-full"
             >
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing Payment...
+                  Redirecting to Payment...
                 </>
               ) : (
                 <>
@@ -210,7 +264,7 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
 
           {listing.payment_status === 'paid' && daysRemaining !== null && daysRemaining <= 7 && (
             <Button 
-              onClick={handleTestPayment}
+              onClick={handleStripePayment}
               disabled={isProcessing}
               variant="outline"
               className="w-full"
@@ -218,7 +272,7 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing Renewal...
+                  Redirecting to Payment...
                 </>
               ) : (
                 <>
@@ -230,11 +284,31 @@ export function PaymentStatusCard({ listing, onStatusUpdate }: PaymentStatusCard
           )}
         </div>
 
+        {/* Refresh Button */}
+        <div className="mt-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              console.log('Manual refresh requested');
+              if (onStatusUpdate) {
+                onStatusUpdate();
+              }
+              window.location.reload();
+            }}
+            className="w-full text-xs"
+          >
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Refresh Status
+          </Button>
+        </div>
+
         {/* Additional Info */}
         <div className="text-xs text-gray-500 space-y-1">
           <p>• Listings are active for 30 days after payment</p>
           <p>• You can renew anytime before expiration</p>
           <p>• Expired listings are automatically deactivated</p>
+          <p>• Secure payment via Stripe</p>
         </div>
       </CardContent>
     </Card>

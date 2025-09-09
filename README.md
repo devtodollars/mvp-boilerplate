@@ -65,13 +65,14 @@ TODO
 
 - Notifications Testing
 - Chat read/unread fix chat top tab
-- and test Auth logging in and deletion
 
-SMTP server and sending emails using... I forgot lol
+
+
+FIX Time remainin status goes to unpaid 
 
 #### TODO
 
-* Stripe set up 
+
 
 
 
