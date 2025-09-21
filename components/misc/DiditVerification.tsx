@@ -149,27 +149,7 @@ export default function DiditVerification({ isOpen, onVerificationComplete, onSk
           <div className="text-xs text-gray-500 text-center">
             Verification is powered by Didit, a secure identity verification service.
           </div>
-          
-          {onSkip && (
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={onSkip}
-                disabled={isLoading}
-                className="flex-1"
-              >
-                Skip for Now
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={handleClose}
-                disabled={isLoading}
-                className="flex-1"
-              >
-                Close
-              </Button>
-            </div>
-          )}
+        
         </div>
       </DialogContent>
     </Dialog>

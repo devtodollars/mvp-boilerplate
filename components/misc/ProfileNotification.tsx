@@ -24,6 +24,13 @@ export default function ProfileNotification() {
     const checkProfile = async () => {
       if (!user) return
 
+      // Don't show profile completion notifications on search pages or when applying
+      // This allows users to see the document selection dialog first
+      if (pathname === '/search' || pathname.startsWith('/search/')) {
+        console.log('ProfileNotification: Skipping profile check on search page:', pathname)
+        return
+      }
+
       try {
         const api = createApiClient(supabase)
         const { completed } = await api.checkProfileCompletion(user)
@@ -55,10 +62,16 @@ export default function ProfileNotification() {
         }
 
         if (profile) {
-          const hasProfileData = profile.first_name && profile.last_name && 
-            (profile.phone || profile.bio || profile.occupation || profile.date_of_birth)
+          // Use the same strict requirements as checkProfileCompletion
+          const hasRequiredFields = profile &&
+            profile.first_name &&
+            profile.last_name &&
+            profile.phone &&
+            profile.bio &&
+            profile.occupation &&
+            profile.date_of_birth;
           
-          if (!hasProfileData) {
+          if (!hasRequiredFields) {
             if (pathname === '/listroom') {
               setShowDialog(true)
             } else {

@@ -103,26 +103,52 @@ export function DocumentUpload({ disabled = false }: DocumentUploadProps) {
     try {
       const supabase = createClient()
 
-      const { data, error } = await supabase.storage
+      // List all files in the user's folder
+      const { data: files, error } = await supabase.storage
         .from('user-documents')
         .list(user.id, {
           limit: 100,
           offset: 0,
+          sortBy: { column: 'created_at', order: 'desc' }
         })
 
       if (error) {
         throw new Error(`Failed to load documents: ${error.message}`)
       }
 
-      console.log('Loaded documents:', data) // Debug log
-      setDocuments((data || []) as StoredDocument[])
+      // Filter out folders and map to our document format
+      const documents: StoredDocument[] = (files || [])
+        .filter(file => file.name && !file.name.endsWith('/'))
+        .map(file => ({
+          name: `${user.id}/${file.name}`, // Include full path for download/delete operations
+          id: file.id || file.name,
+          updated_at: file.updated_at || new Date().toISOString(),
+          created_at: file.created_at || new Date().toISOString(),
+          last_accessed_at: file.last_accessed_at || new Date().toISOString(),
+          metadata: {
+            size: file.metadata?.size || 0,
+            mimetype: file.metadata?.mimetype || 'application/octet-stream',
+            cacheControl: file.metadata?.cacheControl || '3600',
+            document_type: file.metadata?.document_type,
+            custom_name: file.metadata?.custom_name,
+            encrypted: file.metadata?.encrypted,
+            encryption_iv: file.metadata?.encryption_iv,
+            encryption_key: file.metadata?.encryption_key,
+            original_mimetype: file.metadata?.original_mimetype,
+            original_filename: file.metadata?.original_filename,
+            original_size: file.metadata?.original_size
+          }
+        }))
+
+      setDocuments(documents)
     } catch (error) {
       console.error('Load documents error:', error)
       toast({
-        title: "Load Failed",
-        description: error instanceof Error ? error.message : "Failed to load documents.",
+        title: "Failed to Load Documents",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
         variant: "destructive",
       })
+      setDocuments([])
     } finally {
       setLoading(false)
     }
@@ -268,7 +294,7 @@ export function DocumentUpload({ disabled = false }: DocumentUploadProps) {
       // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('user-documents')
-        .remove([`${user.id}/${document.name}`])
+        .remove([document.name])
 
       if (storageError) {
         throw new Error(`Delete failed: ${storageError.message}`)
@@ -297,7 +323,7 @@ export function DocumentUpload({ disabled = false }: DocumentUploadProps) {
 
       const { data, error } = await supabase.storage
         .from('user-documents')
-        .download(`${user.id}/${document.name}`)
+        .download(document.name)
 
       if (error) {
         throw new Error(`Download failed: ${error.message}`)
@@ -411,7 +437,7 @@ export function DocumentUpload({ disabled = false }: DocumentUploadProps) {
 
       const { data, error } = await supabase.storage
         .from('user-documents')
-        .download(`${user.id}/${document.name}`)
+        .download(document.name)
 
       if (error) {
         throw new Error(`Preview failed: ${error.message}`)
@@ -479,10 +505,13 @@ export function DocumentUpload({ disabled = false }: DocumentUploadProps) {
   const getDocumentInfo = (document: StoredDocument) => {
     console.log('Document:', document.name, 'Metadata:', document.metadata) // Debug log
 
+    // Extract just the filename from the full path (user_id/filename)
+    const filename = document.name.includes('/') ? document.name.split('/').pop() || document.name : document.name
+
     // Try to extract metadata from filename first (new format)
-    if (document.name.includes('__META__')) {
+    if (filename.includes('__META__')) {
       try {
-        const parts = document.name.split('__META__')
+        const parts = filename.split('__META__')
         const encodedMetadata = parts[1]
         const metadataString = atob(encodedMetadata)
         const metadata = JSON.parse(metadataString)
@@ -521,7 +550,7 @@ export function DocumentUpload({ disabled = false }: DocumentUploadProps) {
     }
 
     // Fallback: parse from filename (format: type__name__timestamp.ext)
-    const parts = document.name.split('__')
+    const parts = filename.split('__')
     if (parts.length >= 3) {
       const type = parts[0] as DocumentType
       const name = parts[1].replace(/_/g, ' ')
@@ -529,7 +558,7 @@ export function DocumentUpload({ disabled = false }: DocumentUploadProps) {
         type: documentTypeEnum._def.values.includes(type) ? type : 'other' as DocumentType,
         name,
         size: document.metadata?.size || 0,
-        encrypted: document.name.endsWith('.enc'),
+        encrypted: filename.endsWith('.enc'),
         originalFilename: undefined,
         mimeType: document.metadata?.mimetype
       }
@@ -538,9 +567,9 @@ export function DocumentUpload({ disabled = false }: DocumentUploadProps) {
     // Final fallback
     return {
       type: 'other' as DocumentType,
-      name: document.name,
+      name: filename,
       size: document.metadata?.size || 0,
-      encrypted: document.name.endsWith('.enc'),
+      encrypted: filename.endsWith('.enc'),
       originalFilename: undefined,
       mimeType: document.metadata?.mimetype
     }

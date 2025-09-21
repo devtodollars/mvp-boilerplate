@@ -42,7 +42,7 @@ BEGIN
         SELECT 1 
         FROM applications a
         JOIN listings l ON a.listing_id = l.id
-        WHERE l.user_id = user_id
+        WHERE l.user_id = can_access_shared_document.user_id
         AND a.shared_documents @> jsonb_build_array(
             jsonb_build_object('filename', document_filename)
         )

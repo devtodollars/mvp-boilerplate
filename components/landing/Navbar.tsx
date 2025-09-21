@@ -160,7 +160,9 @@ export const Navbar = () => {
                       <Button
                         variant="ghost"
                         onClick={handleAuth}
+                        className="justify-start"
                       >
+                        <HouseIcon className="h-5 w-5 mr-2" />
                         {user.email}
                       </Button>
                       <Button
@@ -224,8 +226,10 @@ export const Navbar = () => {
                 <Button
                   onClick={handleAuth}
                   variant="ghost"
+                  size="sm"
+                  className="relative"
                 >
-                  <HouseIcon></HouseIcon>
+                  <HouseIcon className="h-5 w-5" />
                 </Button>
                 <Button
                   onClick={handleSignOut}

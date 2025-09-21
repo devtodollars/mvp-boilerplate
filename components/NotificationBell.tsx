@@ -34,6 +34,24 @@ export default function NotificationBell() {
       setupNotificationSubscription(user.id)
     }
     
+    // Listen for custom events from NotificationsPanel
+    const handleNotificationDeleted = () => {
+      console.log('NotificationBell: Received notificationDeleted event')
+      setNotificationCount(prev => {
+        const newCount = Math.max(0, prev - 1)
+        console.log('NotificationBell: Updating count from', prev, 'to', newCount)
+        return newCount
+      })
+    }
+    
+    const handleAllNotificationsDeleted = () => {
+      console.log('NotificationBell: Received allNotificationsDeleted event')
+      setNotificationCount(0)
+    }
+    
+    window.addEventListener('notificationDeleted', handleNotificationDeleted)
+    window.addEventListener('allNotificationsDeleted', handleAllNotificationsDeleted)
+    
     // Cleanup function (same pattern as ChatTabs)
     return () => {
       if (notificationChannelRef.current) {
@@ -44,6 +62,9 @@ export default function NotificationBell() {
         }
         notificationChannelRef.current = null;
       }
+      
+      window.removeEventListener('notificationDeleted', handleNotificationDeleted)
+      window.removeEventListener('allNotificationsDeleted', handleAllNotificationsDeleted)
     }
   }, [user, supabase])
 
@@ -137,13 +158,13 @@ export default function NotificationBell() {
     }
   }
 
-  // Handle bell click - open chat directly
+  // Handle bell click - open notifications panel
   const handleBellClick = () => {
-    // Dispatch custom event to open chat (same pattern used elsewhere in the app)
-    const openChatEvent = new CustomEvent('openChat', {
+    // Dispatch custom event to open notifications panel
+    const openNotificationsEvent = new CustomEvent('openNotifications', {
       detail: { showPanel: true }
     })
-    window.dispatchEvent(openChatEvent)
+    window.dispatchEvent(openNotificationsEvent)
   }
 
   return (

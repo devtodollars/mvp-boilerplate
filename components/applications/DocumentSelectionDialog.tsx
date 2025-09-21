@@ -117,26 +117,53 @@ export function DocumentSelectionDialog({
     setLoadingDocuments(true)
     try {
       const supabase = createClient()
-      
-      const { data, error } = await supabase.storage
+
+      // List all files in the user's folder
+      const { data: files, error } = await supabase.storage
         .from('user-documents')
         .list(user.id, {
           limit: 100,
           offset: 0,
+          sortBy: { column: 'created_at', order: 'desc' }
         })
 
       if (error) {
         throw new Error(`Failed to load documents: ${error.message}`)
       }
 
-      setUserDocuments((data || []) as StoredDocument[])
+      // Filter out folders and map to our document format
+      const documents: StoredDocument[] = (files || [])
+        .filter(file => file.name && !file.name.endsWith('/'))
+        .map(file => ({
+          name: `${user.id}/${file.name}`, // Include full path for download/delete operations
+          id: file.id || file.name,
+          updated_at: file.updated_at || new Date().toISOString(),
+          created_at: file.created_at || new Date().toISOString(),
+          last_accessed_at: file.last_accessed_at || new Date().toISOString(),
+          metadata: {
+            size: file.metadata?.size || 0,
+            mimetype: file.metadata?.mimetype || 'application/octet-stream',
+            cacheControl: file.metadata?.cacheControl || '3600',
+            document_type: file.metadata?.document_type,
+            custom_name: file.metadata?.custom_name,
+            encrypted: file.metadata?.encrypted,
+            encryption_iv: file.metadata?.encryption_iv,
+            encryption_key: file.metadata?.encryption_key,
+            original_mimetype: file.metadata?.original_mimetype,
+            original_filename: file.metadata?.original_filename,
+            original_size: file.metadata?.original_size
+          }
+        }))
+
+      setUserDocuments(documents)
     } catch (error) {
       console.error('Load documents error:', error)
       toast({
         title: "Failed to Load Documents",
-        description: error instanceof Error ? error.message : "Could not load your documents.",
+        description: error instanceof Error ? error.message : "Please try refreshing the page.",
         variant: "destructive",
       })
+      setUserDocuments([])
     } finally {
       setLoadingDocuments(false)
     }
@@ -144,10 +171,13 @@ export function DocumentSelectionDialog({
 
   // Helper function to extract document info from filename
   const getDocumentInfo = (document: StoredDocument) => {
+    // Extract just the filename from the full path (user_id/filename)
+    const filename = document.name.includes('/') ? document.name.split('/').pop() || document.name : document.name
+
     // Try to extract metadata from filename first (new format)
-    if (document.name.includes('__META__')) {
+    if (filename.includes('__META__')) {
       try {
-        const parts = document.name.split('__META__')
+        const parts = filename.split('__META__')
         const encodedMetadata = parts[1]
         const metadataString = atob(encodedMetadata)
         const metadata = JSON.parse(metadataString)
@@ -182,7 +212,7 @@ export function DocumentSelectionDialog({
     }
 
     // Fallback: parse from filename (format: type__name__timestamp.ext)
-    const parts = document.name.split('__')
+    const parts = filename.split('__')
     if (parts.length >= 3) {
       const type = parts[0] as DocumentType
       const name = parts[1].replace(/_/g, ' ')
@@ -190,7 +220,7 @@ export function DocumentSelectionDialog({
         type: documentTypeEnum._def.values.includes(type) ? type : 'other' as DocumentType,
         name,
         size: document.metadata?.size || 0,
-        encrypted: document.name.endsWith('.enc'),
+        encrypted: filename.endsWith('.enc'),
         originalFilename: undefined,
         mimeType: document.metadata?.mimetype
       }
@@ -199,9 +229,9 @@ export function DocumentSelectionDialog({
     // Final fallback
     return {
       type: 'other' as DocumentType,
-      name: document.name,
+      name: filename,
       size: document.metadata?.size || 0,
-      encrypted: document.name.endsWith('.enc'),
+      encrypted: filename.endsWith('.enc'),
       originalFilename: undefined,
       mimeType: document.metadata?.mimetype
     }
@@ -314,18 +344,20 @@ export function DocumentSelectionDialog({
                   <span className="ml-2 text-gray-600">Loading your documents...</span>
                 </div>
               ) : userDocuments.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <Upload className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                    <h3 className="font-medium text-gray-900 mb-2">No Documents Found</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      You haven't uploaded any documents yet. Upload documents like proof of employment, 
-                      payslips, or references to strengthen your application.
+                <div className="text-center py-12">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-8">
+                    <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Upload className="h-8 w-8 text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Documents Available</h3>
+                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                      You haven't uploaded any documents yet. Please upload documents like proof of employment, 
+                      payslips, or references in your profile to strengthen your application.
                     </p>
                     <Link href="/account/profile">
-                      <Button variant="outline" size="sm">
+                      <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                         <ExternalLink className="h-4 w-4 mr-2" />
-                        Upload Documents
+                        Go to Profile & Upload Documents
                       </Button>
                     </Link>
                   </div>

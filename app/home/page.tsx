@@ -13,7 +13,12 @@ export default async function WelcomeCard() {
     // The client-side AuthProvider will handle user state
     const user = null;
 
-    const { data: listings } = await supabase.from('listings').select('*');
+    const { data: listings } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('active', true)
+        .eq('payment_status', 'paid')
+        .gt('payment_expires_at', new Date().toISOString());
 
     return (
         <>
