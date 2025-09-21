@@ -5,10 +5,13 @@ export async function GET() {
   try {
     const supabase = await createClient()
     
-    // Fetch all listings with owner information
+    // Fetch public listings: active, paid, and not expired
     const { data: listings, error } = await supabase
       .from('listings')
       .select('*')
+      .eq('active', true)
+      .eq('payment_status', 'paid')
+      .gt('payment_expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
     
     if (error) {

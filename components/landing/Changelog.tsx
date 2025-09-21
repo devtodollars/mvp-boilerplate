@@ -22,7 +22,7 @@ const changelogEntries: ChangelogEntry[] = [
     ]
   },
   {
-    date: 'Sept 1, 2025',
+    date: 'Sept 29, 2025',
     type: 'Alpha Launch',
     title: 'Product Launch version Alpha',
     description: 'Focus on delivering developed features and seeking user feedback on the application\'s performance.',

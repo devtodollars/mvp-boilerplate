@@ -68,7 +68,7 @@ TODO
 
 
 
-FIX Time remainin status goes to unpaid 
+Consider adding a scheduled cron (e.g., Vercel Cron or Supabase cron) to hit /api/listings/check-expired daily so it doesn’t rely on dashboard traffic.
 
 #### TODO
 

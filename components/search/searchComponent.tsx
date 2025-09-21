@@ -60,7 +60,7 @@ export default function Component({
   const [isClient, setIsClient] = useState(false)
   const [likedListings, setLikedListings] = useState<Set<string>>(new Set())
   const [likingListing, setLikingListing] = useState<string | null>(null)
-  
+
   // Debounce user to prevent excessive auth-related operations
   const debouncedUser = useDebounce(useAuth().user, 500)
   const [currentFilters, setCurrentFilters] = useState<SearchFilters>({
@@ -1012,15 +1012,7 @@ export default function Component({
 
                             {/* Badges and amenities in one row - Mobile */}
                             <div className="flex items-center gap-2 overflow-hidden">
-                              {property.owner?.verified ? (
-                                <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <CheckCircle className="h-2.5 w-2.5 text-green-600" />
-                                </div>
-                              ) : (
-                                <div className="w-4 h-4 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <Shield className="h-2.5 w-2.5 text-amber-600" />
-                                </div>
-                              )}
+
                               {property.amenities && property.amenities.length > 0 && (
                                 <>
                                   {property.amenities.slice(0, 3).map((amenity: string) => (
@@ -1145,18 +1137,10 @@ export default function Component({
                                 />
                               </Button>
                             </div>
-                            
+
                             {/* Badges and amenities in one row - Desktop */}
                             <div className="flex items-center gap-2 overflow-hidden">
-                              {property.owner?.verified ? (
-                                <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <CheckCircle className="h-2.5 w-2.5 text-green-600" />
-                                </div>
-                              ) : (
-                                <div className="w-4 h-4 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <Shield className="h-2.5 w-2.5 text-amber-600" />
-                                </div>
-                              )}
+
                               {property.amenities && property.amenities.length > 0 && (
                                 <>
                                   {property.amenities.slice(0, 3).map((amenity: string) => (

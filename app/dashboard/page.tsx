@@ -319,6 +319,13 @@ export default function ApplicationsPage() {
       console.log('=== FETCHING OWNED LISTINGS ===');
       console.log('User ID:', userId);
       
+      // Ensure expired listings are marked before fetching
+      try {
+        await fetch('/api/listings/check-expired', { method: 'POST' })
+      } catch (e) {
+        console.warn('Failed to trigger expiry check, proceeding anyway');
+      }
+
       // First, fetch the listings with owner information
       const { data: listings, error: listingsError } = await supabase
         .from('listings')
