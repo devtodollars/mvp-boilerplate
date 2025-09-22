@@ -47,7 +47,6 @@ export default function Component({
   onResultsUpdate
 }: SearchComponentProps) {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const [listings, setListings] = useState<any[]>([])
   const [filteredListings, setFilteredListings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -307,7 +306,7 @@ export default function Component({
 
     // Apply filters
     if (currentFilters || effectiveFilters) {
-      const beforeCount = filtered.length
+      // const beforeCount = filtered.length
       const filtersToApply = { ...currentFilters, ...effectiveFilters }
 
       console.log('Applying filters:', filtersToApply)
@@ -560,7 +559,7 @@ export default function Component({
   }
 
   // Helper to get image URLs (array of strings)
-  const getImageUrls = (listing: any) => getListingImages(listing.images)
+  // const getImageUrls = (listing: any) => getListingImages(listing.images)
 
   // Helper to get all media URLs
   const getMediaUrls = (listing: any) => {
@@ -581,18 +580,18 @@ export default function Component({
     return media
   }
 
-  // Helper to format viewing time
-  function formatViewingTime(viewing: string) {
-    // Try to parse as ISO date/time
-    const date = new Date(viewing);
-    if (!isNaN(date.getTime())) {
-      return date.toLocaleString(undefined, {
-        weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true
-      });
-    }
-    // Fallback to raw string
-    return viewing;
-  }
+  // // Helper to format viewing time
+  // function formatViewingTime(viewing: string) {
+  //   // Try to parse as ISO date/time
+  //   const date = new Date(viewing);
+  //   if (!isNaN(date.getTime())) {
+  //     return date.toLocaleString(undefined, {
+  //       weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true
+  //     });
+  //   }
+  //   // Fallback to raw string
+  //   return viewing;
+  // }
 
   // Memoize the properties data for the map to prevent unnecessary re-renders
   const mapProperties = useMemo(() =>

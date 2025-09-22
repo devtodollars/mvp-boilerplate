@@ -10,6 +10,7 @@ import { useAuth } from "@/components/providers/AuthProvider"
 export default function AccountCreationPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
   const [userEmail, setUserEmail] = useState<string>("")
   const [loading, setLoading] = useState(true)
 
@@ -17,7 +18,6 @@ export default function AccountCreationPage() {
     const checkUser = async () => {
       try {
         const supabase = createClient()
-        const { user } = useAuth()
         
         if (!user) {
           toast({
@@ -70,7 +70,7 @@ export default function AccountCreationPage() {
     checkUser()
     
     return () => clearTimeout(timeout)
-  }, [router, toast])
+  }, [router, toast, user])
 
   if (loading) {
     return (

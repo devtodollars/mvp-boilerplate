@@ -17,7 +17,7 @@ async function sendEmailPostmark(props: SendEmailPostmarkProps) {
   const headers = new Headers({
     "Accept": "application/json",
     "Content-Type": "application/json",
-    "X-Postmark-Server-Token": Deno.env.get("POSTMARK_SERVER_TOKEN") || "",
+    "X-Postmark-Server-Token": process.env.POSTMARK_SERVER_TOKEN || "",
   });
 
   const reqBody = JSON.stringify(props);
@@ -33,7 +33,7 @@ export async function sendEmail(
   { to, template, templateModel = {}, messageStream = "outbound" }:
     SendEmailProps,
 ) {
-  const From: string = Deno.env.get("POSTMARK_FROM_EMAIL") || "";
+  const From: string = process.env.POSTMARK_FROM_EMAIL || "";
   return await sendEmailPostmark({
     From,
     To: to,

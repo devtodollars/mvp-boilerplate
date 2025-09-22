@@ -1,5 +1,4 @@
 'use client';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -25,35 +24,22 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { 
   AlertTriangle, 
   Trash2, 
   User as UserIcon, 
   Building2, 
   Heart, 
-  MapPin, 
-  Euro, 
-  Calendar, 
   Clock, 
   CheckCircle, 
   XCircle, 
-  Eye,
-  Edit,
-  Plus,
   ArrowRight,
-  Home,
   Loader2,
-  Star,
   TrendingUp,
   BarChart3,
   FileUser,
-  FileX,
-  ChevronRight,
-  HomeIcon,
   UserCog
 } from 'lucide-react';
-import Image from 'next/image';
 import { useAuth } from '@/components/providers/AuthProvider';
 
 export default function AccountPage() {

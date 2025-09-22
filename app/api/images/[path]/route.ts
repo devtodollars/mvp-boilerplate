@@ -3,10 +3,11 @@ import { createClient } from '@/utils/supabase/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string } }
+  { params }: { params: Promise<{ path: string }> }
 ) {
   try {
-    const path = params.path
+    const resolvedParams = await params
+    const path = resolvedParams.path
     const bucket = request.nextUrl.searchParams.get('bucket') || 'listing-images'
     
     if (!path) {

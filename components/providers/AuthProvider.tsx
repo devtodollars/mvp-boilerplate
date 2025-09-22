@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (error) {
           console.error('Session error:', error);
           const newUser = null;
-          if (userRef.current?.id !== newUser?.id) {
+          if (userRef.current !== newUser) {
             userRef.current = newUser;
             setUser(newUser);
           }

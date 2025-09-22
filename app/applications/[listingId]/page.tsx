@@ -4,10 +4,13 @@ import { getUser } from '@/utils/supabase/queries';
 import ApplicationManagement from '@/components/ApplicationManagement';
 import ProfileNotification from '@/components/misc/ProfileNotification';
 
+// Force dynamic rendering since we need cookies
+export const dynamic = 'force-dynamic';
+
 interface ApplicationManagementPageProps {
-  params: {
+  params: Promise<{
     listingId: string;
-  };
+  }>;
 }
 
 export default async function ApplicationManagementPage({ params }: ApplicationManagementPageProps) {
@@ -35,14 +38,20 @@ export default async function ApplicationManagementPage({ params }: ApplicationM
   }
 
   // If user doesn't own the listing, redirect to dashboard
-  if (listing.user_id !== user.id) {
+  if (!listing.user_id || listing.user_id !== user.id) {
     return redirect('/dashboard');
   }
+
+  // Ensure user_id is not null for the component
+  const listingWithUserId = {
+    ...listing,
+    user_id: listing.user_id as string
+  };
 
   return (
     <>
       <ProfileNotification />
-      <ApplicationManagement listing={listing} />
+      <ApplicationManagement listing={listingWithUserId} />
     </>
   );
 } 

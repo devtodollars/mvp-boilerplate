@@ -88,11 +88,10 @@ export function ApplicationDocumentViewer({
       // Check if document is encrypted
       if (document.filename.endsWith('.enc')) {
         try {
-          const decryption = new DocumentEncryption()
-          const decryptedData = await decryption.decryptDocument(data)
-          finalBlob = decryptedData.blob
-          finalFilename = decryptedData.filename
-          finalMimeType = decryptedData.mimeType
+          const arrayBuffer = await data.arrayBuffer()
+          const decryptedData = await DocumentEncryption.decryptFile(arrayBuffer, document.filename, new Uint8Array())
+          finalBlob = new Blob([decryptedData], { type: finalMimeType })
+          finalFilename = document.originalFilename || document.filename.replace('.enc', '')
         } catch (decryptError) {
           console.error('Decryption failed:', decryptError)
           throw new Error('Failed to decrypt document')

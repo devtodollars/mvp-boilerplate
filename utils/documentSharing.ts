@@ -50,7 +50,7 @@ export class DocumentSharingService {
       const { error } = await this.supabase
         .from('applications')
         .update({
-          shared_documents: documentsToShare
+          shared_documents: documentsToShare as any
         })
         .eq('id', applicationId)
 
@@ -83,7 +83,7 @@ export class DocumentSharingService {
         throw new Error(`Failed to fetch shared documents: ${error.message}`)
       }
 
-      return (data?.shared_documents as SharedDocumentInfo[]) || []
+      return (data?.shared_documents as any) || []
 
     } catch (error) {
       console.error('DocumentSharingService.getSharedDocuments error:', error)

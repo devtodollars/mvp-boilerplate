@@ -21,7 +21,6 @@ import {
   Home, 
   Wifi, 
   Car, 
-  Utensils, 
   Dumbbell,
   PawPrint,
   Calendar,
@@ -151,12 +150,12 @@ export default function AdvancedSearchFilters({
 }: AdvancedSearchFiltersProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  const updateFilter = (key: keyof SearchFilters, value: any) => {
-    onFiltersChange({
-      ...filters,
-      [key]: value
-    })
-  }
+  // const updateFilter = (key: keyof SearchFilters, value: any) => {
+  //   onFiltersChange({
+  //     ...filters,
+  //     [key]: value
+  //   })
+  // }
 
   const clearFilters = () => {
     onClearFilters()

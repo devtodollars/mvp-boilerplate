@@ -533,7 +533,7 @@ export function DocumentUpload({ disabled = false }: DocumentUploadProps) {
 
     // Try to get from metadata first (legacy)
     if (document.metadata?.document_type && document.metadata?.custom_name) {
-      const size = document.metadata.encrypted === 'true' && document.metadata.original_size
+      const size = document.metadata.encrypted && document.metadata.original_size
         ? parseInt(document.metadata.original_size)
         : document.metadata.size
 
@@ -541,7 +541,7 @@ export function DocumentUpload({ disabled = false }: DocumentUploadProps) {
         type: document.metadata.document_type as DocumentType,
         name: document.metadata.custom_name,
         size: size || 0,
-        encrypted: document.metadata.encrypted === 'true',
+        encrypted: document.metadata.encrypted,
         originalFilename: document.metadata.original_filename,
         mimeType: document.metadata.original_mimetype || document.metadata.mimetype,
         encryptionKey: document.metadata.encryption_key,

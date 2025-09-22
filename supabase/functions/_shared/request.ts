@@ -1,5 +1,5 @@
-import { User } from "supabase";
-import { supabase } from "./supabase.ts";
+import { User } from "@supabase/supabase-js";
+import { supabase } from "./supabase";
 
 async function getUserFromRequest(req: Request) {
   const token = req.headers.get("Authorization")!.replace("Bearer ", "");
@@ -55,10 +55,10 @@ export function clientRequestHandlerWithUser(
       return corsResponse(await handler(req, user));
     } catch (e) {
       console.error(e);
-      return resFromError(e);
+      return resFromError(e as { message?: string });
     }
   };
-  Deno.serve(enhancedHandler);
+  // Deno.serve(enhancedHandler); // Commented out for Next.js compatibility
 }
 
 export function clientRequestHandler(
@@ -75,8 +75,8 @@ export function clientRequestHandler(
       return corsResponse(res);
     } catch (e) {
       console.error(e);
-      return resFromError(e);
+      return resFromError(e as { message?: string });
     }
   };
-  Deno.serve(enhancedHandler);
+  // Deno.serve(enhancedHandler); // Commented out for Next.js compatibility
 }

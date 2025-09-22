@@ -1,3 +1,3 @@
-import { initPricesAndProducts } from "../_shared/stripe.ts";
+import { initPricesAndProducts } from "../_shared/stripe";
 
 initPricesAndProducts();

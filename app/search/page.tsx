@@ -3,6 +3,9 @@ import ProfileNotification from '@/components/misc/ProfileNotification';
 import SearchPageWrapper from '@/components/search/SearchPageWrapper';
 import { getCachedUser } from '@/utils/supabase/serverAuth';
 
+// Force dynamic rendering since we need cookies
+export const dynamic = 'force-dynamic';
+
 export default async function SearchPage() {
     const supabase = await createClient();
     

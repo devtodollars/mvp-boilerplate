@@ -5,6 +5,9 @@ import { EnhancedAuthForm } from '@/components/misc/enhancedAuthForm';
 import { AuthState } from '@/utils/types';
 import { getCachedUser } from '@/utils/supabase/serverAuth';
 
+// Force dynamic rendering since we need cookies
+export const dynamic = 'force-dynamic';
+
 export default async function SignIn(
   props: {
     params: Promise<{ id: string }>;

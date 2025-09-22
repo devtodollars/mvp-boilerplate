@@ -709,7 +709,7 @@ export default function ApplicationManagement({ listing }: ApplicationManagement
                 {selectedApplication.shared_documents && selectedApplication.shared_documents.length > 0 && (
                   <ApplicationDocumentViewer
                     applicationId={selectedApplication.id}
-                    sharedDocuments={selectedApplication.shared_documents}
+                    sharedDocuments={selectedApplication.shared_documents as any}
                     applicantUserId={selectedApplication.user_id}
                   />
                 )}
@@ -939,7 +939,7 @@ function ApplicationCard({
               <div className="border-t p-3">
                 <ApplicationDocumentViewer
                   applicationId={application.id}
-                  sharedDocuments={application.shared_documents}
+                  sharedDocuments={application.shared_documents as any}
                   applicantUserId={application.user_id}
                   className="border-0 shadow-none"
                 />

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { 
@@ -13,10 +13,8 @@ import {
   AlertTriangle, 
   Info, 
   MessageSquare,
-  Calendar,
   User,
   Home,
-  Trash2,
   Loader2
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
@@ -325,7 +323,7 @@ export default function NotificationsPanel({ isOpen, onClose }: NotificationsPan
                               </p>
                             )}
                             <p className="text-xs text-gray-500 mt-1">
-                              {formatNotificationTime(notification.created_at)}
+                              {formatNotificationTime(notification.created_at || '')}
                             </p>
                           </div>
                           <Button

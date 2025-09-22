@@ -1,18 +1,18 @@
 import Stripe from "stripe";
-import { Tables } from "../types_db.ts";
+import { Tables } from "../types_db";
 import {
   createOrRetrieveCustomer,
   upsertPriceRecords,
-  upsertProductRecords,
-} from "./supabase.ts";
-import { calculateTrialEndUnixTimestamp } from "./utils.ts";
-import { User } from "supabase";
+  // upsertProductRecords,
+} from "./supabase";
+import { calculateTrialEndUnixTimestamp } from "./utils";
+import { User } from "@supabase/supabase-js";
 
-export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   httpClient: Stripe.createFetchHttpClient(),
   // https://github.com/stripe/stripe-node#configuration
   // https://stripe.com/docs/api/versioning
-  apiVersion: "2024-06-20",
+  apiVersion: "2024-04-10",
 });
 
 type Price = Tables<"prices">;
@@ -25,7 +25,7 @@ export const processWebhookRequest = async (req: Request) => {
   return await stripe.webhooks.constructEventAsync(
     body,
     signature!,
-    Deno.env.get("STRIPE_WEBHOOK_SIGNING_SECRET")!,
+    process.env.STRIPE_WEBHOOK_SIGNING_SECRET!,
     undefined,
     cryptoProvider,
   );
@@ -148,10 +148,10 @@ export async function initPricesAndProducts() {
     const products = prodRes.data;
     const prodIds = products.map((p: Stripe.Product) => p.id);
     const prices = priceRes.data.filter((p: Stripe.Price) =>
-      prodIds.includes(p.product),
+      typeof p.product === 'string' && prodIds.includes(p.product),
     );
 
-    await upsertProductRecords(products);
+    // await upsertProductRecords(products);
     await upsertPriceRecords(prices);
   } catch (e) {
     console.error(e);

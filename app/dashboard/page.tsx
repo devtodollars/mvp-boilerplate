@@ -6,14 +6,13 @@ import { createClient } from '@/utils/supabase/client';
 import { createApiClient } from '@/utils/supabase/api';
 import { Button } from '@/components/ui/button';
 import { trackListingView } from '@/utils/supabase/listings';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { 
   User, 
   MapPin, 
-  Euro, 
   Calendar, 
   Clock, 
   CheckCircle, 
@@ -26,24 +25,16 @@ import {
   Home,
   Building2,
   Eye,
-  Edit,
-  MoreHorizontal,
   Plus,
-  Star,
-  BarChart3,
-  TrendingUp,
-  Award,
   Loader2,
   LayoutGrid,
   FileSearch,
-  FileX,
   Search,
   Settings,
   MessageSquare
 } from 'lucide-react';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DeleteListingDialog } from '@/components/DeleteListingDialog';
 import { PaymentStatusCard } from '@/components/PaymentStatusCard';
@@ -54,7 +45,7 @@ export default function ApplicationsPage() {
   const [ownedListings, setOwnedListings] = useState<any[]>([]);
   const [likedListings, setLikedListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [setUserProfile] = useState<any>(null);
   const [withdrawingApplicationId, setWithdrawingApplicationId] = useState<string | null>(null);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<any>(null);

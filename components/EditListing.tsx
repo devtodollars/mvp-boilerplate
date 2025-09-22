@@ -25,7 +25,6 @@ import { updateListingSchema, UpdateListing,
 } from "@/schemas/listing"
 import { useToast } from '@/components/ui/use-toast';
 import { createClient } from '@/utils/supabase/client';
-import { updateListing } from '@/utils/supabase/listings';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { format, isBefore, startOfDay } from "date-fns";
 import { cn } from "@/utils/cn";
@@ -181,8 +180,8 @@ export default function EditListing({ listing }: EditListingProps) {
             amenities: listing.amenities || [],
             nearby_facilities: listing.nearby_facilities || [],
             house_rules: listing.house_rules || '',
-            images: listing.images || [],
-            videos: listing.videos || [],
+            images: (listing.images as string[]) || [],
+            videos: (listing.videos as string[]) || [],
             active: listing.active || false,
             viewing_times: listing.viewing_times || [],
         },

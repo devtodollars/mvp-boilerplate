@@ -568,7 +568,7 @@ export default function PostRoomPage() {
                   control={control}
                   render={({ field }) => (
                     <AddressAutocomplete
-                      value={field.value}
+                      value={field.value || ''}
                       onChange={field.onChange}
                       onSelect={(val, data) => {
                         // Helper to extract context values

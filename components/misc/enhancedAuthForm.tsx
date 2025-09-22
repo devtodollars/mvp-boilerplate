@@ -79,7 +79,7 @@ export function EnhancedAuthForm({ state }: { state: AuthState }) {
           console.log('Signup result.session:', result?.session) // Debug log
 
           // Check if signup was successful or if there's an error
-          if (result && result.error) {
+          if (result && 'error' in result && result.error) {
             // Handle API-level errors (like user already exists)
             console.log('Signup error from API:', result.error)
             toast({

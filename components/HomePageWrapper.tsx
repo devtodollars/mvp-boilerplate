@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { About } from '@/components/landing/About'
@@ -17,7 +17,7 @@ interface HomePageWrapperProps {
   user: any
 }
 
-export function HomePageWrapper({ user }: HomePageWrapperProps) {
+function HomePageContent({ user }: HomePageWrapperProps) {
   const { toast } = useToast()
   const searchParams = useSearchParams()
 
@@ -50,5 +50,13 @@ export function HomePageWrapper({ user }: HomePageWrapperProps) {
       <FAQ />
       <Changelog />
     </>
+  )
+}
+
+export function HomePageWrapper({ user }: HomePageWrapperProps) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomePageContent user={user} />
+    </Suspense>
   )
 } 

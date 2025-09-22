@@ -4,15 +4,18 @@ import { getUser } from '@/utils/supabase/queries';
 import ChatRoom from '@/components/ChatRoom';
 import ProfileNotification from '@/components/misc/ProfileNotification';
 
+// Force dynamic rendering since we need cookies
+export const dynamic = 'force-dynamic';
+
 interface ChatPageProps {
-  params: {
+  params: Promise<{
     applicationId: string;
-  };
+  }>;
 }
 
 export default async function ChatPage({ params }: ChatPageProps) {
   const supabase = await createClient();
-  const { applicationId } = params;
+  const { applicationId } = await params;
 
   // Get current user
   const user = await getUser(supabase);
@@ -52,7 +55,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
   const isApplicant = application.user_id === user.id;
   const otherPartyName = isApplicant 
     ? application.listing.property_name // If user is applicant, show property name
-    : (application.user.full_name || `${application.user.first_name} ${application.user.last_name}`.trim() || 'Applicant'); // If user is owner, show applicant name
+    : (application.user[0]?.full_name || `${application.user[0]?.first_name || ''} ${application.user[0]?.last_name || ''}`.trim() || 'Applicant'); // If user is owner, show applicant name
 
   const listingName = application.listing.property_name;
 

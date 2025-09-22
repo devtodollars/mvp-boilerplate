@@ -148,7 +148,7 @@ export function parseNaturalLanguageQuery(query: string): Partial<SearchFilters>
   const lowerQuery = query.toLowerCase()
   
   // Enhanced location extraction - try multiple patterns
-  let locationMatch = lowerQuery.match(/(?:in|at|near|around)\s+([a-zA-Z]+)(?:\s|$)/)
+  const locationMatch = lowerQuery.match(/(?:in|at|near|around)\s+([a-zA-Z]+)(?:\s|$)/)
   if (locationMatch) {
     const location = locationMatch[1].trim()
     
@@ -332,7 +332,7 @@ export function buildSupabaseQuery(filters: SearchFilters) {
   
   // Amenities (JSONB array contains)
   if (filters.amenities.length > 0) {
-    filters.amenities.forEach((amenity, index) => {
+    filters.amenities.forEach((amenity, _) => {
       query += ` AND amenities @> $${paramIndex}`
       params.push(JSON.stringify([amenity]))
       paramIndex++

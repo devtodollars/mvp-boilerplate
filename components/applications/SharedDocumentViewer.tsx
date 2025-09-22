@@ -90,9 +90,8 @@ export function SharedDocumentViewer({
 
     try {
       const decryptedDocument = await DocumentSharingService.accessSharedDocument(
-        sharedDocument.id,
         user.id,
-        action
+        sharedDocument.document_name
       )
 
       // Call the callback if provided

@@ -5,6 +5,9 @@ import { getUser } from '@/utils/supabase/queries';
 import ListARoom from '@/components/ListARoom';
 import ProfileNotification from '@/components/misc/ProfileNotification';
 
+// Force dynamic rendering since we need cookies
+export const dynamic = 'force-dynamic';
+
 export default async function ListRoom() {
     const supabase: any = await createClient();
 

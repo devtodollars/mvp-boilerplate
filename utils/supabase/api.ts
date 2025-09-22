@@ -618,7 +618,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
       const { data, error } = await supabase.rpc('update_application_status', {
         application_uuid: applicationId,
         new_status: status,
-        review_notes: notes || null
+        review_notes: notes || undefined
       });
 
       if (error) throw error;

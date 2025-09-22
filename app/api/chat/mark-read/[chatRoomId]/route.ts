@@ -20,7 +20,7 @@ export async function POST(
     // Directly update messages to mark them as read instead of using RPC
     const { error } = await supabase
       .from('messages')
-      .update({ read_at: new Date().toISOString() })
+      .update({ read_at: new Date().toISOString() } as any)
       .eq('chat_room_id', chatRoomId)
       .neq('sender_id', user.id) // Don't mark own messages as read
       .is('read_at', null) // Only update unread messages

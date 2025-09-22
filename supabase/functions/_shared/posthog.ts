@@ -1,6 +1,3 @@
-import { PostHog } from "posthog";
+import { PostHog } from "posthog-js";
 
-export const posthog = new PostHog(Deno.env.get("POSTHOG_CLIENT_KEY") || "", {
-  flushAt: 1,
-  flushInterval: 0,
-});
+export const posthog = new PostHog();

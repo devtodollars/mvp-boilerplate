@@ -26,7 +26,7 @@ export class DocumentEncryption {
         return await crypto.subtle.deriveKey(
             {
                 name: 'PBKDF2',
-                salt: salt,
+                salt: salt as BufferSource,
                 iterations: 100000,
                 hash: 'SHA-256',
             },
@@ -61,7 +61,7 @@ export class DocumentEncryption {
         const encryptedData = await crypto.subtle.encrypt(
             {
                 name: 'AES-GCM',
-                iv: iv,
+                iv: iv as BufferSource,
             },
             key,
             fileBuffer
@@ -110,7 +110,7 @@ export class DocumentEncryption {
         return await crypto.subtle.decrypt(
             {
                 name: 'AES-GCM',
-                iv: iv,
+                iv: iv as BufferSource,
             },
             key,
             encryptedData

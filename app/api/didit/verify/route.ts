@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
         // Get user profile from users table
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, first_name, last_name')
+      .select('id, first_name, last_name, verified')
       .eq('id', userId)
       .single()
     
@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
     const verificationRequest = {
       userId: user.id,
       email: email || '',
-      firstName: user.first_name,
-      lastName: user.last_name,
+      firstName: user.first_name || '',
+      lastName: user.last_name || '',
       redirectUrl,
     }
 

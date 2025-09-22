@@ -7,10 +7,35 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -23,6 +48,7 @@ export type Database = {
           notes: string | null
           position: number
           reviewed_at: string | null
+          shared_documents: Json | null
           status: string
           updated_at: string | null
           user_id: string
@@ -35,6 +61,7 @@ export type Database = {
           notes?: string | null
           position: number
           reviewed_at?: string | null
+          shared_documents?: Json | null
           status?: string
           updated_at?: string | null
           user_id: string
@@ -47,6 +74,7 @@ export type Database = {
           notes?: string | null
           position?: number
           reviewed_at?: string | null
+          shared_documents?: Json | null
           status?: string
           updated_at?: string | null
           user_id?: string
@@ -305,6 +333,7 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
+          read_at: string | null
           sender_id: string
           updated_at: string | null
         }
@@ -313,6 +342,7 @@ export type Database = {
           content: string
           created_at?: string | null
           id?: string
+          read_at?: string | null
           sender_id: string
           updated_at?: string | null
         }
@@ -321,6 +351,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           id?: string
+          read_at?: string | null
           sender_id?: string
           updated_at?: string | null
         }
@@ -581,15 +612,23 @@ export type Database = {
     Functions: {
       add_application_to_queue: {
         Args: {
+          application_notes?: string
           listing_uuid: string
           user_uuid: string
-          application_notes?: string
         }
         Returns: string
+      }
+      can_access_shared_document: {
+        Args: { document_path: string; user_id: string }
+        Returns: boolean
       }
       check_expired_listings: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      check_user_exists: {
+        Args: { email_to_check: string }
+        Returns: boolean
       }
       delete_all_notifications: {
         Args: { user_uuid: string }
@@ -604,7 +643,7 @@ export type Database = {
         Returns: boolean
       }
       extend_listing_payment: {
-        Args: { listing_uuid: string; days_to_add?: number }
+        Args: { days_to_add?: number; listing_uuid: string }
         Returns: boolean
       }
       get_listing_applicant_count: {
@@ -614,21 +653,21 @@ export type Database = {
       get_listing_payment_info: {
         Args: { listing_uuid: string }
         Returns: {
-          listing_id: string
-          payment_status: string
-          payment_expires_at: string
-          payment_amount: number
+          can_renew: boolean
           days_remaining: number
           is_active: boolean
-          can_renew: boolean
+          listing_id: string
+          payment_amount: number
+          payment_expires_at: string
+          payment_status: string
         }[]
       }
       get_listing_stats: {
         Args: { listing_uuid: string }
         Returns: {
           applicant_count: number
-          views_count: number
           last_viewed_at: string
+          views_count: number
         }[]
       }
       get_next_application_position: {
@@ -637,13 +676,13 @@ export type Database = {
       }
       get_or_create_chat_room: {
         Args:
-          | { application_uuid: string }
           | {
-              listing_uuid: string
-              owner_uuid: string
               applicant_uuid: string
               application_uuid: string
+              listing_uuid: string
+              owner_uuid: string
             }
+          | { application_uuid: string }
         Returns: string
       }
       increment_listing_views: {
@@ -656,9 +695,9 @@ export type Database = {
       }
       reapply_to_property: {
         Args: {
+          application_notes?: string
           listing_uuid: string
           user_uuid: string
-          application_notes?: string
         }
         Returns: string
       }
@@ -932,6 +971,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       amenity_type: [

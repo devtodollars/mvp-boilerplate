@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { getApiUser } from '@/utils/supabase/serverApiAuth'
 
 export async function DELETE(
   request: NextRequest,

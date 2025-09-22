@@ -48,7 +48,7 @@ export const getListingPaymentInfo = async (listingId: string): Promise<PaymentI
       return null;
     }
 
-    return data && data.length > 0 ? data[0] : null;
+    return data && data.length > 0 ? data[0] as PaymentInfo : null;
   } catch (error) {
     console.error('Error in getListingPaymentInfo:', error);
     return null;
@@ -422,6 +422,7 @@ export const getPaymentStats = async (userId: string) => {
       failedPayments: data.filter(p => p.status === 'failed').length,
       thisMonth: data.filter(p => {
         try {
+          if (!p.created_at) return false;
           const paymentDate = new Date(p.created_at);
           const now = new Date();
           return paymentDate.getMonth() === now.getMonth() && 

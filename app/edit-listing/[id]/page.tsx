@@ -4,15 +4,18 @@ import { getUser } from '@/utils/supabase/queries';
 import EditListing from '@/components/EditListing';
 import ProfileNotification from '@/components/misc/ProfileNotification';
 
+// Force dynamic rendering since we need cookies
+export const dynamic = 'force-dynamic';
+
 interface EditListingPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function EditListingPage({ params }: EditListingPageProps) {
   const supabase = await createClient();
-  const { id } = params;
+  const { id } = await params;
 
   // Get current user
   const user = await getUser(supabase);

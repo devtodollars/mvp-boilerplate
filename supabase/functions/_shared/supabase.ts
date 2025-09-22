@@ -1,12 +1,12 @@
-import { createClient } from "supabase";
-import { Database, Tables, TablesInsert } from "../types_db.ts";
+import { createClient } from "@supabase/supabase-js";
+import { Database, TablesInsert } from "../types_db";
 import Stripe from "stripe";
-import { stripe } from "./stripe.ts";
-import { toDateTime } from "./utils.ts";
+import { stripe } from "./stripe";
+import { toDateTime } from "./utils";
 
 export const supabase = createClient<Database>(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
     auth: {
       persistSession: false,
@@ -18,26 +18,27 @@ export const supabase = createClient<Database>(
 // Change to control trial period length
 const TRIAL_PERIOD_DAYS = 0;
 
-const upsertProductRecord = async (product: Stripe.Product) =>
-  await upsertProductRecords([product]);
-const upsertProductRecords = async (products: Stripe.Product[]) => {
-  const productData: Tables<"products">[] = products.map((product) => ({
-    id: product.id,
-    active: product.active,
-    name: product.name,
-    description: product.description ?? null,
-    image: product.images?.[0] ?? null,
-    metadata: product.metadata,
-  }));
+// Commented out - products table doesn't exist in current schema
+// const upsertProductRecord = async (product: Stripe.Product) =>
+//   await upsertProductRecords([product]);
+// const upsertProductRecords = async (products: Stripe.Product[]) => {
+//   const productData = products.map((product) => ({
+//     id: product.id,
+//     active: product.active,
+//     name: product.name,
+//     description: product.description ?? null,
+//     image: product.images?.[0] ?? null,
+//     metadata: product.metadata,
+//   }));
 
-  const { error: upsertError } = await supabase
-    .from("products")
-    .upsert(productData);
-  if (upsertError) {
-    throw new Error(`Product insert/update failed: ${upsertError.message}`);
-  }
-  console.log(`Product inserted/updated: ${products.map((p) => p.id)}`);
-};
+//   const { error: upsertError } = await supabase
+//     .from("products")
+//     .upsert(productData);
+//   if (upsertError) {
+//     throw new Error(`Product insert/update failed: ${upsertError.message}`);
+//   }
+//   console.log(`Product inserted/updated: ${products.map((p) => p.id)}`);
+// };
 
 const upsertPriceRecord = async (price: Stripe.Price) =>
   await upsertPriceRecords([price]);
@@ -84,16 +85,17 @@ const upsertPriceRecords = async (
   }
 };
 
-const deleteProductRecord = async (product: Stripe.Product) => {
-  const { error: deletionError } = await supabase
-    .from("products")
-    .delete()
-    .eq("id", product.id);
-  if (deletionError) {
-    throw new Error(`Product deletion failed: ${deletionError.message}`);
-  }
-  console.log(`Product deleted: ${product.id}`);
-};
+// Commented out - products table doesn't exist in current schema
+// const deleteProductRecord = async (product: Stripe.Product) => {
+//   const { error: deletionError } = await supabase
+//     .from("products")
+//     .delete()
+//     .eq("id", product.id);
+//   if (deletionError) {
+//     throw new Error(`Product deletion failed: ${deletionError.message}`);
+//   }
+//   console.log(`Product deleted: ${product.id}`);
+// };
 
 const deletePriceRecord = async (price: Stripe.Price) => {
   const { error: deletionError } = await supabase
@@ -228,141 +230,144 @@ const copyBillingDetailsToCustomer = async (
   }
 };
 
-const manageSubscriptionStatusChange = async (
-  subscriptionId: string,
-  customerId: string,
-  createAction = false,
-) => {
-  // Get customer's UUID from mapping table.
-  const { data: customerData, error: noCustomerError } = await supabase
-    .from("customers")
-    .select("id")
-    .eq("stripe_customer_id", customerId)
-    .single();
+// Commented out - subscriptions table doesn't exist in current schema
+// const manageSubscriptionStatusChange = async (
+//   subscriptionId: string,
+//   customerId: string,
+//   createAction = false,
+// ) => {
+//   // Get customer's UUID from mapping table.
+//   const { data: customerData, error: noCustomerError } = await supabase
+//     .from("customers")
+//     .select("id")
+//     .eq("stripe_customer_id", customerId)
+//     .single();
 
-  if (noCustomerError) {
-    throw new Error(`Customer lookup failed: ${noCustomerError.message}`);
-  }
+//   if (noCustomerError) {
+//     throw new Error(`Customer lookup failed: ${noCustomerError.message}`);
+//   }
 
-  const { id: uuid } = customerData!;
+//   const { id: uuid } = customerData!;
 
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-    expand: ["default_payment_method"],
-  });
-  // Upsert the latest status of the subscription object.
-  const subscriptionData: TablesInsert<"subscriptions"> = {
-    id: subscription.id,
-    user_id: uuid,
-    metadata: subscription.metadata,
-    status: subscription.status,
-    price_id: subscription.items.data[0].price.id,
-    //TODO check quantity on subscription
-    // @ts-ignore: ignore quantity doesnt exist
-    quantity: subscription.quantity,
-    cancel_at_period_end: subscription.cancel_at_period_end,
-    cancel_at: subscription.cancel_at
-      ? toDateTime(subscription.cancel_at).toISOString()
-      : null,
-    canceled_at: subscription.canceled_at
-      ? toDateTime(subscription.canceled_at).toISOString()
-      : null,
-    current_period_start: toDateTime(
-      subscription.current_period_start,
-    ).toISOString(),
-    current_period_end: toDateTime(
-      subscription.current_period_end,
-    ).toISOString(),
-    created: toDateTime(subscription.created).toISOString(),
-    ended_at: subscription.ended_at
-      ? toDateTime(subscription.ended_at).toISOString()
-      : null,
-    trial_start: subscription.trial_start
-      ? toDateTime(subscription.trial_start).toISOString()
-      : null,
-    trial_end: subscription.trial_end
-      ? toDateTime(subscription.trial_end).toISOString()
-      : null,
-  };
+//   const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+//     expand: ["default_payment_method"],
+//   });
+//   // Upsert the latest status of the subscription object.
+//   const subscriptionData: TablesInsert<"subscriptions"> = {
+//     id: subscription.id,
+//     user_id: uuid,
+//     metadata: subscription.metadata,
+//     status: subscription.status,
+//     price_id: subscription.items.data[0].price.id,
+//     //TODO check quantity on subscription
+//     // @ts-ignore: ignore quantity doesnt exist
+//     quantity: subscription.quantity,
+//     cancel_at_period_end: subscription.cancel_at_period_end,
+//     cancel_at: subscription.cancel_at
+//       ? toDateTime(subscription.cancel_at).toISOString()
+//       : null,
+//     canceled_at: subscription.canceled_at
+//       ? toDateTime(subscription.canceled_at).toISOString()
+//       : null,
+//     current_period_start: toDateTime(
+//       subscription.current_period_start,
+//     ).toISOString(),
+//     current_period_end: toDateTime(
+//       subscription.current_period_end,
+//     ).toISOString(),
+//     created: toDateTime(subscription.created).toISOString(),
+//     ended_at: subscription.ended_at
+//       ? toDateTime(subscription.ended_at).toISOString()
+//       : null,
+//     trial_start: subscription.trial_start
+//       ? toDateTime(subscription.trial_start).toISOString()
+//       : null,
+//     trial_end: subscription.trial_end
+//       ? toDateTime(subscription.trial_end).toISOString()
+//       : null,
+//   };
 
-  const { error: upsertError } = await supabase
-    .from("subscriptions")
-    .upsert([subscriptionData]);
-  if (upsertError) {
-    throw new Error(
-      `Subscription insert/update failed: ${upsertError.message}`,
-    );
-  }
-  console.log(
-    `Inserted/updated subscription [${subscription.id}] for user [${uuid}]`,
-  );
+//   const { error: upsertError } = await supabase
+//     .from("subscriptions")
+//     .upsert([subscriptionData]);
+//   if (upsertError) {
+//     throw new Error(
+//       `Subscription insert/update failed: ${upsertError.message}`,
+//     );
+//   }
+//   console.log(
+//     `Inserted/updated subscription [${subscription.id}] for user [${uuid}]`,
+//   );
 
-  // For a new subscription copy the billing details to the customer object.
-  // NOTE: This is a costly operation and should happen at the very end.
-  if (createAction && subscription.default_payment_method && uuid) {
-    await copyBillingDetailsToCustomer(
-      uuid,
-      subscription.default_payment_method as Stripe.PaymentMethod,
-    );
-  }
-};
+//   // For a new subscription copy the billing details to the customer object.
+//   // NOTE: This is a costly operation and should happen at the very end.
+//   if (createAction && subscription.default_payment_method && uuid) {
+//     await copyBillingDetailsToCustomer(
+//       uuid,
+//       subscription.default_payment_method as Stripe.PaymentMethod,
+//     );
+//   }
+// };
 
-const insertCheckoutSession = async (
-  webhookSession: Stripe.Checkout.Session,
-) => {
-  // Get customer's UUID from mapping table.
-  const { data: customerData, error: noCustomerError } = await supabase
-    .from("customers")
-    .select("id")
-    .eq("stripe_customer_id", webhookSession.customer)
-    .single();
+// Commented out - checkout_sessions table doesn't exist in current schema
+// const insertCheckoutSession = async (
+//   webhookSession: Stripe.Checkout.Session,
+// ) => {
+//   // Get customer's UUID from mapping table.
+//   const { data: customerData, error: noCustomerError } = await supabase
+//     .from("customers")
+//     .select("id")
+//     .eq("stripe_customer_id", webhookSession.customer)
+//     .single();
 
-  if (noCustomerError) {
-    throw new Error(`Customer lookup failed: ${noCustomerError.message}`);
-  }
+//   if (noCustomerError) {
+//     throw new Error(`Customer lookup failed: ${noCustomerError.message}`);
+//   }
 
-  const checkoutSession = await stripe.checkout.sessions.retrieve(
-    webhookSession.id,
-    {
-      expand: ["line_items"],
-    },
-  );
+//   const checkoutSession = await stripe.checkout.sessions.retrieve(
+//     webhookSession.id,
+//     {
+//       expand: ["line_items"],
+//     },
+//   );
 
-  const { id: uuid } = customerData!;
+//   const { id: uuid } = customerData!;
 
-  // Upsert the latest status of the subscription object.
-  const sessionData: TablesInsert<"checkout_sessions"> = {
-    id: checkoutSession.id,
-    user_id: uuid,
-    metadata: checkoutSession.metadata,
-    mode: checkoutSession.mode,
-    status: checkoutSession.status,
-    payment_status: checkoutSession.payment_status,
-    price_id: checkoutSession.line_items.data[0].price.id,
-    //TODO check quantity on subscription
-    // @ts-ignore: ignore quantity doesnt exist
-    quantity: checkoutSession.line_items.data[0].quantity,
-    created: toDateTime(checkoutSession.created).toISOString(),
-  };
+//   // Upsert the latest status of the subscription object.
+//   const sessionData: TablesInsert<"checkout_sessions"> = {
+//     id: checkoutSession.id,
+//     user_id: uuid,
+//     metadata: checkoutSession.metadata,
+//     mode: checkoutSession.mode,
+//     status: checkoutSession.status,
+//     payment_status: checkoutSession.payment_status,
+//     price_id: checkoutSession.line_items.data[0].price.id,
+//     //TODO check quantity on subscription
+//     // @ts-ignore: ignore quantity doesnt exist
+//     quantity: checkoutSession.line_items.data[0].quantity,
+//     created: toDateTime(checkoutSession.created).toISOString(),
+//   };
 
-  const { error: insertError } = await supabase
-    .from("checkout_sessions")
-    .insert(sessionData);
-  if (insertError) {
-    throw new Error(`Checkout session insert failed: ${insertError.message}`);
-  }
-  console.log(
-    `Inserted checkout session [${checkoutSession.id}] for user [${uuid}]`,
-  );
-};
+//   const { error: insertError } = await supabase
+//     .from("checkout_sessions")
+//     .insert(sessionData);
+//   if (insertError) {
+//     throw new Error(`Checkout session insert failed: ${insertError.message}`);
+//   }
+//   console.log(
+//     `Inserted checkout session [${checkoutSession.id}] for user [${uuid}]`,
+//   );
+// };
 
 export {
   createOrRetrieveCustomer,
   deletePriceRecord,
-  deleteProductRecord,
-  insertCheckoutSession,
-  manageSubscriptionStatusChange,
   upsertPriceRecord,
   upsertPriceRecords,
-  upsertProductRecord,
-  upsertProductRecords,
+  // Commented out - tables don't exist in current schema
+  // deleteProductRecord,
+  // insertCheckoutSession,
+  // manageSubscriptionStatusChange,
+  // upsertProductRecord,
+  // upsertProductRecords,
 };

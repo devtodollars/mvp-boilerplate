@@ -45,7 +45,7 @@ class ApiCache {
    * Clear cache for specific user (call on sign out)
    */
   clearUser(userId: string): void {
-    for (const [key, entry] of this.cache.entries()) {
+    for (const [key, entry] of Array.from(this.cache.entries())) {
       if (entry.userId === userId) {
         this.cache.delete(key);
       }
@@ -64,7 +64,7 @@ class ApiCache {
    */
   cleanup(): void {
     const now = Date.now();
-    for (const [key, entry] of this.cache.entries()) {
+    for (const [key, entry] of Array.from(this.cache.entries())) {
       if (now - entry.timestamp > this.DEFAULT_TTL) {
         this.cache.delete(key);
       }
