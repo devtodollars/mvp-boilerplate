@@ -106,7 +106,7 @@ export const Navbar = () => {
     <header className="sticky border-b-[1px] top-0 z-40 w-full bg-white dark:border-b-slate-700 dark:bg-background">
       <NavigationMenu className="mx-auto">
         <NavigationMenuList className="container h-14 px-4 w-screen flex justify-between ">
-          <NavigationMenuItem className="font-bold flex">
+          <NavigationMenuItem className="font-bold flex items-center gap-6">
             <a
               rel="noreferrer noopener"
               href="/"
@@ -115,6 +115,24 @@ export const Navbar = () => {
               <LogoIcon />
               GoLet.ie
             </a>
+            
+            {/* Desktop navigation items next to logo */}
+            {pathname === '/' && (
+              <nav className="hidden md:flex gap-2">
+                {routeList.map((route: RouteProps, i) => (
+                  <a
+                    rel="noreferrer noopener"
+                    href={route.href}
+                    key={i}
+                    className={`text-[17px] ${buttonVariants({
+                      variant: 'ghost'
+                    })}`}
+                  >
+                    {route.label}
+                  </a>
+                ))}
+              </nav>
+            )}
           </NavigationMenuItem>
 
           {/* mobile */}
@@ -156,15 +174,16 @@ export const Navbar = () => {
                       <div className="flex justify-center gap-2 mb-2">
                         <NotificationBell />
                         <ChatNotificationBell />
-                      </div>
-                      <Button
+                        <Button
                         variant="ghost"
                         onClick={handleAuth}
                         className="justify-start"
                       >
                         <HouseIcon className="h-5 w-5 mr-2" />
-                        {user.email}
+                  
                       </Button>
+                      </div>
+                     
                       <Button
                         variant="outline"
                         size="sm"
@@ -186,23 +205,7 @@ export const Navbar = () => {
             </Sheet>
           </span>
 
-          {/* desktop */}
-          {pathname === '/' && (
-            <nav className="hidden md:flex gap-2">
-              {routeList.map((route: RouteProps, i) => (
-                <a
-                  rel="noreferrer noopener"
-                  href={route.href}
-                  key={i}
-                  className={`text-[17px] ${buttonVariants({
-                    variant: 'ghost'
-                  })}`}
-                >
-                  {route.label}
-                </a>
-              ))}
-            </nav>
-          )}
+
 
 
           {/* {pathname === '/search' && (
