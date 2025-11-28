@@ -29,7 +29,9 @@ export function AuthForm({ state }: { state: AuthState }) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const stateInfo: Record<AuthState, StateInfo> = {
     signup: {
       title: 'Sign Up',
@@ -38,6 +40,14 @@ export function AuthForm({ state }: { state: AuthState }) {
       hasPasswordField: true,
       hasOAuth: false,
       onSubmit: async () => {
+        if (password !== confirmPassword) {
+          toast({
+            title: 'Password Error',
+            description: 'Passwords do not match',
+            variant: 'destructive'
+          });
+          return;
+        }
         setLoading(true);
         try {
           await api.passwordSignup({ email, password });
@@ -209,6 +219,34 @@ export function AuthForm({ state }: { state: AuthState }) {
                   disabled={loading}
                 >
                   {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+          {authState === 'signup' && (
+            <div className="grid gap-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  disabled={loading}
+                  value={confirmPassword}
+                  required
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  disabled={loading}
+                >
+                  {showConfirmPassword ? (
                     <EyeOff className="h-4 w-4" />
                   ) : (
                     <Eye className="h-4 w-4" />
