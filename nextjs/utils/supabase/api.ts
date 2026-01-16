@@ -2,14 +2,18 @@ import { Database } from '@/types_db';
 import {
   Provider,
   SignInWithPasswordCredentials,
-  SignUpWithPasswordCredentials,
   SupabaseClient
 } from '@supabase/supabase-js';
 import { getURL } from '@/utils/helpers';
 
 export const createApiClient = (supabase: SupabaseClient<Database>) => {
-  const passwordSignup = async (creds: SignUpWithPasswordCredentials) => {
-    const res = await supabase.auth.signUp(creds);
+  const passwordSignup = async (creds: { email: string; password: string }) => {
+    const res = await supabase.auth.signUp({
+      ...creds,
+      options: {
+        emailRedirectTo: getURL('/api/auth_callback')
+      }
+    });
     if (res.error) throw res.error;
     return res.data;
   };
@@ -46,6 +50,17 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     if (res.error) throw res.error;
     return res;
   };
+  const resendEmailVerification = async (email: string) => {
+    const res = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: getURL('/api/auth_callback')
+      }
+    });
+    if (res.error) throw res.error;
+    return res.data;
+  };
 
   return {
     passwordSignin,
@@ -53,6 +68,7 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     passwordReset,
     passwordUpdate,
     oauthSignin,
-    signOut
+    signOut,
+    resendEmailVerification
   };
 };
