@@ -59,11 +59,12 @@
 - Publishing pipeline to publish to Netlify and to publish supabase functions
 - 🚧 [Automated Mobile Publishing](https://github.com/devtodollars/flutter-supabase-production-template/issues/22) 🚧
 
-### Emails ([Postmark](https://postmarkapp.com/))
+### Emails ([Loops.so](https://loops.so))
 
-- Send transactional emails
-- DNS setup to avoid spam folder (DKIM, DMARC, SPF in subdomain)
-- Simplify email updates by using postmark templates
+- Send transactional emails with Loops.so
+- Template-based emails with variable support
+- Contact management and event-triggered campaigns
+- Built-in analytics and deliverability tracking
 
 ### 🚧 [Error Monitoring](https://github.com/devtodollars/flutter-supabase-production-template/issues/18) ([Sentry](https://sentry.io/welcome/)) 🚧
 

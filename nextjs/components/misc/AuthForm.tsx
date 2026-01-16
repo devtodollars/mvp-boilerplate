@@ -32,6 +32,16 @@ export function AuthForm({ state }: { state: AuthState }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [resendTimeout, setResendTimeout] = useState(0);
+
+  // Countdown timer for resend button
+  useEffect(() => {
+    if (resendTimeout > 0) {
+      const timer = setTimeout(() => setResendTimeout(resendTimeout - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimeout]);
+
   const stateInfo: Record<AuthState, StateInfo> = {
     signup: {
       title: 'Sign Up',
@@ -50,9 +60,27 @@ export function AuthForm({ state }: { state: AuthState }) {
         }
         setLoading(true);
         try {
-          await api.passwordSignup({ email, password });
-          await api.passwordSignin({ email, password });
-          router.refresh();
+          const res = await api.passwordSignup({ email, password });
+
+          // Check for duplicate email - Supabase returns user with empty identities array
+          if (res.user && res.user.identities && res.user.identities.length === 0) {
+            toast({
+              title: 'Email Already Registered',
+              description:
+                'This email is already associated with an account. Please sign in or use a different email.',
+              variant: 'destructive',
+              duration: 5000
+            });
+            setLoading(false);
+            return;
+          }
+
+          // Check if email is already verified (e.g., OAuth or pre-verified)
+          if (res.user?.user_metadata?.email_verified) {
+            router.refresh();
+          } else {
+            setAuthState(AuthState.VerifyEmail);
+          }
         } catch (e) {
           if (e instanceof Error) {
             toast({
@@ -61,8 +89,11 @@ export function AuthForm({ state }: { state: AuthState }) {
               variant: 'destructive'
             });
           }
+        } finally {
+          setTimeout(() => {
+            setLoading(false);
+          }, 3000);
         }
-        setLoading(false);
       }
     },
     signin: {
@@ -78,14 +109,23 @@ export function AuthForm({ state }: { state: AuthState }) {
           router.refresh();
         } catch (e) {
           if (e instanceof Error) {
+            let err_message = e.message;
+            if (e.message.includes('Email not confirmed')) {
+              err_message =
+                'Your email is not verified. Please navigate to Sign Up tab and verify your email before proceeding.';
+            }
             toast({
               title: 'Auth Error',
-              description: e.message,
-              variant: 'destructive'
+              description: err_message,
+              variant: 'destructive',
+              duration: 3000
             });
           }
+        } finally {
+          setTimeout(() => {
+            setLoading(false);
+          }, 3000);
         }
-        setLoading(false);
       }
     },
     forgot_password: {
@@ -130,6 +170,39 @@ export function AuthForm({ state }: { state: AuthState }) {
           });
           setTimeout(() => router.replace('/'), 3000);
           router.replace('/');
+        } catch (e) {
+          if (e instanceof Error) {
+            toast({
+              title: 'Auth Error',
+              description: e.message,
+              variant: 'destructive'
+            });
+          }
+        }
+        setLoading(false);
+      }
+    },
+    verify_email: {
+      title: 'Verify Your Email',
+      description:
+        "We've sent you a verification email. Please check your inbox and click the verification link to continue. If you don't see the email, check your spam folder or click below to resend.",
+      submitText:
+        resendTimeout > 0
+          ? `Resend in ${resendTimeout}s`
+          : 'Resend Verification Email',
+      hasEmailField: false,
+      hasPasswordField: false,
+      hasOAuth: false,
+      onSubmit: async () => {
+        if (resendTimeout > 0) return;
+        setLoading(true);
+        try {
+          await api.resendEmailVerification(email);
+          setResendTimeout(60);
+          toast({
+            title: 'Verification Email Sent',
+            description: 'Please check your inbox for the verification link.'
+          });
         } catch (e) {
           if (e instanceof Error) {
             toast({
@@ -214,7 +287,12 @@ export function AuthForm({ state }: { state: AuthState }) {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => {
+                    setShowPassword(!showPassword);
+                    if (authState === 'signup') {
+                      setShowConfirmPassword(!showPassword);
+                    }
+                  }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   disabled={loading}
                 >
@@ -242,7 +320,10 @@ export function AuthForm({ state }: { state: AuthState }) {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onClick={() => {
+                    setShowPassword(!showConfirmPassword);
+                    setShowConfirmPassword(!showConfirmPassword);
+                  }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   disabled={loading}
                 >
@@ -298,6 +379,23 @@ export function AuthForm({ state }: { state: AuthState }) {
                 Sign in
               </Link>
             </div>
+          )}
+          {authState === 'verify_email' && (
+            <>
+              <div className="text-center text-sm text-muted-foreground">
+                Verification email sent to: <strong>{email}</strong>
+              </div>
+              <div className="text-center text-sm">
+                Already verified?{' '}
+                <Link
+                  href="#"
+                  className="underline"
+                  onClick={() => setAuthState(AuthState.Signin)}
+                >
+                  Sign in
+                </Link>
+              </div>
+            </>
           )}
           {currState.hasOAuth && (
             <>

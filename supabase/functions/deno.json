@@ -2,6 +2,7 @@
   "imports": {
     "supabase": "https://esm.sh/@supabase/supabase-js@2.90.1",
     "stripe": "https://esm.sh/stripe@20.1.2?target=deno&no-check",
-    "posthog": "npm:posthog-node@5.20.0"
+    "posthog": "npm:posthog-node@5.20.0",
+    "loops": "npm:loops@4.0.0"
   }
 }

@@ -18,7 +18,14 @@ export async function GET(request: NextRequest) {
     } else if (errorMessage) {
       throw new Error(errorMessage);
     }
-  } catch (e) {
+  } catch (e: any) {
+    if (e.code == 'bad_code_verifier' || e.code == 'validation_failed') {
+      return NextResponse.redirect(
+        getURL(
+          `/auth/signin?toast_title=Success&toast_description=Email Verified Sign in again`
+        )
+      );
+    }
     if (!(e instanceof Error)) throw e;
     return NextResponse.redirect(
       getURL(

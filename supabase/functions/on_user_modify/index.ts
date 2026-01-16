@@ -1,5 +1,5 @@
 import { posthog } from "../_shared/posthog.ts";
-import { sendEmail } from "../_shared/postmark.ts";
+import { sendWelcomeEmail } from "../_shared/loops.ts";
 
 Deno.serve(async (req) => {
   let { record, old_record, type } = await req.json();
@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
 
   if (type === "INSERT") {
     event = "user signs up";
-    sendEmail({ to: email, template: "welcome" }); // TODO: update to your email needs
+    sendWelcomeEmail(email, {}); // TODO: update with data variables for your welcome email template
   } else if (
     type === "UPDATE" && record.last_sign_in_at !== old_record.last_sign_in_at
   ) {
