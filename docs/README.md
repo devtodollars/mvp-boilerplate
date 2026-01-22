@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 ---
-# Getting Started
+# Getting Started 1
 
 To get started, choose which frontend you need and go from there:
 
