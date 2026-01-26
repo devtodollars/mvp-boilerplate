@@ -21,10 +21,10 @@ cp .env.example .env
 
 4. Install the required libraries
 ```
-npm install
+pnpm install
 ```
 5. Run the local development server
 
 ```
-npm run dev
+pnpm run dev
 ```
