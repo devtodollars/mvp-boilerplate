@@ -38,3 +38,9 @@ For local database:
 ```bash
 npx supabase gen types typescript --local --schema public > ./nextjs/types_db.ts
 ```
+
+7. For deploying Supabase Edge functions from the local changes to the production environment, run the following command at the root of the application:
+
+```bash
+supabase functions deploy
+```
