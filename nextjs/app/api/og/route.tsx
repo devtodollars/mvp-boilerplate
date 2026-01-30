@@ -1,6 +1,8 @@
 import { ImageResponse } from '@vercel/og';
 import { createAdminClient } from '@/utils/supabase/admin';
 
+export const runtime = 'edge';
+
 // DevToDollars theme colors
 const colors = {
   primary: '#ffca28',
