@@ -112,13 +112,25 @@ async function getUserName(userId: string | null): Promise<string | null> {
 
   try {
     const supabase = createAdminClient();
-    const { data } = await supabase
+
+    // First try public.users table
+    const { data: userData } = await supabase
       .from('users')
       .select('full_name')
       .eq('id', userId)
       .single();
 
-    return data?.full_name || null;
+    if (userData?.full_name) {
+      return userData.full_name;
+    }
+
+    // Fallback to auth.users metadata (requires service role)
+    const { data: authData } = await supabase.auth.admin.getUserById(userId);
+    return (
+      authData?.user?.user_metadata?.full_name ||
+      authData?.user?.user_metadata?.name ||
+      null
+    );
   } catch {
     return null;
   }
