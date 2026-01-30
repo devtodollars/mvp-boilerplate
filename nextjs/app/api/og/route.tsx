@@ -1,5 +1,5 @@
 import { ImageResponse } from '@vercel/og';
-import { createAdminClient } from '@/utils/supabase/admin';
+import { createAdminClientWithCookies } from '@/utils/supabase/admin';
 
 export const runtime = 'edge';
 
@@ -106,42 +106,63 @@ function generateGameOfLifePattern(
   return grid;
 }
 
-// Fetch user name from Supabase if userId is provided
-async function getUserName(userId: string | null): Promise<string | null> {
-  if (!userId) return null;
+// Get logged-in user's name from session
+async function getLoggedInUserName(): Promise<string | null> {
+  console.log('[OG] getLoggedInUserName called');
 
   try {
-    const supabase = createAdminClient();
+    const supabase = await createAdminClientWithCookies();
+    console.log('[OG] Supabase admin client with cookies created');
 
-    // First try public.users table
-    const { data: userData } = await supabase
-      .from('users')
-      .select('full_name')
-      .eq('id', userId)
-      .single();
+    // Get the current user from session
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (userData?.full_name) {
-      return userData.full_name;
+    console.log('[OG] auth.getUser result:', {
+      userId: user?.id,
+      userError,
+    });
+
+    if (!user) {
+      console.log('[OG] No logged-in user found');
+      return null;
     }
 
-    // Fallback to auth.users metadata (requires service role)
-    const { data: authData } = await supabase.auth.admin.getUserById(userId);
-    return (
-      authData?.user?.user_metadata?.full_name ||
-      authData?.user?.user_metadata?.name ||
-      null
-    );
-  } catch {
+    // First try public.users table
+    const { data: profileData, error: profileError } = await supabase
+      .from('users')
+      .select('full_name')
+      .eq('id', user.id)
+      .single();
+
+    console.log('[OG] Users table query result:', { profileData, profileError });
+
+    if (profileData?.full_name) {
+      console.log('[OG] Found full_name in users table:', profileData.full_name);
+      return profileData.full_name;
+    }
+
+    // Fallback to auth metadata
+    const result =
+      user.user_metadata?.full_name || user.user_metadata?.name || null;
+
+    console.log('[OG] Fallback to auth metadata:', result);
+    return result;
+  } catch (error) {
+    console.error('[OG] Error getting logged in user:', error);
     return null;
   }
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
+export async function GET() {
+  console.log('[OG] GET request received');
 
-  // Fetch user name if userId is provided
-  const userName = await getUserName(userId);
+  // Get logged-in user's name from session
+  const userName = await getLoggedInUserName();
+
+  console.log('[OG] Final userName to render:', userName);
 
   const cellSize = 20;
   const gridWidth = Math.ceil(1200 / cellSize);
@@ -252,10 +273,7 @@ export async function GET(request: Request) {
                 marginBottom: 24,
               }}
             >
-              Hello{' '}
-              <span style={{ color: colors.primary, fontWeight: 600 }}>
-                {userName}
-              </span>
+              <span style={{ color: colors.primary, fontWeight: 600 }}>{userName}</span>
             </p>
           )}
 
