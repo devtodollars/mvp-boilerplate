@@ -1,5 +1,4 @@
 import { ImageResponse } from '@vercel/og';
-import { createAdminClientWithCookies } from '@/utils/supabase/admin';
 
 export const runtime = 'edge';
 
@@ -106,64 +105,7 @@ function generateGameOfLifePattern(
   return grid;
 }
 
-// Get logged-in user's name from session
-async function getLoggedInUserName(): Promise<string | null> {
-  console.log('[OG] getLoggedInUserName called');
-
-  try {
-    const supabase = await createAdminClientWithCookies();
-    console.log('[OG] Supabase admin client with cookies created');
-
-    // Get the current user from session
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    console.log('[OG] auth.getUser result:', {
-      userId: user?.id,
-      userError,
-    });
-
-    if (!user) {
-      console.log('[OG] No logged-in user found');
-      return null;
-    }
-
-    // First try public.users table
-    const { data: profileData, error: profileError } = await supabase
-      .from('users')
-      .select('full_name')
-      .eq('id', user.id)
-      .single();
-
-    console.log('[OG] Users table query result:', { profileData, profileError });
-
-    if (profileData?.full_name) {
-      console.log('[OG] Found full_name in users table:', profileData.full_name);
-      return profileData.full_name;
-    }
-
-    // Fallback to auth metadata
-    const result =
-      user.user_metadata?.full_name || user.user_metadata?.name || null;
-
-    console.log('[OG] Fallback to auth metadata:', result);
-    return result;
-  } catch (error) {
-    console.error('[OG] Error getting logged in user:', error);
-    return null;
-  }
-}
-
 export async function GET() {
-  console.log('[OG] GET request received');
-
-  // Get logged-in user's name from session
-  const userName = await getLoggedInUserName();
-
-  console.log('[OG] Final userName to render:', userName);
-
   const cellSize = 20;
   const gridWidth = Math.ceil(1200 / cellSize);
   const gridHeight = Math.ceil(630 / cellSize);
@@ -263,20 +205,6 @@ export async function GET() {
             justifyContent: 'center',
           }}
         >
-          {/* Personalized greeting - only shown if user has a name */}
-          {userName && (
-            <p
-              style={{
-                fontSize: 32,
-                color: colors.gray300,
-                margin: 0,
-                marginBottom: 24,
-              }}
-            >
-              <span style={{ color: colors.primary, fontWeight: 600 }}>{userName}</span>
-            </p>
-          )}
-
           <h1
             style={{
               fontSize: 72,
