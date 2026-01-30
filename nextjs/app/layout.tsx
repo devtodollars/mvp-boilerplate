@@ -10,9 +10,9 @@ import PostHogPageViewWrapper from '@/components/misc/PostHogPageViewWrapper';
 
 
 const meta = {
-  title: 'Next.js Subscription Starter',
-  description: 'Brought to you by Vercel, Stripe, and Supabase.',
-  cardImage: '/og.png',
+  title: 'DevToDollars',
+  description: 'Tech Co-founder as a Service. Helping Developers Become Founders.',
+  cardImage: getURL('/api/og'),
   robots: 'follow, index',
   favicon: '/favicon.ico',
   url: getURL()
@@ -34,17 +34,17 @@ export async function generateMetadata(): Promise<Metadata> {
       url: meta.url,
       title: meta.title,
       description: meta.description,
-      images: [meta.cardImage],
+      images: [{ url: meta.cardImage, width: 1200, height: 630 }],
       type: 'website',
       siteName: meta.title
     },
     twitter: {
       card: 'summary_large_image',
-      site: '@Vercel',
-      creator: '@Vercel',
+      site: '@Zimbilazim',
+      creator: '@Zimbilazim',
       title: meta.title,
       description: meta.description,
-      images: [meta.cardImage]
+      images: [{ url: meta.cardImage, width: 1200, height: 630 }]
     }
   };
 }

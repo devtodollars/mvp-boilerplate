@@ -38,6 +38,7 @@
     "@stripe/stripe-js": "4.0.0",
     "@supabase/ssr": "^0.3.0",
     "@supabase/supabase-js": "^2.43.5",
+    "@vercel/og": "^0.8.6",
     "class-variance-authority": "^0.7.0",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
