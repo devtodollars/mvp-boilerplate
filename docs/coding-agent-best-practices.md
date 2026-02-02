@@ -1,7 +1,7 @@
 ---
-sidebar_position: 2
+sidebar_position: 99
 ---
-# Coding Agent Best Practices
+# Coding Agent
 
 I am currently mostly coding with Claude Code.
 
