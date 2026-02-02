@@ -1,0 +1,10 @@
+{
+  "enabledPlugins": {
+    "supabase@claude-plugins-official": true,
+    "postgres-best-practices@supabase-agent-skills": true,
+    "javascript-typescript@claude-code-workflows": true,
+    "backend-development@claude-code-workflows": true,
+    "payment-processing@claude-code-workflows": true,
+    "developer-essentials@claude-code-workflows": true
+  }
+}
