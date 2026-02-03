@@ -13,7 +13,7 @@ import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 import { Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getURL } from '@/utils/helpers';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -22,11 +22,15 @@ enum PopularPlanType {
   YES = 1
 }
 
+type PaymentMethod = 'stripe' | 'monero';
+
 interface PricingProps {
   id?: string;
+  xmrProductId?: string;
   title: string;
   popular: PopularPlanType;
   price: number;
+  priceXmr?: number;
   description: string;
   buttonText: string;
   benefitList: string[];
@@ -55,6 +59,7 @@ const pricingList: PricingProps[] = [
     title: 'Hobby',
     popular: 1,
     price: 10,
+    priceXmr: 0.0001,
     description:
       'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
     buttonText: 'Subscribe Now',
@@ -71,6 +76,7 @@ const pricingList: PricingProps[] = [
     title: 'Freelancer',
     popular: 0,
     price: 20,
+    priceXmr: 0.1,
     description:
       'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
     buttonText: 'Subscribe Now',
@@ -84,11 +90,49 @@ const pricingList: PricingProps[] = [
   }
 ];
 
+interface XmrProduct {
+  id: string;
+  name: string;
+  amount_xmr: number;
+}
+
 export const Pricing = ({ user }: { user: User | null }) => {
   const { toast } = useToast();
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState<boolean>(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('stripe');
+  const [xmrProducts, setXmrProducts] = useState<XmrProduct[]>([]);
+
+  useEffect(() => {
+    const fetchXmrProducts = async () => {
+      // Note: xmr_products table types will be available after running:
+      // pnpm supabase:generate-types
+      const { data } = await supabase
+        .from('xmr_products' as 'products')
+        .select('*');
+      if (data) {
+        setXmrProducts(data as unknown as XmrProduct[]);
+      }
+    };
+    fetchXmrProducts();
+  }, [supabase]);
+
+  const getXmrProduct = (tierName: string): XmrProduct | undefined => {
+    return xmrProducts.find(
+      (p) => p.name.toLowerCase() === tierName.toLowerCase()
+    );
+  };
+
+  const getXmrProductId = (tierName: string): string | undefined => {
+    return getXmrProduct(tierName)?.id;
+  };
+
+  const getXmrPrice = (pricing: PricingProps): number | undefined => {
+    const product = getXmrProduct(pricing.title);
+    return product?.amount_xmr ?? pricing.priceXmr;
+  };
+
   const handleClick = async (price: PricingProps) => {
     if (price.redirectURL) {
       return router.push(price.redirectURL);
@@ -100,6 +144,48 @@ export const Pricing = ({ user }: { user: User | null }) => {
       return router.push('/auth/signup');
     }
 
+    if (paymentMethod === 'monero') {
+      const xmrProductId = getXmrProductId(price.title);
+      if (!xmrProductId) {
+        setLoading(false);
+        return toast({
+          title: 'Monero payment not available',
+          description: 'This tier does not support Monero payments.',
+          variant: 'destructive'
+        });
+      }
+
+      const { data, error } = await supabase.functions.invoke('get_xmr_url', {
+        body: {
+          return_url: getURL('/#pricing'),
+          product_id: xmrProductId
+        }
+      });
+
+      if (error) {
+        setLoading(false);
+        return toast({
+          title: 'Error Occurred',
+          description: error.message,
+          variant: 'destructive'
+        });
+      }
+
+      const redirectUrl = data?.redirect_url;
+      if (!redirectUrl) {
+        setLoading(false);
+        return toast({
+          title: 'An unknown error occurred.',
+          description:
+            'Please try again later or contact a system administrator.',
+          variant: 'destructive'
+        });
+      }
+      router.push(redirectUrl);
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase.functions.invoke('get_stripe_url', {
       body: {
         return_url: getURL('/#pricing'),
@@ -109,7 +195,7 @@ export const Pricing = ({ user }: { user: User | null }) => {
     if (error) {
       setLoading(false);
       return toast({
-        title: 'Error Occured',
+        title: 'Error Occurred',
         description: error.message,
         variant: 'destructive'
       });
@@ -141,6 +227,34 @@ export const Pricing = ({ user }: { user: User | null }) => {
         Lorem ipsum dolor sit amet consectetur adipisicing elit. Alias
         reiciendis.
       </h3>
+      <div className="flex justify-center items-center gap-4 pb-8">
+        <span
+          className={`text-sm font-medium ${paymentMethod === 'stripe' ? 'text-primary' : 'text-muted-foreground'}`}
+        >
+          Pay with Card
+        </span>
+        <button
+          onClick={() =>
+            setPaymentMethod(paymentMethod === 'stripe' ? 'monero' : 'stripe')
+          }
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+            paymentMethod === 'monero' ? 'bg-orange-500' : 'bg-gray-300'
+          }`}
+          role="switch"
+          aria-checked={paymentMethod === 'monero'}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              paymentMethod === 'monero' ? 'translate-x-6' : 'translate-x-1'
+            }`}
+          />
+        </button>
+        <span
+          className={`text-sm font-medium ${paymentMethod === 'monero' ? 'text-orange-500' : 'text-muted-foreground'}`}
+        >
+          Pay with Monero
+        </span>
+      </div>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         {pricingList.map((pricing: PricingProps) => (
           <Card
@@ -161,8 +275,19 @@ export const Pricing = ({ user }: { user: User | null }) => {
                 ) : null}
               </CardTitle>
               <div>
-                <span className="text-3xl font-bold">${pricing.price}</span>
-                <span className="text-muted-foreground"> /month</span>
+                {paymentMethod === 'monero' && getXmrPrice(pricing) ? (
+                  <>
+                    <span className="text-3xl font-bold text-orange-500">
+                      {getXmrPrice(pricing)} XMR
+                    </span>
+                    <span className="text-muted-foreground"> /month</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-3xl font-bold">${pricing.price}</span>
+                    <span className="text-muted-foreground"> /month</span>
+                  </>
+                )}
               </div>
 
               <CardDescription>{pricing.description}</CardDescription>

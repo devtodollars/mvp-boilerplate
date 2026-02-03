@@ -162,3 +162,9 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 [functions.stripe_webhook]
 verify_jwt = false
 
+[functions.xmr_webhook]
+verify_jwt = false
+
+[functions.get_xmr_url]
+verify_jwt = false
+

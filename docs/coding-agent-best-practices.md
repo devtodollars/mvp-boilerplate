@@ -16,3 +16,14 @@ Skills are folders of instructions, scripts, and resources that Claude loads dyn
 - [backend-development](https://github.com/wshobson/agents/tree/main)
 - [payment-processing](https://github.com/wshobson/agents/tree/main)
 - [developer-essentials](https://github.com/wshobson/agents/tree/main)
+- [frontend-design](https://github.com/anthropics/claude-code-plugins)
+
+### Frontend Design Installation
+
+```bash
+# Add the Claude Code plugins Marketplace
+/plugin marketplace add anthropics/claude-code
+
+# Install the Frontend Design Plugin
+/plugin install frontend-design@claude-code-plugins
+```
