@@ -20,15 +20,25 @@ clientRequestHandlerWithUser(async (req, user) => {
     throw new Error("product_id is required");
   }
 
-  // Lookup product from xmr_products table
+  // Lookup product with its price from xmr_products and xmr_prices tables
   const { data: product, error: productError } = await supabase
     .from("xmr_products")
-    .select()
+    .select("*, xmr_prices(*)")
     .eq("id", product_id)
+    .eq("xmr_prices.active", true)
     .single();
 
   if (productError || !product) {
     throw new Error(`Product not found: ${productError?.message || "unknown"}`);
+  }
+
+  // Get the price from the related xmr_prices
+  const price = Array.isArray(product.xmr_prices)
+    ? product.xmr_prices[0]
+    : product.xmr_prices;
+
+  if (!price || !price.amount_xmr) {
+    throw new Error("No active price found for this product");
   }
 
   // Create invoice with xmrcheckout API
@@ -39,11 +49,12 @@ clientRequestHandlerWithUser(async (req, user) => {
       Authorization: `ApiKey ${XMRCHECKOUT_API_KEY}`,
     },
     body: JSON.stringify({
-      amount_xmr: product.amount_xmr,
+      amount_xmr: price.amount_xmr,
       description: `${product.name} subscription`,
       metadata: {
         user_id: user.id,
         product_id: product.id,
+        price_id: price.id,
         product_name: product.name,
       },
       checkout_continue_url: return_url,
@@ -62,7 +73,8 @@ clientRequestHandlerWithUser(async (req, user) => {
     id: invoice.id,
     user_id: user.id,
     product_id: product.id,
-    amount_xmr: product.amount_xmr,
+    price_id: price.id,
+    amount_xmr: price.amount_xmr,
     status: "pending",
     address: invoice.address,
   });
@@ -77,8 +89,9 @@ clientRequestHandlerWithUser(async (req, user) => {
     event: "user starts xmr checkout",
     properties: {
       product_id: product.id,
+      price_id: price.id,
       product_name: product.name,
-      amount_xmr: product.amount_xmr,
+      amount_xmr: price.amount_xmr,
       invoice_id: invoice.id,
     },
   });

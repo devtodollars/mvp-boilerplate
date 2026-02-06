@@ -11,7 +11,7 @@ export const getUser = cache(async (supabase: SupabaseClient) => {
 export const getSubscription = cache(async (supabase: SupabaseClient) => {
   const { data: subscription } = await supabase
     .from('subscriptions')
-    .select('*, prices(*, products(*))')
+    .select('*, prices(*, products(*)), xmr_prices(*, xmr_products(*))')
     .in('status', ['trialing', 'active'])
     .order('created', { ascending: false })
     .limit(1)

@@ -168,3 +168,6 @@ verify_jwt = false
 [functions.get_xmr_url]
 verify_jwt = false
 
+[functions.get_stripe_url]
+verify_jwt = false
+

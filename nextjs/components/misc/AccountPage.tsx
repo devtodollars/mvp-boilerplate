@@ -108,14 +108,20 @@ export default function AccountPage({
                 <CardTitle>Your Plan</CardTitle>
                 <CardDescription>
                   {subscription
-                    ? `You are currently on the ${subscription?.prices?.products?.name} plan.`
+                    ? `You are currently on the ${subscription?.prices?.products?.name || subscription?.xmr_prices?.xmr_products?.name || 'Unknown'} plan.`
                     : 'You are not currently subscribed to any plan.'}
                 </CardDescription>
               </CardHeader>
               <CardFooter className="border-t px-6 py-4 flex space-between">
-                <Button onClick={handleBillingPortal} disabled={loading}>
-                  Manage subscription
-                </Button>
+                {subscription?.prices ? (
+                  <Button onClick={handleBillingPortal} disabled={loading}>
+                    Manage subscription
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    XMR subscriptions are managed manually.
+                  </p>
+                )}
               </CardFooter>
             </Card>
             <Card x-chunk="dashboard-04-chunk-3">

@@ -96,36 +96,42 @@ async function handleInvoiceConfirmed(event: XMRWebhookEvent) {
     console.error("Failed to update invoice:", updateError);
   }
 
-  // Get product details for subscription
-  const { data: product } = await supabase
-    .from("xmr_products")
-    .select()
-    .eq("id", productId)
+  // Get price details for subscription (price is linked to product)
+  const { data: price } = await supabase
+    .from("xmr_prices")
+    .select("*, xmr_products(*)")
+    .eq("product_id", productId)
+    .eq("active", true)
     .single();
 
-  // Calculate subscription period
+  if (!price) {
+    throw new Error(`No active price found for product: ${productId}`);
+  }
+
+  // Calculate subscription period based on price interval
   const now = new Date();
   const periodEnd = new Date(now);
-  if (product?.interval === "year") {
-    periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+  const intervalCount = price.interval_count || 1;
+  if (price.interval === "year") {
+    periodEnd.setFullYear(periodEnd.getFullYear() + intervalCount);
   } else {
-    periodEnd.setMonth(periodEnd.getMonth() + 1);
+    periodEnd.setMonth(periodEnd.getMonth() + intervalCount);
   }
 
   // Create XMR-based subscription ID
   const subscriptionId = `xmr_sub_${invoice.id}`;
 
-  // Upsert subscription in subscriptions table
+  // Upsert subscription in subscriptions table with xmr_price_id
   const { error: subscriptionError } = await supabase
     .from("subscriptions")
     .upsert({
       id: subscriptionId,
       user_id: userId,
       status: "active",
+      xmr_price_id: price.id,
       metadata: {
         payment_method: "xmr",
         xmr_invoice_id: invoice.id,
-        xmr_product_id: productId,
         amount_xmr: invoice.amount_xmr,
       },
       cancel_at_period_end: false,
@@ -147,8 +153,9 @@ async function handleInvoiceConfirmed(event: XMRWebhookEvent) {
     event: "xmr subscription activated",
     properties: {
       invoice_id: invoice.id,
+      price_id: price.id,
       product_id: productId,
-      product_name: invoice.metadata?.product_name,
+      product_name: price.xmr_products?.name,
       amount_xmr: invoice.amount_xmr,
       subscription_id: subscriptionId,
     },

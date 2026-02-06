@@ -14,6 +14,7 @@ import { Sponsors } from '@/components/landing/Sponsors';
 import { Team } from '@/components/landing/Team';
 import { Testimonials } from '@/components/landing/Testimonials';
 import { createClient } from '@/utils/supabase/server';
+import { getSubscription } from '@/utils/supabase/queries';
 
 export default async function LandingPage() {
   const supabase = await createClient();
@@ -21,6 +22,8 @@ export default async function LandingPage() {
   const {
     data: { user }
   } = await supabase.auth.getUser();
+
+  const subscription = await getSubscription(supabase);
 
   return (
     <>
@@ -34,7 +37,7 @@ export default async function LandingPage() {
       <Cta />
       <Testimonials />
       <Team />
-      <Pricing user={user} />
+      <Pricing user={user} subscription={subscription} />
       <Newsletter />
       <FAQ />
       <Footer />
