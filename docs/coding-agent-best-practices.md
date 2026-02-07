@@ -17,6 +17,7 @@ Skills are folders of instructions, scripts, and resources that Claude loads dyn
 - [payment-processing](https://github.com/wshobson/agents/tree/main)
 - [developer-essentials](https://github.com/wshobson/agents/tree/main)
 - [frontend-design](https://github.com/anthropics/claude-code-plugins)
+- [landing-page-guide-v2](https://skillsmp.com/skills/bear2u-my-skills-claude-skills-landing-page-guide-v2-skill-md)
 
 ### Frontend Design Installation
 
