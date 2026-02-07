@@ -1,18 +1,12 @@
-import { About } from '@/components/landing/About';
 import { Cta } from '@/components/landing/Cta';
 import { FAQ } from '@/components/landing/FAQ';
-import { Features } from '@/components/landing/Features';
 import { Footer } from '@/components/landing/Footer';
 import { Hero } from '@/components/landing/Hero';
-import { HowItWorks } from '@/components/landing/HowItWorks';
+import { Items } from '@/components/landing/Items';
+import { Logos } from '@/components/landing/Logos';
 import { Navbar } from '@/components/landing/Navbar';
-import { Newsletter } from '@/components/landing/Newsletter';
 import { Pricing } from '@/components/landing/Pricing';
-import { ScrollToTop } from '@/components/landing/ScrollToTop';
-import { Services } from '@/components/landing/Services';
-import { Sponsors } from '@/components/landing/Sponsors';
-import { Team } from '@/components/landing/Team';
-import { Testimonials } from '@/components/landing/Testimonials';
+import { Stats } from '@/components/landing/Stats';
 import { createClient } from '@/utils/supabase/server';
 import { getSubscription } from '@/utils/supabase/queries';
 
@@ -29,19 +23,13 @@ export default async function LandingPage() {
     <>
       <Navbar user={user} />
       <Hero />
-      <Sponsors />
-      <About />
-      <HowItWorks />
-      <Features />
-      <Services />
-      <Cta />
-      <Testimonials />
-      <Team />
+      <Logos />
+      <Items />
+      <Stats />
       <Pricing user={user} subscription={subscription} />
-      <Newsletter />
       <FAQ />
+      <Cta />
       <Footer />
-      <ScrollToTop />
     </>
   );
 }

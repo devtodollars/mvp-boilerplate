@@ -35,10 +35,6 @@ const routeList: RouteProps[] = [
     label: 'Features'
   },
   {
-    href: '/#testimonials',
-    label: 'Testimonials'
-  },
-  {
     href: '/#pricing',
     label: 'Pricing'
   },
@@ -60,17 +56,17 @@ export const Navbar = ({ user }: { user: User | null }) => {
     return router.push('/auth');
   };
   return (
-    <header className="sticky border-b top-0 z-40 w-full bg-white dark:border-b-slate-700 dark:bg-background">
+    <header className="sticky top-0 z-40 w-full glass-2 backdrop-blur-md">
       <NavigationMenu className="mx-auto">
-        <NavigationMenuList className="container h-14 px-4 w-screen flex justify-between ">
+        <NavigationMenuList className="max-w-container mx-auto h-14 px-4 w-screen flex justify-between">
           <NavigationMenuItem className="font-bold flex">
             <a
               rel="noreferrer noopener"
               href="/"
-              className="ml-2 font-bold text-xl flex"
+              className="ml-2 font-bold text-xl flex items-center gap-2"
             >
               <LogoIcon />
-              ShadcnUI/React
+              DevToDollars
             </a>
           </NavigationMenuItem>
 
@@ -88,7 +84,7 @@ export const Navbar = ({ user }: { user: User | null }) => {
               <SheetContent side={'left'}>
                 <SheetHeader>
                   <SheetTitle className="font-bold text-xl">
-                    Shadcn/React
+                    DevToDollars
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col justify-center items-center gap-2 mt-4">

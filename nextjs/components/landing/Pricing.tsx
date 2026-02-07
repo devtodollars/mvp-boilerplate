@@ -10,6 +10,7 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Section } from '@/components/ui/section';
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 import { Check } from 'lucide-react';
@@ -108,14 +109,17 @@ export const Pricing = ({
   user: User | null;
   subscription: SubscriptionWithPriceAndProduct | null;
 }) => {
-  const hasActiveSubscription = subscription?.status === 'active' || subscription?.status === 'trialing';
-  const isXmrSubscription = hasActiveSubscription && subscription?.prices?.currency === 'XMR';
+  const hasActiveSubscription =
+    subscription?.status === 'active' || subscription?.status === 'trialing';
+  const isXmrSubscription =
+    hasActiveSubscription && subscription?.prices?.currency === 'XMR';
   const { toast } = useToast();
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState<boolean>(false);
   const [productsLoading, setProductsLoading] = useState<boolean>(true);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('stripe');
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod>('stripe');
   const [products, setProducts] = useState<ProductWithPrices[]>([]);
 
   useEffect(() => {
@@ -134,9 +138,14 @@ export const Pricing = ({
     fetchProducts();
   }, [supabase]);
 
-  const getProduct = (tierName: string, provider: string): ProductWithPrices | undefined => {
+  const getProduct = (
+    tierName: string,
+    provider: string
+  ): ProductWithPrices | undefined => {
     return products.find(
-      (p) => p.name?.toLowerCase() === tierName.toLowerCase() && p.provider === provider
+      (p) =>
+        p.name?.toLowerCase() === tierName.toLowerCase() &&
+        p.provider === provider
     );
   };
 
@@ -186,12 +195,15 @@ export const Pricing = ({
         });
       }
 
-      const { data, error } = await supabase.functions.invoke('get_xmr_url', {
-        body: {
-          return_url: getURL('/#pricing'),
-          product_id: moneroProductId
+      const { data, error } = await supabase.functions.invoke(
+        'get_xmr_url',
+        {
+          body: {
+            return_url: getURL('/#pricing'),
+            product_id: moneroProductId
+          }
         }
-      });
+      );
 
       if (error) {
         setLoading(false);
@@ -228,12 +240,15 @@ export const Pricing = ({
       });
     }
 
-    const { data, error } = await supabase.functions.invoke('get_stripe_url', {
-      body: {
-        return_url: getURL('/#pricing'),
-        price: stripePriceId
+    const { data, error } = await supabase.functions.invoke(
+      'get_stripe_url',
+      {
+        body: {
+          return_url: getURL('/#pricing'),
+          price: stripePriceId
+        }
       }
-    });
+    );
     if (error) {
       setLoading(false);
       return toast({
@@ -255,15 +270,20 @@ export const Pricing = ({
     router.push(redirectUrl);
     setLoading(false);
   };
+
   return (
-    <section id="pricing" className="relative py-24 sm:py-32 overflow-hidden">
+    <Section
+      id="pricing"
+      className="relative overflow-hidden"
+    >
       {/* Layered Monero gradient background - organic aurora-like movement */}
 
       {/* Base layer - slow diagonal drift */}
       <div
         className="absolute inset-0 -z-10 transition-opacity duration-1000 ease-in-out"
         style={{
-          background: 'linear-gradient(135deg, #ff6601 0%, transparent 50%, #4c4c4c 100%)',
+          background:
+            'linear-gradient(135deg, #ff6601 0%, transparent 50%, #4c4c4c 100%)',
           backgroundSize: '400% 400%',
           animation: 'gradient-drift 30s ease-in-out infinite',
           opacity: paymentMethod === 'monero' ? 0.3 : 0
@@ -274,7 +294,8 @@ export const Pricing = ({
       <div
         className="absolute inset-[-50%] -z-10 transition-opacity duration-1000 ease-in-out"
         style={{
-          background: 'radial-gradient(ellipse at center, #ff6601 0%, transparent 50%, #4c4c4c 80%, transparent 100%)',
+          background:
+            'radial-gradient(ellipse at center, #ff6601 0%, transparent 50%, #4c4c4c 80%, transparent 100%)',
           animation: 'gradient-rotate 60s linear infinite',
           opacity: paymentMethod === 'monero' ? 0.2 : 0
         }}
@@ -284,7 +305,8 @@ export const Pricing = ({
       <div
         className="absolute inset-0 -z-10 transition-opacity duration-1000 ease-in-out"
         style={{
-          background: 'radial-gradient(ellipse at 30% 20%, rgba(255, 102, 1, 0.4) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(76, 76, 76, 0.3) 0%, transparent 50%)',
+          background:
+            'radial-gradient(ellipse at 30% 20%, rgba(255, 102, 1, 0.4) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(76, 76, 76, 0.3) 0%, transparent 50%)',
           animation: 'gradient-breathe 8s ease-in-out infinite',
           opacity: paymentMethod === 'monero' ? 1 : 0
         }}
@@ -296,19 +318,13 @@ export const Pricing = ({
         style={{ opacity: paymentMethod === 'monero' ? 1 : 0 }}
       />
 
-      <div className="container">
-        <h2 className="text-3xl md:text-4xl font-bold text-center">
-          Get
-          <span className="bg-linear-to-b from-primary/60 to-primary text-transparent bg-clip-text">
-            {' '}
-            Unlimited{' '}
-          </span>
-          Access
+      <div className="max-w-container mx-auto">
+        <h2 className="text-center text-3xl leading-tight font-semibold sm:text-5xl sm:leading-tight">
+          Get Unlimited Access
         </h2>
-        <h3 className="text-xl text-center text-muted-foreground pt-4 pb-8">
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Alias
-          reiciendis.
-        </h3>
+        <p className="text-xl text-center text-muted-foreground pt-4 pb-8">
+          Choose the plan that works for you.
+        </p>
         {hasActiveSubscription && !isXmrSubscription ? (
           <div className="flex justify-center items-center gap-4 pb-8">
             <span className="text-sm font-medium text-muted-foreground">
@@ -324,28 +340,41 @@ export const Pricing = ({
             </span>
             <button
               onClick={() =>
-                setPaymentMethod(paymentMethod === 'stripe' ? 'monero' : 'stripe')
+                setPaymentMethod(
+                  paymentMethod === 'stripe' ? 'monero' : 'stripe'
+                )
               }
               className="relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 overflow-hidden"
               style={{
-                background: paymentMethod === 'monero'
-                  ? 'linear-gradient(90deg, #ff6601 0%, #4c4c4c 50%, #ff6601 100%)'
-                  : '#d1d5db',
-                backgroundSize: paymentMethod === 'monero' ? '200% 100%' : '100% 100%',
-                animation: paymentMethod === 'monero' ? 'gradient-flow 3s ease-in-out infinite' : 'none',
-                boxShadow: paymentMethod === 'monero' ? '0 0 20px rgba(255, 102, 1, 0.4)' : 'none'
+                background:
+                  paymentMethod === 'monero'
+                    ? 'linear-gradient(90deg, #ff6601 0%, #4c4c4c 50%, #ff6601 100%)'
+                    : '#d1d5db',
+                backgroundSize:
+                  paymentMethod === 'monero' ? '200% 100%' : '100% 100%',
+                animation:
+                  paymentMethod === 'monero'
+                    ? 'gradient-flow 3s ease-in-out infinite'
+                    : 'none',
+                boxShadow:
+                  paymentMethod === 'monero'
+                    ? '0 0 20px rgba(255, 102, 1, 0.4)'
+                    : 'none'
               }}
               role="switch"
               aria-checked={paymentMethod === 'monero'}
             >
               <span
                 className={`inline-block h-5 w-5 transform rounded-full bg-white transition-all duration-300 shadow-md ${
-                  paymentMethod === 'monero' ? 'translate-x-8' : 'translate-x-1'
+                  paymentMethod === 'monero'
+                    ? 'translate-x-8'
+                    : 'translate-x-1'
                 }`}
                 style={{
-                  boxShadow: paymentMethod === 'monero'
-                    ? '0 2px 8px rgba(255, 102, 1, 0.5)'
-                    : '0 2px 4px rgba(0,0,0,0.1)'
+                  boxShadow:
+                    paymentMethod === 'monero'
+                      ? '0 2px 8px rgba(255, 102, 1, 0.5)'
+                      : '0 2px 4px rgba(0,0,0,0.1)'
                 }}
               />
             </button>
@@ -364,17 +393,20 @@ export const Pricing = ({
           {pricingTiers.map((tier: PricingTier) => (
             <Card
               key={tier.title}
-              className={
+              className={`glass-4 ${
                 tier.popular === PopularPlanType.YES
                   ? 'drop-shadow-xl shadow-black/10 dark:shadow-white/10'
                   : ''
-              }
+              }`}
             >
               <CardHeader>
                 <CardTitle className="flex item-center justify-between">
                   {tier.title}
                   {tier.popular === PopularPlanType.YES ? (
-                    <Badge variant="secondary" className="text-sm text-primary">
+                    <Badge
+                      variant="secondary"
+                      className="text-sm text-primary"
+                    >
                       Most popular
                     </Badge>
                   ) : null}
@@ -394,7 +426,9 @@ export const Pricing = ({
                     </>
                   ) : (
                     <>
-                      <span className="text-3xl font-bold">${getStripePrice(tier)}</span>
+                      <span className="text-3xl font-bold">
+                        ${getStripePrice(tier)}
+                      </span>
                       <span className="text-muted-foreground"> /month</span>
                     </>
                   )}
@@ -407,7 +441,13 @@ export const Pricing = ({
                 <Button
                   className="w-full"
                   onClick={() => handleClick(tier)}
-                  disabled={loading || (productsLoading && !tier.redirectURL) || (hasActiveSubscription && !isXmrSubscription && !tier.redirectURL)}
+                  disabled={
+                    loading ||
+                    (productsLoading && !tier.redirectURL) ||
+                    (hasActiveSubscription &&
+                      !isXmrSubscription &&
+                      !tier.redirectURL)
+                  }
                 >
                   {hasActiveSubscription && !tier.redirectURL
                     ? isXmrSubscription
@@ -433,6 +473,6 @@ export const Pricing = ({
           ))}
         </div>
       </div>
-    </section>
+    </Section>
   );
 };
