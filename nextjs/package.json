@@ -38,6 +38,7 @@
     "@stripe/stripe-js": "4.0.0",
     "@supabase/ssr": "^0.3.0",
     "@supabase/supabase-js": "^2.43.5",
+    "@tailwindcss/postcss": "^4.1.18",
     "@vercel/og": "^0.8.6",
     "class-variance-authority": "^0.7.0",
     "classnames": "^2.5.1",
@@ -50,14 +51,13 @@
     "react-merge-refs": "^2.1.1",
     "stripe": "^15.12.0",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss": "^3.4.4",
+    "tailwindcss": "^4.1.18",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@types/node": "^20.14.6",
     "@types/react": "19.2.8",
     "@types/react-dom": "19.2.3",
-    "autoprefixer": "^10.4.19",
     "eslint": "^9.39.2",
     "eslint-config-next": "16.1.1",
     "eslint-config-prettier": "^9.1.0",
@@ -65,7 +65,7 @@
     "eslint-plugin-tailwindcss": "^3.17.3",
     "postcss": "^8.4.38",
     "prettier": "^3.3.2",
-    "prettier-plugin-tailwindcss": "^0.6.5",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "supabase": "^1.178.2",
     "typescript": "^5.5.2"
   },

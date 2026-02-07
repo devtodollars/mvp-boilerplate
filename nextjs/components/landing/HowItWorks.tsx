@@ -1,11 +1,6 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  MedalIcon,
-  MapIcon,
-  PlaneIcon,
-  GiftIcon
-} from '@/components/landing/Icons';
+import { Shield, Lock, EyeOff, Wallet } from 'lucide-react';
 
 import type { JSX } from "react";
 
@@ -17,25 +12,25 @@ interface FeatureProps {
 
 const features: FeatureProps[] = [
   {
-    icon: <MedalIcon />,
+    icon: <Shield className="w-14 h-14 text-primary" />,
     title: 'Accessibility',
     description:
       'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Illum quas provident cum'
   },
   {
-    icon: <MapIcon />,
+    icon: <Lock className="w-14 h-14 text-primary" />,
     title: 'Community',
     description:
       'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Illum quas provident cum'
   },
   {
-    icon: <PlaneIcon />,
+    icon: <EyeOff className="w-14 h-14 text-primary" />,
     title: 'Scalability',
     description:
       'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Illum quas provident cum'
   },
   {
-    icon: <GiftIcon />,
+    icon: <Wallet className="w-14 h-14 text-primary" />,
     title: 'Gamification',
     description:
       'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Illum quas provident cum'
@@ -47,7 +42,7 @@ export const HowItWorks = () => {
     <section id="howItWorks" className="container text-center py-24 sm:py-32">
       <h2 className="text-3xl md:text-4xl font-bold ">
         How It{' '}
-        <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
+        <span className="bg-linear-to-b from-primary/60 to-primary text-transparent bg-clip-text">
           Works{' '}
         </span>
         Step-by-Step Guide

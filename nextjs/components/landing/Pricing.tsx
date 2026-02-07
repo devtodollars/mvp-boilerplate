@@ -299,7 +299,7 @@ export const Pricing = ({
       <div className="container">
         <h2 className="text-3xl md:text-4xl font-bold text-center">
           Get
-          <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
+          <span className="bg-linear-to-b from-primary/60 to-primary text-transparent bg-clip-text">
             {' '}
             Unlimited{' '}
           </span>
@@ -352,7 +352,7 @@ export const Pricing = ({
             <span
               className={`text-sm font-semibold transition-all duration-300 ${
                 paymentMethod === 'monero'
-                  ? 'bg-gradient-to-r from-[#ff6601] to-[#ff8534] bg-clip-text text-transparent'
+                  ? 'bg-linear-to-r from-[#ff6601] to-[#ff8534] bg-clip-text text-transparent'
                   : 'text-muted-foreground'
               }`}
             >

@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { MagnifierIcon, WalletIcon, ChartIcon } from './Icons';
+import { Server, CreditCard, DatabaseZap } from 'lucide-react';
 
 import type { JSX } from "react";
 
@@ -20,29 +20,29 @@ const serviceList: ServiceProps[] = [
     title: 'Code Collaboration',
     description:
       'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nisi nesciunt est nostrum omnis ab sapiente.',
-    icon: <ChartIcon />
+    icon: <Server className="w-6 h-6 text-primary" />
   },
   {
     title: 'Project Management',
     description:
       'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nisi nesciunt est nostrum omnis ab sapiente.',
-    icon: <WalletIcon />
+    icon: <CreditCard className="w-6 h-6 text-primary" />
   },
   {
     title: 'Task Automation',
     description:
       'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nisi nesciunt est nostrum omnis ab sapiente.',
-    icon: <MagnifierIcon />
+    icon: <DatabaseZap className="w-6 h-6 text-primary" />
   }
 ];
 
 export const Services = () => {
   return (
     <section className="container py-24 sm:py-32">
-      <div className="grid lg:grid-cols-[1fr,1fr] gap-8 place-items-center">
+      <div className="grid lg:grid-cols-[1fr_1fr] gap-8 place-items-center">
         <div>
           <h2 className="text-3xl md:text-4xl font-bold">
-            <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
+            <span className="bg-linear-to-b from-primary/60 to-primary text-transparent bg-clip-text">
               Client-Centric{' '}
             </span>
             Services
