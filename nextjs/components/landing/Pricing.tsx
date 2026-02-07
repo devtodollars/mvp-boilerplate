@@ -89,22 +89,14 @@ const pricingTiers: PricingTier[] = [
   }
 ];
 
-interface XmrProduct {
-  id: string;
-  name: string;
-  xmr_prices: {
-    id: string;
-    amount_xmr: number;
-    active: boolean | null;
-  }[];
-}
-
-interface StripeProduct {
+interface ProductWithPrices {
   id: string;
   name: string | null;
+  provider: string;
   prices: {
     id: string;
     unit_amount: number | null;
+    currency: string | null;
     active: boolean | null;
   }[];
 }
@@ -117,74 +109,59 @@ export const Pricing = ({
   subscription: SubscriptionWithPriceAndProduct | null;
 }) => {
   const hasActiveSubscription = subscription?.status === 'active' || subscription?.status === 'trialing';
+  const isXmrSubscription = hasActiveSubscription && subscription?.prices?.currency === 'XMR';
   const { toast } = useToast();
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState<boolean>(false);
   const [productsLoading, setProductsLoading] = useState<boolean>(true);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('stripe');
-  const [xmrProducts, setXmrProducts] = useState<XmrProduct[]>([]);
-  const [stripeProducts, setStripeProducts] = useState<StripeProduct[]>([]);
+  const [products, setProducts] = useState<ProductWithPrices[]>([]);
 
   useEffect(() => {
     const fetchProducts = async () => {
       setProductsLoading(true);
-      // Fetch XMR products with prices
-      const { data: xmrData } = await supabase
-        .from('xmr_products')
-        .select('*, xmr_prices(*)')
-        .eq('active', true)
-        .eq('xmr_prices.active', true);
-      if (xmrData) {
-        setXmrProducts(xmrData as unknown as XmrProduct[]);
-      }
-
-      // Fetch Stripe products with prices
-      const { data: stripeData } = await supabase
+      const { data } = await supabase
         .from('products')
         .select('*, prices(*)')
         .eq('active', true)
         .eq('prices.active', true);
-      if (stripeData) {
-        setStripeProducts(stripeData as unknown as StripeProduct[]);
+      if (data) {
+        setProducts(data as unknown as ProductWithPrices[]);
       }
       setProductsLoading(false);
     };
     fetchProducts();
   }, [supabase]);
 
-  const getStripeProduct = (tierName: string): StripeProduct | undefined => {
-    return stripeProducts.find(
-      (p) => p.name?.toLowerCase() === tierName.toLowerCase()
+  const getProduct = (tierName: string, provider: string): ProductWithPrices | undefined => {
+    return products.find(
+      (p) => p.name?.toLowerCase() === tierName.toLowerCase() && p.provider === provider
     );
   };
 
   const getStripePriceId = (tierName: string): string | undefined => {
-    const product = getStripeProduct(tierName);
-    return product?.prices?.[0]?.id;
+    const product = getProduct(tierName, 'STRIPE');
+    const usdPrice = product?.prices?.find((p) => p.currency === 'USD');
+    return usdPrice?.id;
   };
 
   const getStripePrice = (tier: PricingTier): number => {
-    const product = getStripeProduct(tier.title);
-    const unitAmount = product?.prices?.[0]?.unit_amount;
+    const product = getProduct(tier.title, 'STRIPE');
+    const usdPrice = product?.prices?.find((p) => p.currency === 'USD');
+    const unitAmount = usdPrice?.unit_amount;
     // unit_amount is in cents, convert to dollars
     return unitAmount ? unitAmount / 100 : tier.fallbackPrice;
   };
 
-  const getXmrProduct = (tierName: string): XmrProduct | undefined => {
-    return xmrProducts.find(
-      (p) => p.name.toLowerCase() === tierName.toLowerCase()
-    );
-  };
-
-  const getXmrProductId = (tierName: string): string | undefined => {
-    return getXmrProduct(tierName)?.id;
+  const getMoneroProductId = (tierName: string): string | undefined => {
+    return getProduct(tierName, 'MONERO')?.id;
   };
 
   const getXmrPrice = (tier: PricingTier): number | undefined => {
-    const product = getXmrProduct(tier.title);
-    const amountXmr = product?.xmr_prices?.[0]?.amount_xmr;
-    return amountXmr ?? tier.fallbackPriceXmr;
+    const product = getProduct(tier.title, 'MONERO');
+    const xmrPrice = product?.prices?.find((p) => p.currency === 'XMR');
+    return xmrPrice?.unit_amount ?? tier.fallbackPriceXmr;
   };
 
   const handleClick = async (tier: PricingTier) => {
@@ -199,8 +176,8 @@ export const Pricing = ({
     }
 
     if (paymentMethod === 'monero') {
-      const xmrProductId = getXmrProductId(tier.title);
-      if (!xmrProductId) {
+      const moneroProductId = getMoneroProductId(tier.title);
+      if (!moneroProductId) {
         setLoading(false);
         return toast({
           title: 'Monero payment not available',
@@ -212,7 +189,7 @@ export const Pricing = ({
       const { data, error } = await supabase.functions.invoke('get_xmr_url', {
         body: {
           return_url: getURL('/#pricing'),
-          product_id: xmrProductId
+          product_id: moneroProductId
         }
       });
 
@@ -332,7 +309,7 @@ export const Pricing = ({
           Lorem ipsum dolor sit amet consectetur adipisicing elit. Alias
           reiciendis.
         </h3>
-        {hasActiveSubscription ? (
+        {hasActiveSubscription && !isXmrSubscription ? (
           <div className="flex justify-center items-center gap-4 pb-8">
             <span className="text-sm font-medium text-muted-foreground">
               You have an active subscription
@@ -430,9 +407,13 @@ export const Pricing = ({
                 <Button
                   className="w-full"
                   onClick={() => handleClick(tier)}
-                  disabled={loading || (productsLoading && !tier.redirectURL) || (hasActiveSubscription && !tier.redirectURL)}
+                  disabled={loading || (productsLoading && !tier.redirectURL) || (hasActiveSubscription && !isXmrSubscription && !tier.redirectURL)}
                 >
-                  {hasActiveSubscription && !tier.redirectURL ? 'Subscribed' : tier.buttonText}
+                  {hasActiveSubscription && !tier.redirectURL
+                    ? isXmrSubscription
+                      ? 'Extend subscription'
+                      : 'Subscribed'
+                    : tier.buttonText}
                 </Button>
               </CardContent>
 

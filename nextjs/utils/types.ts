@@ -21,18 +21,11 @@ export type StateInfo = {
 type Subscription = Tables<'subscriptions'>;
 type Price = Tables<'prices'>;
 type Product = Tables<'products'>;
-type XmrPrice = Tables<'xmr_prices'>;
-type XmrProduct = Tables<'xmr_products'>;
 
 export type SubscriptionWithPriceAndProduct = Subscription & {
   prices:
     | (Price & {
         products: Product | null;
-      })
-    | null;
-  xmr_prices:
-    | (XmrPrice & {
-        xmr_products: XmrProduct | null;
       })
     | null;
 };

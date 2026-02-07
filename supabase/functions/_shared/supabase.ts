@@ -28,6 +28,7 @@ const upsertProductRecords = async (products: Stripe.Product[]) => {
     description: product.description ?? null,
     image: product.images?.[0] ?? null,
     metadata: product.metadata,
+    provider: "STRIPE" as const,
   }));
 
   const { error: upsertError } = await supabase
@@ -50,7 +51,7 @@ const upsertPriceRecords = async (
     id: price.id,
     product_id: typeof price.product === "string" ? price.product : "",
     active: price.active,
-    currency: price.currency,
+    currency: price.currency.toUpperCase(),
     type: price.type,
     unit_amount: price.unit_amount ?? null,
     interval: price.recurring?.interval ?? null,

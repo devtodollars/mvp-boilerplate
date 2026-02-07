@@ -11,6 +11,7 @@ interface XMRInvoice {
   metadata?: {
     user_id?: string;
     product_id?: string;
+    price_id?: string;
     product_name?: string;
   };
   created_at: string;
@@ -77,6 +78,7 @@ Deno.serve(async (req) => {
 async function handleInvoiceConfirmed(event: XMRWebhookEvent) {
   const invoice = event.invoice;
   const userId = invoice.metadata?.user_id;
+  const priceId = invoice.metadata?.price_id;
   const productId = invoice.metadata?.product_id;
 
   if (!userId) {
@@ -96,70 +98,128 @@ async function handleInvoiceConfirmed(event: XMRWebhookEvent) {
     console.error("Failed to update invoice:", updateError);
   }
 
-  // Get price details for subscription (price is linked to product)
+  // Get price details from unified prices table
   const { data: price } = await supabase
-    .from("xmr_prices")
-    .select("*, xmr_products(*)")
-    .eq("product_id", productId)
-    .eq("active", true)
+    .from("prices")
+    .select("*, products(*)")
+    .eq("id", priceId)
+    .eq("currency", "XMR")
     .single();
 
   if (!price) {
-    throw new Error(`No active price found for product: ${productId}`);
+    throw new Error(`No XMR price found: ${priceId}`);
   }
 
-  // Calculate subscription period based on price interval
-  const now = new Date();
-  const periodEnd = new Date(now);
-  const intervalCount = price.interval_count || 1;
-  if (price.interval === "year") {
-    periodEnd.setFullYear(periodEnd.getFullYear() + intervalCount);
-  } else {
-    periodEnd.setMonth(periodEnd.getMonth() + intervalCount);
-  }
-
-  // Create XMR-based subscription ID
-  const subscriptionId = `xmr_sub_${invoice.id}`;
-
-  // Upsert subscription in subscriptions table with xmr_price_id
-  const { error: subscriptionError } = await supabase
+  // Check for an existing XMR subscription for this user
+  const { data: existingSub } = await supabase
     .from("subscriptions")
-    .upsert({
-      id: subscriptionId,
-      user_id: userId,
-      status: "active",
-      xmr_price_id: price.id,
-      metadata: {
-        payment_method: "xmr",
-        xmr_invoice_id: invoice.id,
-        amount_xmr: invoice.amount_xmr,
-      },
-      cancel_at_period_end: false,
-      created: now.toISOString(),
-      current_period_start: now.toISOString(),
-      current_period_end: periodEnd.toISOString(),
-    });
+    .select("*")
+    .eq("user_id", userId)
+    .eq("metadata->>payment_method", "xmr")
+    .limit(1)
+    .maybeSingle();
 
-  if (subscriptionError) {
-    throw new Error(`Subscription upsert failed: ${subscriptionError.message}`);
+  const now = new Date();
+
+  // Calculate the interval to add
+  const intervalCount = price.interval_count || 1;
+  function addInterval(base: Date): Date {
+    const result = new Date(base);
+    if (price.interval === "year") {
+      result.setFullYear(result.getFullYear() + intervalCount);
+    } else {
+      result.setMonth(result.getMonth() + intervalCount);
+    }
+    return result;
   }
 
-  console.log(
-    `Created/updated XMR subscription [${subscriptionId}] for user [${userId}]`
-  );
+  if (existingSub) {
+    // Stack time onto existing subscription
+    // Start from whichever is later: existing end date or now
+    const existingEnd = new Date(existingSub.current_period_end);
+    const stackBase = existingEnd > now ? existingEnd : now;
+    const newPeriodEnd = addInterval(stackBase);
 
-  posthog.capture({
-    distinctId: userId,
-    event: "xmr subscription activated",
-    properties: {
-      invoice_id: invoice.id,
-      price_id: price.id,
-      product_id: productId,
-      product_name: price.xmr_products?.name,
-      amount_xmr: invoice.amount_xmr,
-      subscription_id: subscriptionId,
-    },
-  });
+    const { error: stackError } = await supabase
+      .from("subscriptions")
+      .update({
+        status: "active",
+        price_id: price.id,
+        current_period_end: newPeriodEnd.toISOString(),
+        metadata: {
+          payment_method: "xmr",
+          xmr_invoice_id: invoice.id,
+          amount_xmr: invoice.amount_xmr,
+        },
+      })
+      .eq("id", existingSub.id);
+
+    if (stackError) {
+      throw new Error(`Subscription stack update failed: ${stackError.message}`);
+    }
+
+    console.log(
+      `Stacked XMR subscription [${existingSub.id}] for user [${userId}]: new end ${newPeriodEnd.toISOString()}`
+    );
+
+    posthog.capture({
+      distinctId: userId,
+      event: "xmr subscription extended",
+      properties: {
+        invoice_id: invoice.id,
+        price_id: price.id,
+        product_id: productId,
+        product_name: price.products?.name,
+        amount_xmr: invoice.amount_xmr,
+        subscription_id: existingSub.id,
+        previous_end: existingSub.current_period_end,
+        new_end: newPeriodEnd.toISOString(),
+      },
+    });
+  } else {
+    // No existing XMR subscription — create a new one
+    const periodEnd = addInterval(now);
+    const subscriptionId = `xmr_sub_${invoice.id}`;
+
+    const { error: subscriptionError } = await supabase
+      .from("subscriptions")
+      .upsert({
+        id: subscriptionId,
+        user_id: userId,
+        status: "active",
+        price_id: price.id,
+        metadata: {
+          payment_method: "xmr",
+          xmr_invoice_id: invoice.id,
+          amount_xmr: invoice.amount_xmr,
+        },
+        cancel_at_period_end: false,
+        created: now.toISOString(),
+        current_period_start: now.toISOString(),
+        current_period_end: periodEnd.toISOString(),
+      });
+
+    if (subscriptionError) {
+      throw new Error(`Subscription upsert failed: ${subscriptionError.message}`);
+    }
+
+    console.log(
+      `Created XMR subscription [${subscriptionId}] for user [${userId}]`
+    );
+
+    posthog.capture({
+      distinctId: userId,
+      event: "xmr subscription activated",
+      properties: {
+        invoice_id: invoice.id,
+        price_id: price.id,
+        product_id: productId,
+        product_name: price.products?.name,
+        amount_xmr: invoice.amount_xmr,
+        subscription_id: subscriptionId,
+      },
+    });
+  }
 }
 
 async function handlePaymentDetected(event: XMRWebhookEvent) {

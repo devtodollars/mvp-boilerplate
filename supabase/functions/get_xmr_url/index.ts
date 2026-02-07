@@ -20,25 +20,27 @@ clientRequestHandlerWithUser(async (req, user) => {
     throw new Error("product_id is required");
   }
 
-  // Lookup product with its price from xmr_products and xmr_prices tables
+  // Lookup product with its XMR price from the unified tables
   const { data: product, error: productError } = await supabase
-    .from("xmr_products")
-    .select("*, xmr_prices(*)")
+    .from("products")
+    .select("*, prices(*)")
     .eq("id", product_id)
-    .eq("xmr_prices.active", true)
+    .eq("provider", "MONERO")
+    .eq("prices.active", true)
+    .eq("prices.currency", "XMR")
     .single();
 
   if (productError || !product) {
     throw new Error(`Product not found: ${productError?.message || "unknown"}`);
   }
 
-  // Get the price from the related xmr_prices
-  const price = Array.isArray(product.xmr_prices)
-    ? product.xmr_prices[0]
-    : product.xmr_prices;
+  // Get the price from the related prices
+  const price = Array.isArray(product.prices)
+    ? product.prices[0]
+    : product.prices;
 
-  if (!price || !price.amount_xmr) {
-    throw new Error("No active price found for this product");
+  if (!price || !price.unit_amount) {
+    throw new Error("No active XMR price found for this product");
   }
 
   // Create invoice with xmrcheckout API
@@ -49,7 +51,7 @@ clientRequestHandlerWithUser(async (req, user) => {
       Authorization: `ApiKey ${XMRCHECKOUT_API_KEY}`,
     },
     body: JSON.stringify({
-      amount_xmr: price.amount_xmr,
+      amount_xmr: price.unit_amount,
       description: `${product.name} subscription`,
       metadata: {
         user_id: user.id,
@@ -74,7 +76,7 @@ clientRequestHandlerWithUser(async (req, user) => {
     user_id: user.id,
     product_id: product.id,
     price_id: price.id,
-    amount_xmr: price.amount_xmr,
+    amount_xmr: price.unit_amount,
     status: "pending",
     address: invoice.address,
   });
@@ -91,7 +93,7 @@ clientRequestHandlerWithUser(async (req, user) => {
       product_id: product.id,
       price_id: price.id,
       product_name: product.name,
-      amount_xmr: price.amount_xmr,
+      amount_xmr: price.unit_amount,
       invoice_id: invoice.id,
     },
   });
