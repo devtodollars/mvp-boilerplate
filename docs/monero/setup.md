@@ -1,21 +1,21 @@
 ---
 sidebar_position: 1
 ---
-# Setup
+# Installation
 
-We use [xmrcheckout](https://xmrcheckout.com/) as a Non-custodial Monero checkout software. Note that you are able to self host xmrcheckout, and the code is completely open source. For more information about self hosting please read the guide here: [https://github.com/xmrcheckout/xmrcheckout](https://github.com/xmrcheckout/xmrcheckout).
+This boilerplate has the infrastructure to support building apps that accept Monero as a payment method for subscriptions. We understand that this is not suited for everyone, so we have isolated the code. In order to start using the Monero code, take the following steps:
 
-The following steps are how you setup your local development with xmrcheckout:
-
-1. Open your Monero wallet, copy your primary address (should start with `4`) and your private view key. Use these keys to login to xmrcheckout.
-2. Navigate to `https://<xmrcheckout-url>/dashboard?tab=profile` to get the values from API Key and Webhook secret and fill in the following environmental variables in the root:
-```
-XMRCHECKOUT_API_KEY=<XMRCHECKOUT_API_KEY>
-XMRCHECKOUT_WEBHOOK_SECRET=<XMRCHECKOUT_WEBHOOK_SECRET>
-XMRCHECKOUT_API_URL=<XMRCHECKOUT_API_URL>
-```
-3. Similar to the [Stripe webhook test guide](../stripe/test-stripeconnect-webhook.md), run ngrok to expose your local Supabase:
+1. Install the Monero related code by running the following bash script:
 ```bash
-ngrok http 54321
+./monero/install.sh
 ```
-4. Copy `https://<ngrok>/functions/v1/xmr_webhook` and paste it inside `https://<xmr-checkout-url>/dashboard?tab=webhooks`
+2. Run the database reset so your migrations take effect:
+```bash
+supabase db reset
+```
+3. Sync your products with Monero support by running the following at the root folder:
+```bash
+deno run --env -A supabase/functions/_scripts/sync-stripe.ts --monero
+```
+
+Once the above steps are completed, proceed with the [Configuration](./configuration.md) guide to set up xmrcheckout.
