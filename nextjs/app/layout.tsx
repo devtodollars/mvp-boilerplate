@@ -3,15 +3,14 @@ import { PropsWithChildren } from 'react';
 import { getURL } from '@/utils/helpers';
 import '@/styles/main.css';
 import { PHProvider } from './providers';
-import { ThemeProvider } from '@/components/landing/theme-provider';
-import dynamic from 'next/dynamic';
+import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/toaster';
 import PostHogPageViewWrapper from '@/components/misc/PostHogPageViewWrapper';
 
-
 const meta = {
   title: 'DevToDollars',
-  description: 'Tech Co-founder as a Service. Helping Developers Become Founders.',
+  description:
+    'Tech Co-founder as a Service. Helping Developers Become Founders.',
   cardImage: getURL('/api/og'),
   robots: 'follow, index',
   favicon: '/favicon.ico',
@@ -51,21 +50,26 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: PropsWithChildren) {
   return (
-    <html lang="en">
-      <ThemeProvider>
-        <PHProvider>
-          <body>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <PHProvider>
             <PostHogPageViewWrapper />
             <main
               id="skip"
-              className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"
+              className="min-h-[calc(100dvh-4rem)] md:min-h-[calc(100dvh-5rem)]"
             >
               {children}
             </main>
             <Toaster />
-          </body>
-        </PHProvider>
-      </ThemeProvider>
+          </PHProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

@@ -178,6 +178,7 @@ export type Database = {
           id: string
           metadata: Json | null
           price_id: string | null
+          xmr_price_id: string | null
           quantity: number | null
           status: Database["public"]["Enums"]["subscription_status"] | null
           trial_end: string | null
@@ -195,6 +196,7 @@ export type Database = {
           id: string
           metadata?: Json | null
           price_id?: string | null
+          xmr_price_id?: string | null
           quantity?: number | null
           status?: Database["public"]["Enums"]["subscription_status"] | null
           trial_end?: string | null
@@ -212,6 +214,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           price_id?: string | null
+          xmr_price_id?: string | null
           quantity?: number | null
           status?: Database["public"]["Enums"]["subscription_status"] | null
           trial_end?: string | null
@@ -224,6 +227,13 @@ export type Database = {
             columns: ["price_id"]
             isOneToOne: false
             referencedRelation: "prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_xmr_price_id_fkey"
+            columns: ["xmr_price_id"]
+            isOneToOne: false
+            referencedRelation: "xmr_prices"
             referencedColumns: ["id"]
           },
           {
@@ -267,6 +277,141 @@ export type Database = {
           },
         ]
       }
+      xmr_invoices: {
+        Row: {
+          id: string
+          user_id: string | null
+          product_id: string | null
+          price_id: string | null
+          amount_xmr: number
+          status: Database["public"]["Enums"]["xmr_invoice_status"]
+          address: string | null
+          created_at: string | null
+          confirmed_at: string | null
+        }
+        Insert: {
+          id: string
+          user_id?: string | null
+          product_id?: string | null
+          price_id?: string | null
+          amount_xmr: number
+          status?: Database["public"]["Enums"]["xmr_invoice_status"]
+          address?: string | null
+          created_at?: string | null
+          confirmed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          product_id?: string | null
+          price_id?: string | null
+          amount_xmr?: number
+          status?: Database["public"]["Enums"]["xmr_invoice_status"]
+          address?: string | null
+          created_at?: string | null
+          confirmed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xmr_invoices_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "xmr_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xmr_invoices_price_id_fkey"
+            columns: ["price_id"]
+            isOneToOne: false
+            referencedRelation: "xmr_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xmr_invoices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xmr_prices: {
+        Row: {
+          id: string
+          product_id: string | null
+          active: boolean | null
+          description: string | null
+          amount_xmr: number
+          interval: Database["public"]["Enums"]["billing_interval"]
+          interval_count: number | null
+          trial_period_days: number | null
+          metadata: Json | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          product_id?: string | null
+          active?: boolean | null
+          description?: string | null
+          amount_xmr: number
+          interval?: Database["public"]["Enums"]["billing_interval"]
+          interval_count?: number | null
+          trial_period_days?: number | null
+          metadata?: Json | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          product_id?: string | null
+          active?: boolean | null
+          description?: string | null
+          amount_xmr?: number
+          interval?: Database["public"]["Enums"]["billing_interval"]
+          interval_count?: number | null
+          trial_period_days?: number | null
+          metadata?: Json | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xmr_prices_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "xmr_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xmr_products: {
+        Row: {
+          id: string
+          name: string
+          active: boolean | null
+          description: string | null
+          image: string | null
+          features: Json | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          active?: boolean | null
+          description?: string | null
+          image?: string | null
+          features?: Json | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          active?: boolean | null
+          description?: string | null
+          image?: string | null
+          features?: Json | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -275,6 +420,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      billing_interval: "month" | "year"
+      xmr_invoice_status: "pending" | "payment_detected" | "confirmed" | "expired"
       checkout_mode: "payment" | "setup" | "subscription"
       checkout_payment_status: "paid" | "unpaid" | "no_payment_required"
       checkout_status: "complete" | "expired" | "open"
