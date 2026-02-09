@@ -93,7 +93,7 @@ const pricingTiers: PricingTier[] = [
 interface ProductWithPrices {
   id: string;
   name: string | null;
-  provider: string;
+  provider?: string;
   prices: {
     id: string;
     unit_amount: number | null;
@@ -146,7 +146,7 @@ export const Pricing = ({
     return products.find(
       (p) =>
         p.name?.toLowerCase() === tierName.toLowerCase() &&
-        p.provider === provider
+        (p.provider === undefined || p.provider === provider)
     );
   };
 
