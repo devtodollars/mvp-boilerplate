@@ -1,3 +1,3 @@
 import { initPricesAndProducts } from "../_shared/stripe.ts";
 
-initPricesAndProducts();
+await initPricesAndProducts();

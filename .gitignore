@@ -1,5 +1,12 @@
 .env
 
+# Monero module runtime files
+.monero-installed
+.monero-backup/
+
+# Deno lockfile (auto-generated, causes sync issues)
+deno.lock
+
 # misc
 .DS_Store
 .obsidian

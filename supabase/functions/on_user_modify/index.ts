@@ -16,7 +16,8 @@ Deno.serve(async (req) => {
 
   if (type === "INSERT") {
     event = "user signs up";
-    sendWelcomeEmail(email, {}); // TODO: update with data variables for your welcome email template
+    // TODO: Re-enable when Loops template is configured
+    // sendWelcomeEmail(email, {});
   } else if (
     type === "UPDATE" && record.last_sign_in_at !== old_record.last_sign_in_at
   ) {

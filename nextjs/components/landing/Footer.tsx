@@ -1,169 +1,96 @@
 'use client';
 import { LogoIcon } from './Icons';
+import { ModeToggle } from './mode-toggle';
+
+interface FooterLink {
+  text: string;
+  href: string;
+}
+
+interface FooterColumn {
+  title: string;
+  links: FooterLink[];
+}
+
+const columns: FooterColumn[] = [
+  {
+    title: 'Product',
+    links: [
+      { text: 'Features', href: '/#features' },
+      { text: 'Pricing', href: '/#pricing' },
+      { text: 'FAQ', href: '/#faq' }
+    ]
+  },
+  {
+    title: 'Company',
+    links: [
+      { text: 'About', href: '#' },
+      { text: 'Blog', href: '#' }
+    ]
+  },
+  {
+    title: 'Connect',
+    links: [
+      { text: 'Github', href: '#' },
+      { text: 'Twitter', href: '#' },
+      { text: 'Discord', href: '#' }
+    ]
+  }
+];
+
+const policies: FooterLink[] = [
+  { text: 'Privacy Policy', href: '#' },
+  { text: 'Terms of Service', href: '#' }
+];
 
 export const Footer = () => {
   return (
-    <footer id="footer">
-      <hr className="w-11/12 mx-auto" />
-
-      <section className="container py-20 grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-12 gap-y-8">
-        <div className="col-span-full xl:col-span-2">
-          <a
-            rel="noreferrer noopener"
-            href="/"
-            className="font-bold text-xl flex"
-          >
-            <LogoIcon />
-            ShadcnUI/React
-          </a>
+    <footer className="bg-background w-full px-4">
+      <div className="max-w-container mx-auto">
+        <div className="grid gap-8 py-12 md:grid-cols-5">
+          <div className="col-span-2">
+            <a
+              rel="noreferrer noopener"
+              href="/"
+              className="flex items-center gap-2"
+            >
+              <LogoIcon />
+              <h3 className="text-xl font-bold">DevToDollars</h3>
+            </a>
+          </div>
+          {columns.map((column, index) => (
+            <div key={index} className="flex flex-col gap-2">
+              <h3 className="text-md pt-1 font-semibold">{column.title}</h3>
+              {column.links.map((link, linkIndex) => (
+                <a
+                  key={linkIndex}
+                  href={link.href}
+                  className="text-muted-foreground text-sm hover:text-foreground transition-colors"
+                >
+                  {link.text}
+                </a>
+              ))}
+            </div>
+          ))}
         </div>
-
-        <div className="flex flex-col gap-2">
-          <h3 className="font-bold text-lg">Follow US</h3>
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              Github
-            </a>
+        <div className="flex flex-col items-center justify-between gap-4 border-t py-8 sm:flex-row">
+          <div className="text-muted-foreground text-sm">
+            &copy; {new Date().getFullYear()} DevToDollars. All rights reserved.
           </div>
-
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              Twitter
-            </a>
-          </div>
-
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              Dribbble
-            </a>
+          <div className="flex items-center gap-4 text-sm">
+            {policies.map((policy, index) => (
+              <a
+                key={index}
+                href={policy.href}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {policy.text}
+              </a>
+            ))}
+            <ModeToggle />
           </div>
         </div>
-
-        <div className="flex flex-col gap-2">
-          <h3 className="font-bold text-lg">Platforms</h3>
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              Web
-            </a>
-          </div>
-
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              Mobile
-            </a>
-          </div>
-
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              Desktop
-            </a>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <h3 className="font-bold text-lg">About</h3>
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              Features
-            </a>
-          </div>
-
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              Pricing
-            </a>
-          </div>
-
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              FAQ
-            </a>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <h3 className="font-bold text-lg">Community</h3>
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              Youtube
-            </a>
-          </div>
-
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              Discord
-            </a>
-          </div>
-
-          <div>
-            <a
-              rel="noreferrer noopener"
-              href="#"
-              className="opacity-60 hover:opacity-100"
-            >
-              Twitch
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <section className="container pb-14 text-center">
-        <h3>
-          &copy; 2024 Landing page made by{' '}
-          <a
-            rel="noreferrer noopener"
-            target="_blank"
-            href="https://github.com/leoMirandaa"
-            className="text-primary transition-all border-primary hover:border-b-2"
-          >
-            Leo Miranda
-          </a>
-        </h3>
-      </section>
+      </div>
     </footer>
   );
 };

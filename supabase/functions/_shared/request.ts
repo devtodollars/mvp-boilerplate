@@ -2,9 +2,21 @@ import { User } from "supabase";
 import { supabase } from "./supabase.ts";
 
 async function getUserFromRequest(req: Request) {
-  const token = req.headers.get("Authorization")!.replace("Bearer ", "");
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    throw new Error("Missing Authorization header");
+  }
+  const token = authHeader.replace("Bearer ", "");
+
+  // Debug logging
+  console.log("SUPABASE_URL:", Deno.env.get("SUPABASE_URL") ? "set" : "NOT SET");
+  console.log("SERVICE_ROLE_KEY:", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ? "set" : "NOT SET");
+
   const { data, error } = await supabase.auth.getUser(token);
-  if (error) throw error;
+  if (error) {
+    console.error("Auth error:", error.message);
+    throw error;
+  }
   const user = data?.user;
   return user;
 }

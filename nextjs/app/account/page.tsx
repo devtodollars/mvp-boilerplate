@@ -14,5 +14,10 @@ export default async function Account() {
     return redirect('/auth/signin');
   }
 
-  return <AccountPage user={user} subscription={subscription} />;
+  return (
+    <AccountPage
+      user={user}
+      subscription={subscription}
+    />
+  );
 }
