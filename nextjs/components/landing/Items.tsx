@@ -33,7 +33,7 @@ const items: ItemProps[] = [
   },
   {
     title: 'Payments',
-    description: 'Stripe subscriptions and Monero payments fully integrated',
+    description: 'Stripe subscriptions fully integrated',
     icon: <CreditCardIcon className="size-5 stroke-1" />
   },
   {

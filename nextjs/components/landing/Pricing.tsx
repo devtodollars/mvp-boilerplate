@@ -25,13 +25,10 @@ enum PopularPlanType {
   YES = 1
 }
 
-type PaymentMethod = 'stripe' | 'monero';
-
 interface PricingTier {
   title: string;
   popular: PopularPlanType;
   fallbackPrice: number;
-  fallbackPriceXmr?: number;
   description: string;
   buttonText: string;
   benefitList: string[];
@@ -60,7 +57,6 @@ const pricingTiers: PricingTier[] = [
     title: 'Hobby',
     popular: 1,
     fallbackPrice: 10,
-    fallbackPriceXmr: 0.0001,
     description:
       'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
     buttonText: 'Subscribe Now',
@@ -76,7 +72,6 @@ const pricingTiers: PricingTier[] = [
     title: 'Freelancer',
     popular: 0,
     fallbackPrice: 20,
-    fallbackPriceXmr: 0.1,
     description:
       'Lorem ipsum dolor sit, amet ipsum consectetur adipisicing elit.',
     buttonText: 'Subscribe Now',
@@ -93,7 +88,6 @@ const pricingTiers: PricingTier[] = [
 interface ProductWithPrices {
   id: string;
   name: string | null;
-  provider?: string;
   prices: {
     id: string;
     unit_amount: number | null;
@@ -111,17 +105,12 @@ export const Pricing = ({
 }) => {
   const hasActiveSubscription =
     subscription?.status === 'active' || subscription?.status === 'trialing';
-  const isXmrSubscription =
-    hasActiveSubscription && subscription?.prices?.currency === 'XMR';
   const { toast } = useToast();
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState<boolean>(false);
   const [productsLoading, setProductsLoading] = useState<boolean>(true);
-  const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>('stripe');
   const [products, setProducts] = useState<ProductWithPrices[]>([]);
-  const hasMoneroProducts = products.some((p) => p.provider === 'MONERO');
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -139,39 +128,24 @@ export const Pricing = ({
     fetchProducts();
   }, [supabase]);
 
-  const getProduct = (
-    tierName: string,
-    provider: string
-  ): ProductWithPrices | undefined => {
+  const getProduct = (tierName: string): ProductWithPrices | undefined => {
     return products.find(
-      (p) =>
-        p.name?.toLowerCase() === tierName.toLowerCase() &&
-        (p.provider === undefined || p.provider === provider)
+      (p) => p.name?.toLowerCase() === tierName.toLowerCase()
     );
   };
 
   const getStripePriceId = (tierName: string): string | undefined => {
-    const product = getProduct(tierName, 'STRIPE');
+    const product = getProduct(tierName);
     const usdPrice = product?.prices?.find((p) => p.currency === 'USD');
     return usdPrice?.id;
   };
 
   const getStripePrice = (tier: PricingTier): number => {
-    const product = getProduct(tier.title, 'STRIPE');
+    const product = getProduct(tier.title);
     const usdPrice = product?.prices?.find((p) => p.currency === 'USD');
     const unitAmount = usdPrice?.unit_amount;
     // unit_amount is in cents, convert to dollars
     return unitAmount ? unitAmount / 100 : tier.fallbackPrice;
-  };
-
-  const getMoneroProductId = (tierName: string): string | undefined => {
-    return getProduct(tierName, 'MONERO')?.id;
-  };
-
-  const getXmrPrice = (tier: PricingTier): number | undefined => {
-    const product = getProduct(tier.title, 'MONERO');
-    const xmrPrice = product?.prices?.find((p) => p.currency === 'XMR');
-    return xmrPrice?.unit_amount ?? tier.fallbackPriceXmr;
   };
 
   const handleClick = async (tier: PricingTier) => {
@@ -183,51 +157,6 @@ export const Pricing = ({
     if (!user) {
       setLoading(false);
       return router.push('/auth/signup');
-    }
-
-    if (paymentMethod === 'monero') {
-      const moneroProductId = getMoneroProductId(tier.title);
-      if (!moneroProductId) {
-        setLoading(false);
-        return toast({
-          title: 'Monero payment not available',
-          description: 'This tier does not support Monero payments.',
-          variant: 'destructive'
-        });
-      }
-
-      const { data, error } = await supabase.functions.invoke(
-        'get_xmr_url',
-        {
-          body: {
-            return_url: getURL('/#pricing'),
-            product_id: moneroProductId
-          }
-        }
-      );
-
-      if (error) {
-        setLoading(false);
-        return toast({
-          title: 'Error Occurred',
-          description: error.message,
-          variant: 'destructive'
-        });
-      }
-
-      const redirectUrl = data?.redirect_url;
-      if (!redirectUrl) {
-        setLoading(false);
-        return toast({
-          title: 'An unknown error occurred.',
-          description:
-            'Please try again later or contact a system administrator.',
-          variant: 'destructive'
-        });
-      }
-      router.push(redirectUrl);
-      setLoading(false);
-      return;
     }
 
     // Get the Stripe price ID from the database
@@ -277,48 +206,6 @@ export const Pricing = ({
       id="pricing"
       className="relative overflow-hidden"
     >
-      {/* Layered Monero gradient background - organic aurora-like movement */}
-
-      {/* Base layer - slow diagonal drift */}
-      <div
-        className="absolute inset-0 -z-10 transition-opacity duration-1000 ease-in-out"
-        style={{
-          background:
-            'linear-gradient(135deg, #ff6601 0%, transparent 50%, #4c4c4c 100%)',
-          backgroundSize: '400% 400%',
-          animation: 'gradient-drift 30s ease-in-out infinite',
-          opacity: paymentMethod === 'monero' ? 0.3 : 0
-        }}
-      />
-
-      {/* Middle layer - counter-rotating radial gradient */}
-      <div
-        className="absolute inset-[-50%] -z-10 transition-opacity duration-1000 ease-in-out"
-        style={{
-          background:
-            'radial-gradient(ellipse at center, #ff6601 0%, transparent 50%, #4c4c4c 80%, transparent 100%)',
-          animation: 'gradient-rotate 60s linear infinite',
-          opacity: paymentMethod === 'monero' ? 0.2 : 0
-        }}
-      />
-
-      {/* Top layer - breathing glow effect */}
-      <div
-        className="absolute inset-0 -z-10 transition-opacity duration-1000 ease-in-out"
-        style={{
-          background:
-            'radial-gradient(ellipse at 30% 20%, rgba(255, 102, 1, 0.4) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(76, 76, 76, 0.3) 0%, transparent 50%)',
-          animation: 'gradient-breathe 8s ease-in-out infinite',
-          opacity: paymentMethod === 'monero' ? 1 : 0
-        }}
-      />
-
-      {/* Subtle overlay for text readability */}
-      <div
-        className="absolute inset-0 -z-10 bg-background/60 dark:bg-background/70 transition-opacity duration-1000 ease-in-out"
-        style={{ opacity: paymentMethod === 'monero' ? 1 : 0 }}
-      />
-
       <div className="max-w-container mx-auto">
         <h2 className="text-center text-3xl leading-tight font-semibold sm:text-5xl sm:leading-tight">
           Get Unlimited Access
@@ -326,67 +213,10 @@ export const Pricing = ({
         <p className="text-xl text-center text-muted-foreground pt-4 pb-8">
           Choose the plan that works for you.
         </p>
-        {hasActiveSubscription && !isXmrSubscription ? (
+        {hasActiveSubscription ? (
           <div className="flex justify-center items-center gap-4 pb-8">
             <span className="text-sm font-medium text-muted-foreground">
               You have an active subscription
-            </span>
-          </div>
-        ) : hasMoneroProducts ? (
-          <div className="flex justify-center items-center gap-4 pb-8">
-            <span
-              className={`text-sm font-medium transition-colors duration-300 ${paymentMethod === 'stripe' ? 'text-primary' : 'text-muted-foreground'}`}
-            >
-              Pay with Card
-            </span>
-            <button
-              onClick={() =>
-                setPaymentMethod(
-                  paymentMethod === 'stripe' ? 'monero' : 'stripe'
-                )
-              }
-              className="relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 overflow-hidden"
-              style={{
-                background:
-                  paymentMethod === 'monero'
-                    ? 'linear-gradient(90deg, #ff6601 0%, #4c4c4c 50%, #ff6601 100%)'
-                    : '#d1d5db',
-                backgroundSize:
-                  paymentMethod === 'monero' ? '200% 100%' : '100% 100%',
-                animation:
-                  paymentMethod === 'monero'
-                    ? 'gradient-flow 3s ease-in-out infinite'
-                    : 'none',
-                boxShadow:
-                  paymentMethod === 'monero'
-                    ? '0 0 20px rgba(255, 102, 1, 0.4)'
-                    : 'none'
-              }}
-              role="switch"
-              aria-checked={paymentMethod === 'monero'}
-            >
-              <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-all duration-300 shadow-md ${
-                  paymentMethod === 'monero'
-                    ? 'translate-x-8'
-                    : 'translate-x-1'
-                }`}
-                style={{
-                  boxShadow:
-                    paymentMethod === 'monero'
-                      ? '0 2px 8px rgba(255, 102, 1, 0.5)'
-                      : '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-              />
-            </button>
-            <span
-              className={`text-sm font-semibold transition-all duration-300 ${
-                paymentMethod === 'monero'
-                  ? 'bg-linear-to-r from-[#ff6601] to-[#ff8534] bg-clip-text text-transparent'
-                  : 'text-muted-foreground'
-              }`}
-            >
-              Pay with Monero
             </span>
           </div>
         ) : null}
@@ -418,13 +248,6 @@ export const Pricing = ({
                       <Skeleton className="h-9 w-16" />
                       <span className="text-muted-foreground"> /month</span>
                     </div>
-                  ) : paymentMethod === 'monero' && getXmrPrice(tier) ? (
-                    <>
-                      <span className="text-3xl font-bold text-orange-500">
-                        {getXmrPrice(tier)} XMR
-                      </span>
-                      <span className="text-muted-foreground"> /month</span>
-                    </>
                   ) : (
                     <>
                       <span className="text-3xl font-bold">
@@ -445,15 +268,11 @@ export const Pricing = ({
                   disabled={
                     loading ||
                     (productsLoading && !tier.redirectURL) ||
-                    (hasActiveSubscription &&
-                      !isXmrSubscription &&
-                      !tier.redirectURL)
+                    (hasActiveSubscription && !tier.redirectURL)
                   }
                 >
                   {hasActiveSubscription && !tier.redirectURL
-                    ? isXmrSubscription
-                      ? 'Extend subscription'
-                      : 'Subscribed'
+                    ? 'Subscribed'
                     : tier.buttonText}
                 </Button>
               </CardContent>

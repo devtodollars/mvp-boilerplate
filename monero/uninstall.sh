@@ -20,9 +20,6 @@ rmdir "$ROOT_DIR/supabase/functions/get_xmr_url" 2>/dev/null || true
 rm -f "$ROOT_DIR/supabase/functions/xmr_webhook/index.ts"
 rmdir "$ROOT_DIR/supabase/functions/xmr_webhook" 2>/dev/null || true
 rm -f "$ROOT_DIR/supabase/migrations/20260207145825_monero-payment-migrations.sql"
-rm -f "$ROOT_DIR/docs/monero/setup.md"
-rm -f "$ROOT_DIR/docs/monero/_category_.json"
-rmdir "$ROOT_DIR/docs/monero" 2>/dev/null || true
 
 # --- 2. Restore Stripe-only files from backup ---
 echo "  Restoring Stripe-only file versions..."

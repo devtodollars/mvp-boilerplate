@@ -32,15 +32,6 @@ export const getProducts = cache(async (supabase: SupabaseClient) => {
   return products;
 });
 
-export const getXmrInvoices = cache(async (supabase: SupabaseClient) => {
-  const { data: invoices } = await supabase
-    .from('xmr_invoices')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  return invoices;
-});
-
 export const getUserDetails = cache(async (supabase: SupabaseClient) => {
   const { data: userDetails } = await supabase
     .from('users')

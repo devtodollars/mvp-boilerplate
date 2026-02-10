@@ -355,87 +355,10 @@ const insertCheckoutSession = async (
   );
 };
 
-const initMoneroProducts = async () => {
-  console.log("Initializing Monero products and prices");
-
-  const moneroProducts = [
-    {
-      id: "xmr_prod_hobby",
-      active: true,
-      name: "Hobby",
-      description: null,
-      image: null,
-      metadata: {},
-      provider: "MONERO" as const,
-    },
-    {
-      id: "xmr_prod_freelancer",
-      active: true,
-      name: "Freelancer",
-      description: null,
-      image: null,
-      metadata: {},
-      provider: "MONERO" as const,
-    },
-  ];
-
-  const moneroPrices = [
-    {
-      id: "xmr_price_hobby_month",
-      product_id: "xmr_prod_hobby",
-      active: true,
-      currency: "XMR",
-      type: "recurring" as const,
-      unit_amount: 0.0001,
-      interval: "month" as const,
-      interval_count: 1,
-      trial_period_days: 0,
-      metadata: {},
-    },
-    {
-      id: "xmr_price_freelancer_month",
-      product_id: "xmr_prod_freelancer",
-      active: true,
-      currency: "XMR",
-      type: "recurring" as const,
-      unit_amount: 0.1,
-      interval: "month" as const,
-      interval_count: 1,
-      trial_period_days: 0,
-      metadata: {},
-    },
-  ];
-
-  const { error: productError } = await supabase
-    .from("products")
-    .upsert(moneroProducts);
-  if (productError) {
-    throw new Error(
-      `Monero product insert/update failed: ${productError.message}`,
-    );
-  }
-  console.log(
-    `Monero products inserted/updated: ${moneroProducts.map((p) => p.id)}`,
-  );
-
-  const { error: priceError } = await supabase
-    .from("prices")
-    .upsert(moneroPrices);
-  if (priceError) {
-    throw new Error(
-      `Monero price insert/update failed: ${priceError.message}`,
-    );
-  }
-  console.log(
-    `Monero prices inserted/updated: ${moneroPrices.map((p) => p.id)}`,
-  );
-};
-
 export {
   createOrRetrieveCustomer,
   deletePriceRecord,
   deleteProductRecord,
-  initMoneroProducts,
   insertCheckoutSession,
   manageSubscriptionStatusChange,
   upsertPriceRecord,

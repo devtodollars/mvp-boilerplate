@@ -10,7 +10,6 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/landing/Navbar';
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
@@ -20,31 +19,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { createApiClient } from '@/utils/supabase/api';
 import { SubscriptionWithPriceAndProduct } from '@/utils/types';
-import { Tables } from '@/types_db';
-
-type XmrInvoice = Tables<'xmr_invoices'>;
-
-const statusVariant = (status: string) => {
-  switch (status) {
-    case 'confirmed':
-      return 'default';
-    case 'payment_detected':
-      return 'secondary';
-    case 'expired':
-      return 'destructive';
-    default:
-      return 'outline-solid';
-  }
-};
 
 export default function AccountPage({
   user,
-  subscription,
-  xmrInvoices
+  subscription
 }: {
   user: User;
   subscription: SubscriptionWithPriceAndProduct;
-  xmrInvoices: XmrInvoice[] | null;
 }) {
   const supabase = createClient();
   const { toast } = useToast();
@@ -79,45 +60,6 @@ export default function AccountPage({
     router.push(redirectUrl);
     setLoading(false);
   };
-
-  const handleXmrRenew = async () => {
-    if (!subscription?.prices?.products?.id) return;
-    setLoading(true);
-
-    const { data, error } = await supabase.functions.invoke('get_xmr_url', {
-      body: {
-        return_url: getURL('/account'),
-        product_id: subscription.prices.products.id
-      }
-    });
-
-    if (error) {
-      setLoading(false);
-      return toast({
-        title: 'Error Occurred',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-
-    const redirectUrl = data?.redirect_url;
-    if (!redirectUrl) {
-      setLoading(false);
-      return toast({
-        title: 'An unknown error occurred.',
-        description:
-          'Please try again later or contact a system administrator.',
-        variant: 'destructive'
-      });
-    }
-    router.push(redirectUrl);
-    setLoading(false);
-  };
-
-  const isXmrSubscription = subscription?.prices?.currency === 'XMR';
-  const xmrExpired = isXmrSubscription && subscription?.current_period_end
-    ? new Date(subscription.current_period_end) < new Date()
-    : false;
 
   const handleSignOut = async () => {
     setLoading(true);
@@ -171,79 +113,13 @@ export default function AccountPage({
                 </CardDescription>
               </CardHeader>
               <CardFooter className="border-t px-6 py-4 flex space-between">
-                {isXmrSubscription ? (
-                  <div className="flex items-center gap-4">
-                    <div className="text-sm text-muted-foreground">
-                      {xmrExpired ? (
-                        <span className="text-destructive font-medium">Expired</span>
-                      ) : subscription?.current_period_end ? (
-                        <span>
-                          Expires on{' '}
-                          {new Date(subscription.current_period_end).toLocaleDateString(undefined, {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </span>
-                      ) : null}
-                    </div>
-                    <Button onClick={handleXmrRenew} disabled={loading}>
-                      Renew subscription
-                    </Button>
-                  </div>
-                ) : subscription ? (
+                {subscription ? (
                   <Button onClick={handleBillingPortal} disabled={loading}>
                     Manage subscription
                   </Button>
                 ) : null}
               </CardFooter>
             </Card>
-            {xmrInvoices && xmrInvoices.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>XMR Payments</CardTitle>
-                  <CardDescription>
-                    Your Monero payment history
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {xmrInvoices.map((invoice) => (
-                      <div
-                        key={invoice.id}
-                        className="flex items-center justify-between rounded-md border p-3"
-                      >
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">
-                            {Number(invoice.amount_xmr)} XMR
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {invoice.confirmed_at
-                              ? new Date(invoice.confirmed_at).toLocaleDateString(undefined, {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })
-                              : new Date(invoice.created_at!).toLocaleDateString(undefined, {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                          </p>
-                        </div>
-                        <Badge variant={statusVariant(invoice.status)}>
-                          {invoice.status.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
             <Card x-chunk="dashboard-04-chunk-3">
               <CardHeader>
                 <CardTitle>Sign out</CardTitle>
