@@ -1,5 +1,5 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { Database } from '@/types_db';
 
@@ -13,34 +13,26 @@ export const createAdminClient = () => {
 
 // For admin operations with cookie access (can get logged-in user + service role)
 export const createAdminClientWithCookies = async () => {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       cookies: {
-        async get(name: string) {
-          const store = await cookieStore;
-          return store.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
         },
-        async set(name: string, value: string, options: CookieOptions) {
+        setAll(cookiesToSet) {
           try {
-            const store = await cookieStore;
-            store.set({ name, value, ...options });
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
           } catch {
             // Ignore errors in Server Components
           }
-        },
-        async remove(name: string, options: CookieOptions) {
-          try {
-            const store = await cookieStore;
-            store.set({ name, value: '', ...options });
-          } catch {
-            // Ignore errors in Server Components
-          }
-        },
-      },
+        }
+      }
     }
   );
 };
