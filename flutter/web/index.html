@@ -18,7 +18,19 @@
 
     <meta charset="UTF-8" />
     <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
-    <meta name="description" content="A new Flutter project." />
+    <meta name="description" content="The DevToDollars app. Sign in to manage your account and subscription." />
+
+    <!--
+      This is the authenticated app, not a marketing surface. It targets no
+      keyword and there is nothing here for a search result to usefully show.
+      Flutter also renders into canvas at runtime, so a crawler only ever sees
+      this empty shell.
+
+      Crawling stays permitted on purpose. Google has to be able to fetch the
+      page to read this noindex; blocking it in robots.txt first would strand
+      the URL in the index as a "no information available" result.
+    -->
+    <meta name="robots" content="noindex, follow" />
 
     <!-- iOS meta tags & icons -->
     <meta name="apple-mobile-web-app-capable" content="yes" />

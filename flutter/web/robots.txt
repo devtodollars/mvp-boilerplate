@@ -1,0 +1,10 @@
+# The netlify.toml catch-all rewrites every unmatched path to the app shell with
+# a 200, so without a real file here /robots.txt served HTML instead of rules.
+# Netlify serves static files before applying redirects, so this file escapes it.
+
+# Crawling is deliberately allowed. Every path on this host returns the same
+# shell, which carries <meta name="robots" content="noindex">, and Google has to
+# be able to fetch the page to see that tag. Disallowing here would block the
+# crawl and leave already-indexed URLs stranded in the index with no snippet.
+User-agent: *
+Allow: /
