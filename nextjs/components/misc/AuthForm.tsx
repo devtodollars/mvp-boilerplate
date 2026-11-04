@@ -62,12 +62,24 @@ export function AuthForm({ state }: { state: AuthState }) {
         try {
           const res = await api.passwordSignup({ email, password });
 
-          // Check for duplicate email - Supabase returns user with empty identities array
-          if (res.user && res.user.identities && res.user.identities.length === 0) {
+          // With email confirmation enabled, Supabase does not return an error
+          // for a duplicate sign up (to avoid leaking which emails have an account):
+          // - confirmed account: returns a fake user with an empty identities array
+          // - unconfirmed account: returns the existing user and re-sends the
+          //   confirmation email, so created_at is well before confirmation_sent_at
+          const isConfirmedDuplicate = res.user?.identities?.length === 0;
+          const isUnconfirmedDuplicate =
+            !!res.user?.created_at &&
+            !!res.user?.confirmation_sent_at &&
+            Date.parse(res.user.confirmation_sent_at) -
+              Date.parse(res.user.created_at) >
+              10_000;
+          if (isConfirmedDuplicate || isUnconfirmedDuplicate) {
             toast({
               title: 'Email Already Registered',
-              description:
-                'This email is already associated with an account. Please sign in or use a different email.',
+              description: isConfirmedDuplicate
+                ? 'This email is already associated with an account. Please sign in or use a different email.'
+                : 'This email is already registered but not yet verified. We sent a new verification link to your inbox.',
               variant: 'destructive',
               duration: 5000
             });
@@ -83,9 +95,13 @@ export function AuthForm({ state }: { state: AuthState }) {
           }
         } catch (e) {
           if (e instanceof Error) {
+            // Returned when email confirmation is disabled and the email is taken
+            const isDuplicate = e.message.includes('already registered');
             toast({
-              title: 'Auth Error',
-              description: e.message,
+              title: isDuplicate ? 'Email Already Registered' : 'Auth Error',
+              description: isDuplicate
+                ? 'This email is already associated with an account. Please sign in or use a different email.'
+                : e.message,
               variant: 'destructive'
             });
           }
