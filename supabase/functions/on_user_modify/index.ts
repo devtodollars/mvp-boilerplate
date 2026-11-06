@@ -1,7 +1,18 @@
 import { posthog } from "../_shared/posthog.ts";
 import { sendWelcomeEmail } from "../_shared/loops.ts";
+import { captureException } from "../_shared/sentry.ts";
 
 Deno.serve(async (req) => {
+  try {
+    return await handleUserModify(req);
+  } catch (e) {
+    console.error(e);
+    await captureException(e);
+    return new Response(null, { status: 500 });
+  }
+});
+
+async function handleUserModify(req: Request) {
   let { record, old_record, type } = await req.json();
   record = record || old_record;
   const email: string = record.email;
@@ -35,4 +46,4 @@ Deno.serve(async (req) => {
   }
 
   return new Response(null);
-});
+}

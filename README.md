@@ -68,7 +68,7 @@
 
 ### Error Monitoring ([Sentry](https://sentry.io/welcome/))
 
-- Sentry wired into the Next.js app for the browser, server, and edge runtimes
-- Unhandled errors from React rendering, Server Components, route handlers, and the proxy are reported automatically
-- Disabled until `NEXT_PUBLIC_SENTRY_DSN` is set, so local development stays quiet by default
+- Sentry wired into the Next.js app (browser, server, and edge runtimes), the Supabase edge functions, and the Flutter app
+- Unhandled errors from React rendering, Server Components, and route handlers are reported automatically, and the auth proxy and edge functions report the errors they catch
+- Disabled until a DSN is set (`NEXT_PUBLIC_SENTRY_DSN` for Next.js, `SENTRY_DSN` for edge functions and Flutter), so local development stays quiet by default
 
