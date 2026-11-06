@@ -6,20 +6,49 @@ part of 'metadata_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$metadataHash() => r'a05e6979d5e0fa8712bffdb0e387e293d3baa29e';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// See also [Metadata].
 @ProviderFor(Metadata)
-final metadataProvider =
-    AutoDisposeAsyncNotifierProvider<Metadata, UserMetadata?>.internal(
-  Metadata.new,
-  name: r'metadataProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$metadataHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final metadataProvider = MetadataProvider._();
 
-typedef _$Metadata = AutoDisposeAsyncNotifier<UserMetadata?>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member
+final class MetadataProvider
+    extends $AsyncNotifierProvider<Metadata, UserMetadata?> {
+  MetadataProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'metadataProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$metadataHash();
+
+  @$internal
+  @override
+  Metadata create() => Metadata();
+}
+
+String _$metadataHash() => r'd2b10aa11726beedf682cb2a6328e41e7090d97c';
+
+abstract class _$Metadata extends $AsyncNotifier<UserMetadata?> {
+  FutureOr<UserMetadata?> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<UserMetadata?>, UserMetadata?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<UserMetadata?>, UserMetadata?>,
+              AsyncValue<UserMetadata?>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

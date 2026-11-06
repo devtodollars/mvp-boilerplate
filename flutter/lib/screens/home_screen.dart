@@ -45,7 +45,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     : "You are not currently subscribed to any plan."));
               },
               loading: () => const CircularProgressIndicator(),
-              error: (_, __) => const Text("Failed to load subscription plan"),
+              error: (_, _) => const Text("Failed to load subscription plan"),
             ),
             const SizedBox(height: 8),
             TextButton(

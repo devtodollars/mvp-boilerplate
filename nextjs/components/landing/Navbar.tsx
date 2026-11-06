@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -60,14 +61,14 @@ export const Navbar = ({ user }: { user: User | null }) => {
       <NavigationMenu className="mx-auto">
         <NavigationMenuList className="max-w-container mx-auto h-14 px-4 w-screen flex justify-between">
           <NavigationMenuItem className="font-bold flex">
-            <a
+            <Link
               rel="noreferrer noopener"
               href="/"
               className="ml-2 font-bold text-xl flex items-center gap-2"
             >
               <LogoIcon />
               DevToDollars
-            </a>
+            </Link>
           </NavigationMenuItem>
 
           {/* mobile */}

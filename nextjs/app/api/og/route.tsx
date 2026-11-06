@@ -1,6 +1,4 @@
-import { ImageResponse } from '@vercel/og';
-
-export const runtime = 'edge';
+import { ImageResponse } from 'next/og';
 
 // DevToDollars theme colors
 const colors = {

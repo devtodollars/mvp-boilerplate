@@ -15,7 +15,7 @@ supabase db reset
 ```
 3. Sync your products with Monero support by running the following at the root folder:
 ```bash
-deno run --env -A supabase/functions/_scripts/sync-stripe.ts --monero
+deno run --env -A --config supabase/functions/_scripts/deno.json supabase/functions/_scripts/sync-stripe.ts --monero
 ```
 
 Once the above steps are completed, proceed with the [Configuration](./configuration.md) guide to set up xmrcheckout.

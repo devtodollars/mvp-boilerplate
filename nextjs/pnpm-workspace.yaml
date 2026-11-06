@@ -1,0 +1,10 @@
+# pnpm 11 reads these from here instead of the "pnpm" field in package.json
+overrides:
+  '@types/react': 19.3.0
+  '@types/react-dom': 19.3.0
+
+# pnpm 11 refuses to install until every dependency with a build script is
+# explicitly allowed or disallowed. core-js (via posthog-js) only prints a
+# funding banner in its postinstall, so it does not need to run.
+allowBuilds:
+  core-js: false
