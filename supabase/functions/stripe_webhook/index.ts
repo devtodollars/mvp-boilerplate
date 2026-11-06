@@ -1,4 +1,5 @@
 import { processWebhookRequest } from "../_shared/stripe.ts";
+import { captureException } from "../_shared/sentry.ts";
 import Stripe from "stripe";
 import {
   deletePriceRecord,
@@ -77,6 +78,7 @@ Deno.serve(async (req) => {
       }
     } catch (error) {
       console.log(error);
+      await captureException(error);
       return new Response(
         "Webhook handler failed. View your supabase function logs.",
         {

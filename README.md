@@ -66,5 +66,9 @@
 - Contact management and event-triggered campaigns
 - Built-in analytics and deliverability tracking
 
-### 🚧 [Error Monitoring](https://github.com/devtodollars/flutter-supabase-production-template/issues/18) ([Sentry](https://sentry.io/welcome/)) 🚧
+### Error Monitoring ([Sentry](https://sentry.io/welcome/))
+
+- Sentry wired into the Next.js app (browser, server, and edge runtimes), the Supabase edge functions, and the Flutter app
+- Unhandled errors from React rendering, Server Components, and route handlers are reported automatically, and the auth proxy and edge functions report the errors they catch
+- Disabled until a DSN is set (`NEXT_PUBLIC_SENTRY_DSN` for Next.js, `SENTRY_DSN` for edge functions and Flutter), so local development stays quiet by default
 

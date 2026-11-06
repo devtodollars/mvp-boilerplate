@@ -1,5 +1,6 @@
 import { User } from "supabase";
 import { supabase } from "./supabase.ts";
+import { captureException } from "./sentry.ts";
 
 async function getUserFromRequest(req: Request) {
   const authHeader = req.headers.get("Authorization");
@@ -67,6 +68,7 @@ export function clientRequestHandlerWithUser(
       return corsResponse(await handler(req, user));
     } catch (e) {
       console.error(e);
+      await captureException(e);
       return resFromError(e);
     }
   };
@@ -87,6 +89,7 @@ export function clientRequestHandler(
       return corsResponse(res);
     } catch (e) {
       console.error(e);
+      await captureException(e);
       return resFromError(e);
     }
   };
