@@ -61,16 +61,16 @@ pnpm supabase:pull              # Pull migrations from remote
 ```bash
 cd supabase
 # Serve functions locally
-supabase functions serve --env-file .env.local --import-map functions/deno.json
+supabase functions serve --env-file .env.local
 
 # Set secrets for production
 supabase secrets set --env-file .env
 
-# Deploy functions
-supabase functions deploy --import-map functions/deno.json
+# Deploy functions (after `supabase link`)
+supabase functions deploy
 
 # Sync Stripe products/prices to database
-deno run -A functions/_scripts/sync-stripe.ts
+deno run -A --config functions/_scripts/deno.json functions/_scripts/sync-stripe.ts
 ```
 
 **Available edge functions:**
@@ -219,7 +219,7 @@ flutter pub run build_runner build --delete-conflicting-outputs
 
 - **Next.js:** Uses `pnpm` (not npm or yarn)
 - **Flutter:** Uses `flutter pub`
-- **Supabase Functions:** Uses Deno with import maps (`functions/deno.json`)
+- **Supabase Functions:** Uses Deno; each function declares its dependencies in its own `functions/<name>/deno.json` with `npm:` specifiers
 
 ## Deployment
 

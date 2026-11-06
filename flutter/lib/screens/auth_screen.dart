@@ -15,7 +15,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool showEmailForm = false;
-  handleSignUpComplete(BuildContext context) {
+  void handleSignUpComplete(BuildContext context) {
     if (!context.mounted) return;
     showDialog(
       context: context,

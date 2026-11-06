@@ -17,7 +17,7 @@ final navigatorKey = GlobalKey<NavigatorState>();
 Uri? initUrl = Uri.base; // needed to set intiial url state
 
 @riverpod
-GoRouter router(RouterRef ref) {
+GoRouter router(Ref ref) {
   final authState = ref.watch(authProvider);
   return GoRouter(
     initialLocation: initUrl?.path, // DO NOT REMOVE
@@ -45,7 +45,7 @@ GoRouter router(RouterRef ref) {
           initUrl = null;
           return path;
         },
-        error: (_, __) => "/loading",
+        error: (_, _) => "/loading",
         loading: () => "/loading",
       );
     },
@@ -74,7 +74,7 @@ GoRouter router(RouterRef ref) {
           GoRoute(
             name: 'reset',
             path: 'reset',
-            pageBuilder: (_, __) {
+            pageBuilder: (_, _) {
               return const DialogPage(child: ResetPasswordDialog());
             },
           )

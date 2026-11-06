@@ -21,8 +21,10 @@ supabase start
 5. Start the functions server (in new terminal)
 
 ```bash
-supabase functions serve --env-file .env.local --import-file supabase/functions/deno.json
+supabase functions serve --env-file .env.local
 ```
+
+Each function's dependencies come from its own `supabase/functions/<name>/deno.json`, so no import map flag is needed.
 
 :::info
 You can run change the `--env-file` to `.env` to use the production environment variables. Useful when testing out [Stripe](../../stripe/README.md) production env in local supabase env.
