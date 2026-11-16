@@ -57,7 +57,6 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   riverpod_generator: ^4.0.0+1
   build_runner: ^2.15.1
-  custom_lint: ^0.8.1
   riverpod_lint: ^3.1.0
 
 # For information on the generic Dart part of this file, see the

@@ -38,7 +38,7 @@ abstract class _$Auth extends $StreamNotifier<supa.Session?> {
   Stream<supa.Session?> build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<AsyncValue<supa.Session?>, supa.Session?>;
     final element =
         ref.element
@@ -48,6 +48,6 @@ abstract class _$Auth extends $StreamNotifier<supa.Session?> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }
