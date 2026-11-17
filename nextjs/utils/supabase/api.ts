@@ -1,32 +1,40 @@
 import { Database } from '@/types_db';
-import {
-  Provider,
-  SignInWithPasswordCredentials,
-  SupabaseClient
-} from '@supabase/supabase-js';
+import { Provider, SupabaseClient } from '@supabase/supabase-js';
 import { getURL } from '@/utils/helpers';
 
 export const createApiClient = (supabase: SupabaseClient<Database>) => {
-  const passwordSignup = async (creds: { email: string; password: string }) => {
+  // captchaToken is required by Supabase once CAPTCHA protection is enabled
+  // (Auth > Attack Protection). It is optional here so local dev works without it.
+  const passwordSignup = async (
+    creds: { email: string; password: string },
+    captchaToken?: string
+  ) => {
     const res = await supabase.auth.signUp({
       ...creds,
       options: {
-        emailRedirectTo: getURL('/api/auth_callback')
+        emailRedirectTo: getURL('/api/auth_callback'),
+        captchaToken
       }
     });
     if (res.error) throw res.error;
     return res.data;
   };
-  const passwordSignin = async (creds: SignInWithPasswordCredentials) => {
-    const res = await supabase.auth.signInWithPassword(creds);
+  const passwordSignin = async (
+    creds: { email: string; password: string },
+    captchaToken?: string
+  ) => {
+    const res = await supabase.auth.signInWithPassword({
+      ...creds,
+      options: { captchaToken }
+    });
     if (res.error) throw res.error;
     return res.data;
   };
-  const passwordReset = async (email: string) => {
+  const passwordReset = async (email: string, captchaToken?: string) => {
     const res = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: getURL('/api/reset_password')
+      redirectTo: getURL('/api/reset_password'),
+      captchaToken
     });
-    console.log(res);
     if (res.error) throw res.error;
     return res.data;
   };
@@ -50,12 +58,16 @@ export const createApiClient = (supabase: SupabaseClient<Database>) => {
     if (res.error) throw res.error;
     return res;
   };
-  const resendEmailVerification = async (email: string) => {
+  const resendEmailVerification = async (
+    email: string,
+    captchaToken?: string
+  ) => {
     const res = await supabase.auth.resend({
       type: 'signup',
       email,
       options: {
-        emailRedirectTo: getURL('/api/auth_callback')
+        emailRedirectTo: getURL('/api/auth_callback'),
+        captchaToken
       }
     });
     if (res.error) throw res.error;

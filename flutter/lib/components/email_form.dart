@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:devtodollars/components/hcaptcha/hcaptcha.dart';
 import 'package:devtodollars/components/recover_password_dialog.dart';
 import 'package:devtodollars/services/auth_notifier.dart';
 
@@ -20,6 +21,8 @@ class _EmailFormState extends ConsumerState<EmailForm> {
   final TextEditingController pwController = TextEditingController();
   final TextEditingController confirmPwController = TextEditingController();
 
+  final captchaController = HCaptchaController();
+  String? captchaToken;
   String errorMessage = '';
   bool loading = false;
   final _formKey = GlobalKey<FormState>();
@@ -63,14 +66,19 @@ class _EmailFormState extends ConsumerState<EmailForm> {
     final email = emailController.text;
     final password = pwController.text;
     if (_formKey.currentState!.validate()) {
+      if (hCaptchaEnabled && captchaToken == null) {
+        setState(() => errorMessage = "Please complete the captcha");
+        return;
+      }
       try {
         setState(() => loading = true);
         final authNotif = ref.read(authProvider.notifier);
 
         if (action == AuthAction.signIn) {
-          await authNotif.signInWithPassword(email, password);
+          await authNotif.signInWithPassword(email, password,
+              captchaToken: captchaToken);
         } else if (action == AuthAction.signUp) {
-          await authNotif.signUp(email, password);
+          await authNotif.signUp(email, password, captchaToken: captchaToken);
           if (mounted) {
             setState(() => action = AuthAction.signIn);
             showDialog(
@@ -93,6 +101,9 @@ class _EmailFormState extends ConsumerState<EmailForm> {
           loading = false;
           errorMessage = e.message;
         });
+      } finally {
+        // Tokens are single-use; require a fresh solve for the next attempt.
+        captchaController.reset();
       }
     }
   }
@@ -200,6 +211,16 @@ class _EmailFormState extends ConsumerState<EmailForm> {
                 ],
               ),
             ),
+            if (hCaptchaEnabled)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Center(
+                  child: HCaptcha(
+                    controller: captchaController,
+                    onToken: (t) => setState(() => captchaToken = t),
+                  ),
+                ),
+              ),
             ElevatedButton(
               onPressed: (loading) ? null : submitForm,
               style: ElevatedButton.styleFrom(
