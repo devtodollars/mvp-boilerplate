@@ -89,7 +89,7 @@ class _EmailFormState extends ConsumerState<EmailForm> {
                     "We sent an email from hi@devtodollars.com to verify your email"),
                 actions: [
                   TextButton(
-                      onPressed: context.pop, child: const Text("Ok Matt."))
+                      onPressed: context.pop, child: const Text("OK"))
                 ],
               ),
             );
