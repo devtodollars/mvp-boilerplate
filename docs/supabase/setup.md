@@ -25,7 +25,7 @@ Make sure you are in your project directory before you run `supabase link`
 
 ```bash
 supabase db push
-supabase functions deploy --import-map supabase/functions/deno.json
+supabase functions deploy
 ```
 
 4. (OPTIONAL) [Setup Supabase local development](local-development/pull-changes.md)

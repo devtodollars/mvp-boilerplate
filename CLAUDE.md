@@ -61,16 +61,16 @@ pnpm supabase:pull              # Pull migrations from remote
 ```bash
 cd supabase
 # Serve functions locally
-supabase functions serve --env-file .env.local --import-map functions/deno.json
+supabase functions serve --env-file .env.local
 
 # Set secrets for production
 supabase secrets set --env-file .env
 
-# Deploy functions
-supabase functions deploy --import-map functions/deno.json
+# Deploy functions (after `supabase link`)
+supabase functions deploy
 
 # Sync Stripe products/prices to database
-deno run -A functions/_scripts/sync-stripe.ts
+deno run -A --config functions/_scripts/deno.json functions/_scripts/sync-stripe.ts
 ```
 
 **Available edge functions:**
@@ -215,11 +215,39 @@ flutter pub run build_runner build --delete-conflicting-outputs
    OR
    Start Flutter: `cd ../flutter && flutter run -d chrome --dart-define-from-file=env.local.json`
 
+## Regression Tests
+
+Full catalog with case IDs and current status: **`tests/README.md`**. Run the
+suite after dependency upgrades, schema changes, or auth/billing changes.
+
+```bash
+tests/start-stack.sh        # terminal 1: local Supabase + edge functions (leave running)
+tests/run-all.sh            # terminal 2: every suite + static checks, PASS/FAIL summary
+tests/run-all.sh --quick    # static checks + unit tests only
+```
+
+Where the tests live:
+
+| Suite | Location | Run |
+|---|---|---|
+| Next.js, DB (RLS/grants/triggers), Stripe + edge functions, Playwright | `nextjs/e2e/*.spec.ts` (config `nextjs/playwright.config.ts`) | `cd nextjs && pnpm test:e2e` (`-g "A4"` for one case) |
+| Flutter models + widgets | `flutter/test/*.dart` | `cd flutter && flutter test` |
+| Flutter web app e2e (real app in Chrome) | `flutter/test/e2e/` | `cd flutter && flutter test --platform chrome test/e2e --dart-define-from-file=env.local.json` |
+| Edge function unit tests | `supabase/functions/_tests/` | `cd supabase/functions && deno test _tests/` |
+| Shared stack / runner scripts | `tests/` | `tests/start-stack.sh`, `tests/run-all.sh` |
+
+Things to know:
+- **Run Supabase as `SUPABASE_PROJECT_ID=mvp-boilerplate-local`** (`start-stack.sh` does this). Other local repos reuse `project_id = "devtodollars"`, and a plain `supabase start` here restores *their* database volume.
+- Edge function secrets for tests live in the gitignored `supabase/.env.local` (template: `tests/env.local.example`). Stripe tests need a **test-mode** `sk_test_` key and are skipped without one. The suites refuse live keys.
+- Stripe webhooks are tested by signing payloads locally with `STRIPE_WEBHOOK_SIGNING_SECRET`, so `stripe listen` isn't needed.
+- When a test exposes a bug, leave it failing (asserting the intended behaviour) and record it in `tests/README.md`. Don't loosen or skip it.
+- New tables need explicit `GRANT`s for `anon` / `authenticated` / `service_role` (see `supabase/migrations/20261117000000_grant_data_api_access.sql`). Supabase no longer exposes new tables to the Data API by default.
+
 ## Package Management
 
 - **Next.js:** Uses `pnpm` (not npm or yarn)
 - **Flutter:** Uses `flutter pub`
-- **Supabase Functions:** Uses Deno with import maps (`functions/deno.json`)
+- **Supabase Functions:** Uses Deno; each function declares its dependencies in its own `functions/<name>/deno.json` with `npm:` specifiers
 
 ## Deployment
 

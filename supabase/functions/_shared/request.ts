@@ -67,7 +67,7 @@ export function clientRequestHandlerWithUser(
       return corsResponse(await handler(req, user));
     } catch (e) {
       console.error(e);
-      return resFromError(e);
+      return resFromError(e as Error);
     }
   };
   Deno.serve(enhancedHandler);
@@ -87,7 +87,7 @@ export function clientRequestHandler(
       return corsResponse(res);
     } catch (e) {
       console.error(e);
-      return resFromError(e);
+      return resFromError(e as Error);
     }
   };
   Deno.serve(enhancedHandler);

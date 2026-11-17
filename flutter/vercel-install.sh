@@ -4,7 +4,7 @@
 # bump both together.
 set -euo pipefail
 
-FLUTTER_VERSION="3.22.2"
+FLUTTER_VERSION="3.50.0"
 
 # Flutter's bootstrap needs unzip to extract the Dart SDK.
 command -v unzip >/dev/null || dnf install -y unzip

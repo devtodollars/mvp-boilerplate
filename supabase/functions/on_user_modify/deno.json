@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "posthog": "npm:posthog-node@5.61.1",
+    "loops": "npm:loops@7.3.0"
+  }
+}
