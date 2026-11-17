@@ -93,6 +93,7 @@ interface ProductWithPrices {
     unit_amount: number | null;
     currency: string | null;
     active: boolean | null;
+    interval: string | null;
   }[];
 }
 
@@ -134,16 +135,18 @@ export const Pricing = ({
     );
   };
 
-  const getStripePriceId = (tierName: string): string | undefined => {
-    const product = getProduct(tierName);
-    const usdPrice = product?.prices?.find((p) => p.currency === 'USD');
-    return usdPrice?.id;
-  };
+  // Cards are labelled "/month", so show and check out with the monthly USD
+  // price only (products also have yearly prices).
+  const getMonthlyUsdPrice = (tierName: string) =>
+    getProduct(tierName)?.prices?.find(
+      (p) => p.currency === 'USD' && p.interval === 'month'
+    );
+
+  const getStripePriceId = (tierName: string): string | undefined =>
+    getMonthlyUsdPrice(tierName)?.id;
 
   const getStripePrice = (tier: PricingTier): number => {
-    const product = getProduct(tier.title);
-    const usdPrice = product?.prices?.find((p) => p.currency === 'USD');
-    const unitAmount = usdPrice?.unit_amount;
+    const unitAmount = getMonthlyUsdPrice(tier.title)?.unit_amount;
     // unit_amount is in cents, convert to dollars
     return unitAmount ? unitAmount / 100 : tier.fallbackPrice;
   };

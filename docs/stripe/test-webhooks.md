@@ -17,7 +17,7 @@ Running this Stripe command will print a webhook secret (such as, `whsec_***`) 
 
 3. In another terminal, run the local supabase server. See [Local Supabase Setup](../supabase/local-development/setup.md) for more information.
 ```
-supabase functions serve --env-file .env --import-map supabase/functions/deno.json
+supabase functions serve --env-file .env
 ```
 
 4. Now local webhooks should be working!

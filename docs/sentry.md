@@ -52,7 +52,7 @@ Create the auth token under **Settings > Auth Tokens** with the `project:release
 - `nextjs/instrumentation.ts` loads the matching server config and exports `onRequestError`, which reports Server Component and route handler errors.
 - `nextjs/app/global-error.tsx` reports errors thrown in the root layout.
 - `nextjs/utils/supabase/middleware.ts` is the auth session refresh that runs in the proxy. It deliberately catches every error and serves the request unauthenticated instead of returning a 500, and it calls `Sentry.captureException` before doing so, so those failures are reported rather than silent.
-- `nextjs/next.config.js` wraps the Next.js config with `withSentryConfig` for build-time instrumentation and source map upload. It also enables `tunnelRoute: '/monitoring'`, so the browser sends events through your own domain instead of `ingest.sentry.io`, which ad blockers commonly block. `/monitoring` is excluded from the proxy matcher in `nextjs/proxy.ts`, so forwarding an event does not trigger a Supabase session refresh.
+- `nextjs/next.config.mjs` wraps the Next.js config with `withSentryConfig` for build-time instrumentation and source map upload. It also enables `tunnelRoute: '/monitoring'`, so the browser sends events through your own domain instead of `ingest.sentry.io`, which ad blockers commonly block. `/monitoring` is excluded from the proxy matcher in `nextjs/proxy.ts`, so forwarding an event does not trigger a Supabase session refresh.
 
 All three Next.js runtimes read `NEXT_PUBLIC_SENTRY_DSN`, and the sample rate for performance traces is 100% in development and 10% in production. Adjust `tracesSampleRate` in the three config files if you need a different rate.
 

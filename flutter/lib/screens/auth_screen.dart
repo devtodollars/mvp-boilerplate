@@ -15,7 +15,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool showEmailForm = false;
-  handleSignUpComplete(BuildContext context) {
+  void handleSignUpComplete(BuildContext context) {
     if (!context.mounted) return;
     showDialog(
       context: context,
@@ -24,7 +24,7 @@ class _AuthScreenState extends State<AuthScreen> {
         content: const Text(
             "We sent an email from hi@devtodollars.com to verify your email"),
         actions: [
-          TextButton(onPressed: context.pop, child: const Text("Ok Matt."))
+          TextButton(onPressed: context.pop, child: const Text("OK"))
         ],
       ),
     );

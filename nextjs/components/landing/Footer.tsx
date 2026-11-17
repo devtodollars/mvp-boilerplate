@@ -1,5 +1,6 @@
 'use client';
 import { LogoIcon } from './Icons';
+import Link from 'next/link';
 import { ModeToggle } from './mode-toggle';
 
 interface FooterLink {
@@ -49,14 +50,14 @@ export const Footer = () => {
       <div className="max-w-container mx-auto">
         <div className="grid gap-8 py-12 md:grid-cols-5">
           <div className="col-span-2">
-            <a
+            <Link
               rel="noreferrer noopener"
               href="/"
               className="flex items-center gap-2"
             >
               <LogoIcon />
               <h3 className="text-xl font-bold">DevToDollars</h3>
-            </a>
+            </Link>
           </div>
           {columns.map((column, index) => (
             <div key={index} className="flex flex-col gap-2">

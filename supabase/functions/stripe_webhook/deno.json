@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "supabase": "npm:@supabase/supabase-js@2.118.0",
+    "stripe": "npm:stripe@23.1.0",
+    "sentry": "npm:@sentry/deno@11.10.0"
+  }
+}

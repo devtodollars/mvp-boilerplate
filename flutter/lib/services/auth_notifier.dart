@@ -45,8 +45,12 @@ class Auth extends _$Auth {
   supa.SupabaseClient get client => supa.Supabase.instance.client;
   supa.Session? get currentSession => client.auth.currentSession;
 
-  Future<void> signInWithPassword(String email, String password) async {
-    await client.auth.signInWithPassword(password: password, email: email);
+  // captchaToken is required by Supabase once CAPTCHA protection is enabled
+  // (Auth > Attack Protection).
+  Future<void> signInWithPassword(String email, String password,
+      {String? captchaToken}) async {
+    await client.auth.signInWithPassword(
+        password: password, email: email, captchaToken: captchaToken);
   }
 
   Future<void> signInWithOAuth(supa.OAuthProvider provider) async {
@@ -61,13 +65,16 @@ class Auth extends _$Auth {
     );
   }
 
-  Future<void> signUp(String email, String password) async {
-    await client.auth.signUp(password: password, email: email);
+  Future<void> signUp(String email, String password,
+      {String? captchaToken}) async {
+    await client.auth.signUp(
+        password: password, email: email, captchaToken: captchaToken);
   }
 
-  Future<void> recoverPassword(String email) async {
+  Future<void> recoverPassword(String email, {String? captchaToken}) async {
     final resetUrl = p.join(Uri.base.origin, "reset");
-    await client.auth.resetPasswordForEmail(email, redirectTo: resetUrl);
+    await client.auth.resetPasswordForEmail(email,
+        redirectTo: resetUrl, captchaToken: captchaToken);
   }
 
   Future<void> updatePassword(String password) async {

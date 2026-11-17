@@ -69,7 +69,7 @@ export function clientRequestHandlerWithUser(
     } catch (e) {
       console.error(e);
       await captureException(e);
-      return resFromError(e);
+      return resFromError(e as Error);
     }
   };
   Deno.serve(enhancedHandler);
@@ -90,7 +90,7 @@ export function clientRequestHandler(
     } catch (e) {
       console.error(e);
       await captureException(e);
-      return resFromError(e);
+      return resFromError(e as Error);
     }
   };
   Deno.serve(enhancedHandler);
