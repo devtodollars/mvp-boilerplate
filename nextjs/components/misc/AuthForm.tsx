@@ -21,6 +21,7 @@ import { useToast } from '../ui/use-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthState, StateInfo } from '@/utils/types';
 import { Eye, EyeOff } from 'lucide-react';
+import { isAuthError } from '@supabase/supabase-js';
 
 // When unset (e.g. local dev without CAPTCHA enabled in Supabase) the widget is
 // skipped and requests are sent without a token.
@@ -50,6 +51,21 @@ export function AuthForm({ state }: { state: AuthState }) {
   const [resendTimeout, setResendTimeout] = useState(0);
   const [captchaToken, setCaptchaToken] = useState<string>();
   const captchaRef = useRef<HCaptcha>(null);
+
+  const showEmailAlreadyRegistered = () =>
+    toast({
+      title: 'Email Already Registered',
+      description:
+        'This email is already associated with an account. Please sign in or use a different email.',
+      variant: 'destructive',
+      duration: 5000
+    });
+
+  // Switching states remounts the captcha widget, so drop any token from the old one.
+  const changeAuthState = (next: AuthState) => {
+    setCaptchaToken(undefined);
+    setAuthState(next);
+  };
 
   const needsCaptcha =
     !!HCAPTCHA_SITE_KEY && CAPTCHA_STATES.includes(authState);
@@ -87,148 +103,28 @@ export function AuthForm({ state }: { state: AuthState }) {
       submitText: 'Sign Up',
       hasEmailField: true,
       hasPasswordField: true,
-      hasOAuth: false,
-      onSubmit: async () => {
-        if (password !== confirmPassword) {
-          toast({
-            title: 'Password Error',
-            description: 'Passwords do not match',
-            variant: 'destructive'
-          });
-          return;
-        }
-        if (!ensureCaptcha()) return;
-        setLoading(true);
-        try {
-          const res = await api.passwordSignup(
-            { email, password },
-            captchaToken
-          );
-
-          // Check for duplicate email - Supabase returns user with empty identities array
-          if (res.user && res.user.identities && res.user.identities.length === 0) {
-            toast({
-              title: 'Email Already Registered',
-              description:
-                'This email is already associated with an account. Please sign in or use a different email.',
-              variant: 'destructive',
-              duration: 5000
-            });
-            setLoading(false);
-            return;
-          }
-
-          // Check if email is already verified (e.g., OAuth or pre-verified)
-          if (res.user?.user_metadata?.email_verified) {
-            router.refresh();
-          } else {
-            setAuthState(AuthState.VerifyEmail);
-          }
-        } catch (e) {
-          if (e instanceof Error) {
-            toast({
-              title: 'Auth Error',
-              description: e.message,
-              variant: 'destructive'
-            });
-          }
-        } finally {
-          resetCaptcha();
-          setTimeout(() => {
-            setLoading(false);
-          }, 3000);
-        }
-      }
+      hasOAuth: false
     },
     signin: {
       title: 'Sign In',
       submitText: 'Sign In',
       hasEmailField: true,
       hasPasswordField: true,
-      hasOAuth: true,
-      onSubmit: async () => {
-        if (!ensureCaptcha()) return;
-        setLoading(true);
-        try {
-          await api.passwordSignin({ email, password }, captchaToken);
-          router.refresh();
-        } catch (e) {
-          if (e instanceof Error) {
-            let err_message = e.message;
-            if (e.message.includes('Email not confirmed')) {
-              err_message =
-                'Your email is not verified. Please navigate to Sign Up tab and verify your email before proceeding.';
-            }
-            toast({
-              title: 'Auth Error',
-              description: err_message,
-              variant: 'destructive',
-              duration: 3000
-            });
-          }
-        } finally {
-          resetCaptcha();
-          setTimeout(() => {
-            setLoading(false);
-          }, 3000);
-        }
-      }
+      hasOAuth: true
     },
     forgot_password: {
       title: 'Reset Password',
       submitText: 'Send Email',
       hasEmailField: true,
       hasPasswordField: false,
-      hasOAuth: false,
-      onSubmit: async () => {
-        if (!ensureCaptcha()) return;
-        setLoading(true);
-        try {
-          await api.passwordReset(email, captchaToken);
-          toast({
-            title: 'Email Sent!',
-            description: 'Check your email to reset your password'
-          });
-        } catch (e) {
-          if (e instanceof Error) {
-            toast({
-              title: 'Auth Error',
-              description: e.message,
-              variant: 'destructive'
-            });
-          }
-        }
-        resetCaptcha();
-        setLoading(false);
-      }
+      hasOAuth: false
     },
     update_password: {
       title: 'Update Password',
       submitText: 'Update Password',
       hasEmailField: false,
       hasPasswordField: true,
-      hasOAuth: false,
-      onSubmit: async () => {
-        setLoading(true);
-        try {
-          await api.passwordUpdate(password);
-          toast({
-            title: 'Password Updated',
-            description: 'Redirecting to the home page...'
-          });
-          setTimeout(() => router.replace('/'), 3000);
-          router.replace('/');
-        } catch (e) {
-          if (e instanceof Error) {
-            toast({
-              title: 'Auth Error',
-              description: e.message,
-              variant: 'destructive'
-            });
-          }
-        }
-        setLoading(false);
-      }
+      hasOAuth: false
     },
     verify_email: {
       title: 'Verify Your Email',
@@ -240,30 +136,153 @@ export function AuthForm({ state }: { state: AuthState }) {
           : 'Resend Verification Email',
       hasEmailField: false,
       hasPasswordField: false,
-      hasOAuth: false,
-      onSubmit: async () => {
-        if (resendTimeout > 0) return;
-        if (!ensureCaptcha()) return;
-        setLoading(true);
-        try {
-          await api.resendEmailVerification(email, captchaToken);
-          setResendTimeout(60);
-          toast({
-            title: 'Verification Email Sent',
-            description: 'Please check your inbox for the verification link.'
-          });
-        } catch (e) {
-          if (e instanceof Error) {
-            toast({
-              title: 'Auth Error',
-              description: e.message,
-              variant: 'destructive'
-            });
-          }
-        }
-        resetCaptcha();
-        setLoading(false);
+      hasOAuth: false
+    }
+  };
+
+  // Submit handlers are kept out of stateInfo: stateInfo is read during render,
+  // and these touch captchaRef, which React only allows in event handlers.
+  const submitHandlers: Record<AuthState, () => Promise<void>> = {
+    signup: async () => {
+      if (password !== confirmPassword) {
+        toast({
+          title: 'Password Error',
+          description: 'Passwords do not match',
+          variant: 'destructive'
+        });
+        return;
       }
+      if (!ensureCaptcha()) return;
+      setLoading(true);
+      try {
+        const res = await api.passwordSignup({ email, password }, captchaToken);
+
+        // Older Supabase Auth signals a duplicate email with an empty identities array.
+        if (
+          res.user &&
+          res.user.identities &&
+          res.user.identities.length === 0
+        ) {
+          showEmailAlreadyRegistered();
+          setLoading(false);
+          return;
+        }
+
+        // Check if email is already verified (e.g., OAuth or pre-verified)
+        if (res.user?.user_metadata?.email_verified) {
+          router.refresh();
+        } else {
+          changeAuthState(AuthState.VerifyEmail);
+        }
+      } catch (e) {
+        // Newer Supabase Auth rejects a duplicate email with this error code.
+        if (isAuthError(e) && e.code === 'user_already_exists') {
+          showEmailAlreadyRegistered();
+        } else if (e instanceof Error) {
+          toast({
+            title: 'Auth Error',
+            description: e.message,
+            variant: 'destructive'
+          });
+        }
+      } finally {
+        resetCaptcha();
+        setTimeout(() => {
+          setLoading(false);
+        }, 3000);
+      }
+    },
+    signin: async () => {
+      if (!ensureCaptcha()) return;
+      setLoading(true);
+      try {
+        await api.passwordSignin({ email, password }, captchaToken);
+        router.refresh();
+      } catch (e) {
+        if (e instanceof Error) {
+          let err_message = e.message;
+          if (e.message.includes('Email not confirmed')) {
+            err_message =
+              'Your email is not verified. Please navigate to Sign Up tab and verify your email before proceeding.';
+          }
+          toast({
+            title: 'Auth Error',
+            description: err_message,
+            variant: 'destructive',
+            duration: 3000
+          });
+        }
+      } finally {
+        resetCaptcha();
+        setTimeout(() => {
+          setLoading(false);
+        }, 3000);
+      }
+    },
+    forgot_password: async () => {
+      if (!ensureCaptcha()) return;
+      setLoading(true);
+      try {
+        await api.passwordReset(email, captchaToken);
+        toast({
+          title: 'Email Sent!',
+          description: 'Check your email to reset your password'
+        });
+      } catch (e) {
+        if (e instanceof Error) {
+          toast({
+            title: 'Auth Error',
+            description: e.message,
+            variant: 'destructive'
+          });
+        }
+      }
+      resetCaptcha();
+      setLoading(false);
+    },
+    update_password: async () => {
+      setLoading(true);
+      try {
+        await api.passwordUpdate(password);
+        toast({
+          title: 'Password Updated',
+          description: 'Redirecting to the home page...'
+        });
+        setTimeout(() => router.replace('/'), 3000);
+        router.replace('/');
+      } catch (e) {
+        if (e instanceof Error) {
+          toast({
+            title: 'Auth Error',
+            description: e.message,
+            variant: 'destructive'
+          });
+        }
+      }
+      setLoading(false);
+    },
+    verify_email: async () => {
+      if (resendTimeout > 0) return;
+      if (!ensureCaptcha()) return;
+      setLoading(true);
+      try {
+        await api.resendEmailVerification(email, captchaToken);
+        setResendTimeout(60);
+        toast({
+          title: 'Verification Email Sent',
+          description: 'Please check your inbox for the verification link.'
+        });
+      } catch (e) {
+        if (e instanceof Error) {
+          toast({
+            title: 'Auth Error',
+            description: e.message,
+            variant: 'destructive'
+          });
+        }
+      }
+      resetCaptcha();
+      setLoading(false);
     }
   };
 
@@ -285,11 +304,6 @@ export function AuthForm({ state }: { state: AuthState }) {
       );
     }
   }, []);
-
-  // Switching states remounts the widget, so drop any token from the old one.
-  useEffect(() => {
-    setCaptchaToken(undefined);
-  }, [authState]);
 
   const currState = stateInfo[authState];
   return (
@@ -323,7 +337,7 @@ export function AuthForm({ state }: { state: AuthState }) {
                 {authState === 'signin' && (
                   <Link
                     href="#"
-                    onClick={() => setAuthState(AuthState.ForgotPassword)}
+                    onClick={() => changeAuthState(AuthState.ForgotPassword)}
                     className="ml-auto inline-block text-sm underline"
                   >
                     Forgot your password?
@@ -333,7 +347,7 @@ export function AuthForm({ state }: { state: AuthState }) {
               <div className="relative">
                 <Input
                   id="password"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   disabled={loading}
                   value={password}
                   required
@@ -366,7 +380,7 @@ export function AuthForm({ state }: { state: AuthState }) {
               <div className="relative">
                 <Input
                   id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
+                  type={showConfirmPassword ? 'text' : 'password'}
                   disabled={loading}
                   value={confirmPassword}
                   required
@@ -407,7 +421,7 @@ export function AuthForm({ state }: { state: AuthState }) {
           <Button
             type="submit"
             className="w-full"
-            onClick={currState.onSubmit}
+            onClick={submitHandlers[authState]}
             disabled={loading}
           >
             {currState.submitText}
@@ -418,7 +432,7 @@ export function AuthForm({ state }: { state: AuthState }) {
               <Link
                 href="#"
                 className="underline"
-                onClick={() => setAuthState(AuthState.Signup)}
+                onClick={() => changeAuthState(AuthState.Signup)}
               >
                 Sign up
               </Link>
@@ -430,7 +444,7 @@ export function AuthForm({ state }: { state: AuthState }) {
               <Link
                 href="#"
                 className="underline"
-                onClick={() => setAuthState(AuthState.Signin)}
+                onClick={() => changeAuthState(AuthState.Signin)}
               >
                 Sign in
               </Link>
@@ -442,7 +456,7 @@ export function AuthForm({ state }: { state: AuthState }) {
               <Link
                 href="#"
                 className="underline"
-                onClick={() => setAuthState(AuthState.Signin)}
+                onClick={() => changeAuthState(AuthState.Signin)}
               >
                 Sign in
               </Link>
@@ -458,7 +472,7 @@ export function AuthForm({ state }: { state: AuthState }) {
                 <Link
                   href="#"
                   className="underline"
-                  onClick={() => setAuthState(AuthState.Signin)}
+                  onClick={() => changeAuthState(AuthState.Signin)}
                 >
                   Sign in
                 </Link>

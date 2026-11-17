@@ -27,8 +27,9 @@ Deno.serve(async (req) => {
     event = await processWebhookRequest(req);
     console.log(`🔔  Webhook received: ${event.type}`);
   } catch (err) {
-    console.log(`❌ Error message: ${err.message}`);
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.log(`❌ Error message: ${message}`);
+    return new Response(`Webhook Error: ${message}`, { status: 400 });
   }
 
   if (relevantEvents.has(event.type)) {

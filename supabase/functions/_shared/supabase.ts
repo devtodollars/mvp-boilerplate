@@ -1,5 +1,5 @@
 import { createClient } from "supabase";
-import { Database, Tables, TablesInsert } from "../types_db.ts";
+import { Database, Enums, Json, Tables, TablesInsert } from "../types_db.ts";
 import Stripe from "stripe";
 import { stripe } from "./stripe.ts";
 import { toDateTime } from "./utils.ts";
@@ -51,9 +51,11 @@ const upsertPriceRecords = async (
     product_id: typeof price.product === "string" ? price.product : "",
     active: price.active,
     currency: price.currency.toUpperCase(),
-    type: price.type,
+    type: price.type as Enums<"pricing_type">,
     unit_amount: price.unit_amount ?? null,
-    interval: price.recurring?.interval ?? null,
+    interval: (price.recurring?.interval ?? null) as
+      | Enums<"pricing_plan_interval">
+      | null,
     interval_count: price.recurring?.interval_count ?? null,
     trial_period_days: price.recurring?.trial_period_days ?? TRIAL_PERIOD_DAYS,
     metadata: price.metadata,
@@ -210,17 +212,33 @@ const copyBillingDetailsToCustomer = async (
   uuid: string,
   payment_method: Stripe.PaymentMethod,
 ) => {
-  //Todo: check this assertion
-  const customer = payment_method.customer as string;
+  const customer = typeof payment_method.customer === "string"
+    ? payment_method.customer
+    : payment_method.customer?.id;
   const { name, phone, address } = payment_method.billing_details;
-  if (!name || !phone || !address) return;
-  //@ts-ignore: typescript error for stripe type
-  await stripe.customers.update(customer, { name, phone, address });
+  // Checkout collects name + address but not phone, so only address is required.
+  if (!customer || !address) return;
+  await stripe.customers.update(customer, {
+    address: {
+      line1: address.line1 ?? "",
+      line2: address.line2 ?? undefined,
+      city: address.city ?? undefined,
+      state: address.state ?? undefined,
+      postal_code: address.postal_code ?? undefined,
+      country: address.country ?? undefined,
+    },
+    ...(name ? { name } : {}),
+    ...(phone ? { phone } : {}),
+  });
+  // e.g. payment_method.card for type "card"
+  const details = (payment_method as unknown as Record<string, unknown>)[
+    payment_method.type
+  ];
   const { error: updateError } = await supabase
     .from("users")
     .update({
       billing_address: { ...address },
-      payment_method: { ...payment_method[payment_method.type] },
+      payment_method: (details ?? null) as Json,
     })
     .eq("id", uuid);
   if (updateError) {
@@ -249,16 +267,16 @@ const manageSubscriptionStatusChange = async (
   const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
     expand: ["default_payment_method"],
   });
+  // Single-price subscriptions: price, quantity and billing period are on the item.
+  const item = subscription.items.data[0];
   // Upsert the latest status of the subscription object.
   const subscriptionData: TablesInsert<"subscriptions"> = {
     id: subscription.id,
     user_id: uuid,
     metadata: subscription.metadata,
-    status: subscription.status,
-    price_id: subscription.items.data[0].price.id,
-    //TODO check quantity on subscription
-    // @ts-ignore: ignore quantity doesnt exist
-    quantity: subscription.quantity,
+    status: subscription.status as Enums<"subscription_status">,
+    price_id: item.price.id,
+    quantity: item.quantity ?? null,
     cancel_at_period_end: subscription.cancel_at_period_end,
     cancel_at: subscription.cancel_at
       ? toDateTime(subscription.cancel_at).toISOString()
@@ -266,12 +284,8 @@ const manageSubscriptionStatusChange = async (
     canceled_at: subscription.canceled_at
       ? toDateTime(subscription.canceled_at).toISOString()
       : null,
-    current_period_start: toDateTime(
-      subscription.current_period_start,
-    ).toISOString(),
-    current_period_end: toDateTime(
-      subscription.current_period_end,
-    ).toISOString(),
+    current_period_start: toDateTime(item.current_period_start).toISOString(),
+    current_period_end: toDateTime(item.current_period_end).toISOString(),
     created: toDateTime(subscription.created).toISOString(),
     ended_at: subscription.ended_at
       ? toDateTime(subscription.ended_at).toISOString()
@@ -313,7 +327,12 @@ const insertCheckoutSession = async (
   const { data: customerData, error: noCustomerError } = await supabase
     .from("customers")
     .select("id")
-    .eq("stripe_customer_id", webhookSession.customer)
+    .eq(
+      "stripe_customer_id",
+      typeof webhookSession.customer === "string"
+        ? webhookSession.customer
+        : webhookSession.customer?.id ?? "",
+    )
     .single();
 
   if (noCustomerError) {
@@ -334,13 +353,12 @@ const insertCheckoutSession = async (
     id: checkoutSession.id,
     user_id: uuid,
     metadata: checkoutSession.metadata,
-    mode: checkoutSession.mode,
-    status: checkoutSession.status,
-    payment_status: checkoutSession.payment_status,
-    price_id: checkoutSession.line_items.data[0].price.id,
-    //TODO check quantity on subscription
-    // @ts-ignore: ignore quantity doesnt exist
-    quantity: checkoutSession.line_items.data[0].quantity,
+    mode: checkoutSession.mode as Enums<"checkout_mode">,
+    status: checkoutSession.status as Enums<"checkout_status"> | null,
+    payment_status: checkoutSession
+      .payment_status as Enums<"checkout_payment_status">,
+    price_id: checkoutSession.line_items?.data[0]?.price?.id ?? null,
+    quantity: checkoutSession.line_items?.data[0]?.quantity ?? null,
     created: toDateTime(checkoutSession.created).toISOString(),
   };
 

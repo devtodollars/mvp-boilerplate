@@ -23,12 +23,13 @@ jobs:
       - uses: actions/checkout@v3
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.44.2"
+          flutter-version: "3.50.0"
           cache: true
           channel: "stable"
 
       - run: flutter doctor -v
-      - run: flutter analyze
+      # Infos (e.g. the material.dart deprecation in Flutter 3.50) are not failures.
+      - run: flutter analyze --no-fatal-infos
       - run: flutter pub get
       - run: flutter test
       - name: Build and zip

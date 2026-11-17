@@ -8,11 +8,12 @@ import {
 import { calculateTrialEndUnixTimestamp } from "./utils.ts";
 import { User } from "supabase";
 
+// Uses the API version pinned by this stripe-node release (see its
+// `Stripe.API_VERSION`), so the types match the responses. On API versions
+// from 2025-03-31 on, billing-period fields live on subscription items.
+// https://github.com/stripe/stripe-node#configuration
 export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   httpClient: Stripe.createFetchHttpClient(),
-  // https://github.com/stripe/stripe-node#configuration
-  // https://stripe.com/docs/api/versioning
-  apiVersion: "2024-06-20",
 });
 
 type Price = Tables<"prices">;
@@ -148,7 +149,7 @@ export async function initPricesAndProducts() {
     const products = prodRes.data;
     const prodIds = products.map((p: Stripe.Product) => p.id);
     const prices = priceRes.data.filter((p: Stripe.Price) =>
-      prodIds.includes(p.product),
+      prodIds.includes(typeof p.product === "string" ? p.product : p.product.id)
     );
 
     await upsertProductRecords(products);

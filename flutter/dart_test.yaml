@@ -1,0 +1,4 @@
+tags:
+  e2e:
+    # Needs the local stack (../tests/start-stack.sh); see ../tests/README.md.
+    timeout: 3x

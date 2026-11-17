@@ -4,7 +4,7 @@
 */
 create table users (
   -- UUID from auth.users
-  id uuid references auth.users not null primary key,
+  id uuid references auth.users on delete cascade not null primary key,
   full_name text,
   avatar_url text,
   -- The customer's billing address, stored in JSON format.
@@ -37,7 +37,7 @@ create trigger on_auth_user_created
 */
 create table customers (
   -- UUID from auth.users
-  id uuid references auth.users not null primary key,
+  id uuid references auth.users on delete cascade not null primary key,
   -- The user's customer ID in Stripe. User must not be able to update this.
   stripe_customer_id text
 );
@@ -110,7 +110,7 @@ create type subscription_status as enum ('trialing', 'active', 'canceled', 'inco
 create table subscriptions (
   -- Subscription ID from Stripe, e.g. sub_1234.
   id text primary key,
-  user_id uuid references auth.users not null,
+  user_id uuid references auth.users on delete cascade not null,
   -- The status of the subscription object, one of subscription_status type above.
   status subscription_status,
   -- Set of key-value pairs, used to store additional information about the object in a structured format.
@@ -151,7 +151,7 @@ create type checkout_payment_status as enum ('paid', 'unpaid', 'no_payment_requi
 create table checkout_sessions (
   -- Checkout Session ID from Stripe, e.g. cs_1234.
   id text primary key,
-  user_id uuid references auth.users not null,
+  user_id uuid references auth.users on delete cascade not null,
   -- The mode of the Checkout Session.
   mode checkout_mode,
   -- The payment status of the Checkout Session
@@ -176,3 +176,30 @@ create policy "Can only view own checkout session data" on checkout_sessions for
  */
 drop publication if exists supabase_realtime;
 create publication supabase_realtime for table products, prices;
+
+/**
+ * DATA API GRANTS
+ * New tables are not exposed to anon/authenticated/service_role by default.
+ * (Mirrors supabase/migrations/20261117000000_grant_data_api_access.sql)
+ */
+-- Edge functions (stripe_webhook, get_stripe_url, sync script) use service_role.
+grant select, insert, update, delete on
+  public.users,
+  public.customers,
+  public.products,
+  public.prices,
+  public.subscriptions,
+  public.checkout_sessions
+to service_role;
+
+-- Pricing is public.
+grant select on public.products, public.prices to anon, authenticated;
+
+-- Signed-in users read and update their own profile (RLS: auth.uid() = id).
+grant select, update on public.users to authenticated;
+
+-- Signed-in users read their own billing records (RLS: auth.uid() = user_id).
+grant select on public.subscriptions, public.checkout_sessions to authenticated;
+
+-- public.customers is intentionally not granted to anon/authenticated: it maps
+-- users to Stripe customer ids and is only touched by service_role.

@@ -12,7 +12,6 @@ export type StateInfo = {
   title: string;
   description?: string;
   submitText: string;
-  onSubmit: () => void;
   hasEmailField: boolean;
   hasPasswordField: boolean;
   hasOAuth: boolean;

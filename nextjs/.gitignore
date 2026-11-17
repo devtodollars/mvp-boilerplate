@@ -39,3 +39,7 @@ yarn-error.log*
 
 # certificates
 certificates
+
+# playwright
+/e2e-results
+/e2e-report

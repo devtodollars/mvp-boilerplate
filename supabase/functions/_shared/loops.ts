@@ -1,8 +1,8 @@
-import { LoopsClient } from "loops";
+import { LoopsClient, type TransactionalVariables } from "loops";
 
 const loops = new LoopsClient(Deno.env.get("LOOPS_API_KEY")!);
 
-type DataVariables = Record<string, string | number | boolean>;
+type DataVariables = TransactionalVariables;
 
 export async function sendWelcomeEmail(
   email: string,
