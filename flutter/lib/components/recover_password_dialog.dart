@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:devtodollars/components/hcaptcha/hcaptcha.dart';
 import 'package:devtodollars/services/auth_notifier.dart';
 
 class RecoverPasswordDialog extends ConsumerStatefulWidget {
@@ -18,6 +19,8 @@ class RecoverPasswordDialog extends ConsumerStatefulWidget {
 
 class _RecoverPasswordDialogState extends ConsumerState<RecoverPasswordDialog> {
   String errMessage = '';
+  final captchaController = HCaptchaController();
+  String? captchaToken;
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
@@ -54,7 +57,14 @@ class _RecoverPasswordDialogState extends ConsumerState<RecoverPasswordDialog> {
                 return errMessage;
               },
             ),
-          )
+          ),
+          if (hCaptchaEnabled) ...[
+            const SizedBox(height: 16),
+            HCaptcha(
+              controller: captchaController,
+              onToken: (t) => setState(() => captchaToken = t),
+            ),
+          ],
         ],
       ),
       actions: [
@@ -67,14 +77,22 @@ class _RecoverPasswordDialogState extends ConsumerState<RecoverPasswordDialog> {
         ElevatedButton(
           child: const Text("Send"),
           onPressed: () async {
+            if (hCaptchaEnabled && captchaToken == null) {
+              setState(() => errMessage = "Please complete the captcha");
+              _formKey.currentState!.validate();
+              return;
+            }
             try {
-              await authNotif.recoverPassword(_emailController.text);
+              await authNotif.recoverPassword(_emailController.text,
+                  captchaToken: captchaToken);
               if (context.mounted) Navigator.of(context).pop();
             } on AuthException catch (e) {
               setState(() {
                 errMessage = e.message;
               });
               _formKey.currentState!.validate();
+            } finally {
+              captchaController.reset();
             }
           },
         )

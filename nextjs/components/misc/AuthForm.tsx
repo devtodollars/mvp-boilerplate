@@ -11,7 +11,9 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
+import { useTheme } from 'next-themes';
 import { SiGithub, SiGoogle } from '@icons-pack/react-simple-icons';
 import { createApiClient } from '@/utils/supabase/api';
 import { createClient } from '@/utils/supabase/client';
@@ -20,11 +22,24 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthState, StateInfo } from '@/utils/types';
 import { Eye, EyeOff } from 'lucide-react';
 
+// When unset (e.g. local dev without CAPTCHA enabled in Supabase) the widget is
+// skipped and requests are sent without a token.
+const HCAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY;
+
+// States that hit a CAPTCHA-protected Supabase endpoint.
+const CAPTCHA_STATES: AuthState[] = [
+  AuthState.Signup,
+  AuthState.Signin,
+  AuthState.ForgotPassword,
+  AuthState.VerifyEmail
+];
+
 export function AuthForm({ state }: { state: AuthState }) {
   const { toast } = useToast();
   const api = createApiClient(createClient());
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const [authState, setAuthState] = useState(state);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -33,6 +48,30 @@ export function AuthForm({ state }: { state: AuthState }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resendTimeout, setResendTimeout] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState<string>();
+  const captchaRef = useRef<HCaptcha>(null);
+
+  const needsCaptcha =
+    !!HCAPTCHA_SITE_KEY && CAPTCHA_STATES.includes(authState);
+
+  // hCaptcha tokens are single-use, so get a fresh one after every attempt.
+  const resetCaptcha = () => {
+    setCaptchaToken(undefined);
+    captchaRef.current?.resetCaptcha();
+  };
+
+  // Returns false (and tells the user) when a required token is missing.
+  const ensureCaptcha = () => {
+    if (needsCaptcha && !captchaToken) {
+      toast({
+        title: 'Verification Required',
+        description: 'Please complete the captcha challenge.',
+        variant: 'destructive'
+      });
+      return false;
+    }
+    return true;
+  };
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -58,9 +97,13 @@ export function AuthForm({ state }: { state: AuthState }) {
           });
           return;
         }
+        if (!ensureCaptcha()) return;
         setLoading(true);
         try {
-          const res = await api.passwordSignup({ email, password });
+          const res = await api.passwordSignup(
+            { email, password },
+            captchaToken
+          );
 
           // Check for duplicate email - Supabase returns user with empty identities array
           if (res.user && res.user.identities && res.user.identities.length === 0) {
@@ -90,6 +133,7 @@ export function AuthForm({ state }: { state: AuthState }) {
             });
           }
         } finally {
+          resetCaptcha();
           setTimeout(() => {
             setLoading(false);
           }, 3000);
@@ -103,9 +147,10 @@ export function AuthForm({ state }: { state: AuthState }) {
       hasPasswordField: true,
       hasOAuth: true,
       onSubmit: async () => {
+        if (!ensureCaptcha()) return;
         setLoading(true);
         try {
-          await api.passwordSignin({ email, password });
+          await api.passwordSignin({ email, password }, captchaToken);
           router.refresh();
         } catch (e) {
           if (e instanceof Error) {
@@ -122,6 +167,7 @@ export function AuthForm({ state }: { state: AuthState }) {
             });
           }
         } finally {
+          resetCaptcha();
           setTimeout(() => {
             setLoading(false);
           }, 3000);
@@ -135,9 +181,10 @@ export function AuthForm({ state }: { state: AuthState }) {
       hasPasswordField: false,
       hasOAuth: false,
       onSubmit: async () => {
+        if (!ensureCaptcha()) return;
         setLoading(true);
         try {
-          await api.passwordReset(email);
+          await api.passwordReset(email, captchaToken);
           toast({
             title: 'Email Sent!',
             description: 'Check your email to reset your password'
@@ -151,6 +198,7 @@ export function AuthForm({ state }: { state: AuthState }) {
             });
           }
         }
+        resetCaptcha();
         setLoading(false);
       }
     },
@@ -195,9 +243,10 @@ export function AuthForm({ state }: { state: AuthState }) {
       hasOAuth: false,
       onSubmit: async () => {
         if (resendTimeout > 0) return;
+        if (!ensureCaptcha()) return;
         setLoading(true);
         try {
-          await api.resendEmailVerification(email);
+          await api.resendEmailVerification(email, captchaToken);
           setResendTimeout(60);
           toast({
             title: 'Verification Email Sent',
@@ -212,6 +261,7 @@ export function AuthForm({ state }: { state: AuthState }) {
             });
           }
         }
+        resetCaptcha();
         setLoading(false);
       }
     }
@@ -235,6 +285,11 @@ export function AuthForm({ state }: { state: AuthState }) {
       );
     }
   }, []);
+
+  // Switching states remounts the widget, so drop any token from the old one.
+  useEffect(() => {
+    setCaptchaToken(undefined);
+  }, [authState]);
 
   const currState = stateInfo[authState];
   return (
@@ -334,6 +389,19 @@ export function AuthForm({ state }: { state: AuthState }) {
                   )}
                 </button>
               </div>
+            </div>
+          )}
+          {needsCaptcha && (
+            <div className="flex justify-center">
+              <HCaptcha
+                key={authState}
+                ref={captchaRef}
+                sitekey={HCAPTCHA_SITE_KEY!}
+                theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+                onVerify={setCaptchaToken}
+                onExpire={() => setCaptchaToken(undefined)}
+                onError={() => setCaptchaToken(undefined)}
+              />
             </div>
           )}
           <Button
