@@ -15,6 +15,8 @@ import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 import { useState } from 'react';
 import { getURL } from '@/utils/helpers';
+import * as Sentry from '@sentry/nextjs';
+import { reportBillingError } from '@/utils/sentry';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { createApiClient } from '@/utils/supabase/api';
@@ -40,6 +42,7 @@ export default function AccountPage({
       }
     });
     if (error) {
+      reportBillingError(error, 'billing_portal');
       setLoading(false);
       return toast({
         title: 'Error Occured',
@@ -49,6 +52,10 @@ export default function AccountPage({
     }
     const redirectUrl = data?.redirect_url;
     if (!redirectUrl) {
+      Sentry.captureMessage('get_stripe_url returned no redirect_url', {
+        level: 'error',
+        tags: { billing_action: 'billing_portal' }
+      });
       setLoading(false);
       return toast({
         title: 'An unknown error occurred.',

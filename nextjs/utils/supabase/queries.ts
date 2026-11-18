@@ -1,10 +1,13 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { cache } from 'react';
+import { setSentryUser } from '@/utils/sentry';
 
 export const getUser = cache(async (supabase: SupabaseClient) => {
   const {
     data: { user }
   } = await supabase.auth.getUser();
+  // Server-side errors in this request are attributed to this user
+  setSentryUser(user);
   return user;
 });
 

@@ -17,6 +17,8 @@ import { Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getURL } from '@/utils/helpers';
+import * as Sentry from '@sentry/nextjs';
+import { reportBillingError } from '@/utils/sentry';
 import { useToast } from '@/components/ui/use-toast';
 import { SubscriptionWithPriceAndProduct } from '@/utils/types';
 
@@ -165,6 +167,11 @@ export const Pricing = ({
     // Get the Stripe price ID from the database
     const stripePriceId = getStripePriceId(tier.title);
     if (!stripePriceId) {
+      // No synced Stripe price for this tier: products/prices are out of sync
+      Sentry.captureMessage(
+        `No Stripe price for pricing tier "${tier.title}"`,
+        { level: 'warning', tags: { billing_action: 'checkout' } }
+      );
       setLoading(false);
       return toast({
         title: 'Price not found',
@@ -183,6 +190,7 @@ export const Pricing = ({
       }
     );
     if (error) {
+      reportBillingError(error, 'checkout');
       setLoading(false);
       return toast({
         title: 'Error Occurred',
@@ -192,6 +200,10 @@ export const Pricing = ({
     }
     const redirectUrl = data?.redirect_url;
     if (!redirectUrl) {
+      Sentry.captureMessage('get_stripe_url returned no redirect_url', {
+        level: 'error',
+        tags: { billing_action: 'checkout' }
+      });
       setLoading(false);
       return toast({
         title: 'An unknown error occurred.',

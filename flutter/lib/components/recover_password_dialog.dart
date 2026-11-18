@@ -1,3 +1,4 @@
+import 'package:devtodollars/services/error_reporting.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -86,7 +87,8 @@ class _RecoverPasswordDialogState extends ConsumerState<RecoverPasswordDialog> {
               await authNotif.recoverPassword(_emailController.text,
                   captchaToken: captchaToken);
               if (context.mounted) Navigator.of(context).pop();
-            } on AuthException catch (e) {
+            } on AuthException catch (e, stackTrace) {
+              reportAuthError(e, stackTrace, 'recover_password');
               setState(() {
                 errMessage = e.message;
               });

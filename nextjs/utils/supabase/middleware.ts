@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
+import { setSentryUser } from '@/utils/sentry';
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -37,7 +38,10 @@ export const updateSession = async (request: NextRequest) => {
     // Refreshes the session when expired. Required for Server Components, which
     // cannot write cookies themselves.
     // https://supabase.com/docs/guides/auth/server-side/nextjs
-    await supabase.auth.getUser();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    setSentryUser(user);
   } catch (e) {
     // Anything thrown here (missing env vars, Supabase unreachable, a bad SDK
     // upgrade) must not take the whole site down with a 500. Serve the request

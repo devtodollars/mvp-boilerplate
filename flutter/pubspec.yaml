@@ -43,7 +43,7 @@ dependencies:
   riverpod_annotation: ^4.0.0
   url_launcher: ^6.3.3
   posthog_flutter: ^5.60.0
-  sentry_flutter: ^8.14.2
+  sentry_flutter: ^9.30.1
   supabase_auth_ui: ^0.7.2
   web: ^1.1.1
 
@@ -60,6 +60,7 @@ dev_dependencies:
   riverpod_generator: ^4.0.0+1
   build_runner: ^2.15.1
   riverpod_lint: ^3.1.0
+  sentry_dart_plugin: ^3.6.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -102,3 +103,13 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+
+# Uploads the Flutter web source maps to Sentry so production stack traces
+# point at Dart code (`dart run sentry_dart_plugin`, run by vercel-build.sh).
+# The org, project, auth token and release come from the SENTRY_ORG,
+# SENTRY_PROJECT, SENTRY_AUTH_TOKEN and SENTRY_RELEASE environment variables.
+sentry:
+  upload_debug_symbols: false
+  upload_source_maps: true
+  upload_sources: true
+  commits: false

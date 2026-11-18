@@ -34,7 +34,8 @@ jobs:
       - run: flutter test
       - name: Build and zip
         run: |
-          flutter build web --dart-define-from-file=env.json
+          # Netlify PR previews report to Sentry as "preview", not "production"
+          flutter build web --dart-define-from-file=env.json --dart-define=SENTRY_ENVIRONMENT=${{ github.event_name == 'pull_request' && 'preview' || 'production' }}
           cd ./build/web
           zip -r ../web.zip .
 

@@ -62,13 +62,15 @@ export function clientRequestHandlerWithUser(
       return new Response("ok", { headers: corsHeaders });
     }
 
+    let userId: string | undefined;
     try {
       const user = await getUserFromRequest(req);
       if (!user) throw Error("Authentication Error");
+      userId = user.id;
       return corsResponse(await handler(req, user));
     } catch (e) {
       console.error(e);
-      await captureException(e);
+      await captureException(e, { userId });
       return resFromError(e as Error);
     }
   };

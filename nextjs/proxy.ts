@@ -14,7 +14,7 @@ export const config = {
      * - favicon.ico (favicon file)
      * - robots.txt, sitemap.xml (crawler metadata files)
      * - images - .svg, .png, .jpg, .jpeg, .gif, .webp
-     * - monitoring (Sentry tunnel route, see next.config.mjs)
+     * - monitoring (Sentry tunnel, see SENTRY_TUNNEL_PATH in utils/sentry.ts)
      * Feel free to modify this pattern to include more paths.
      *
      * robots.txt and sitemap.xml are excluded deliberately. Auth session

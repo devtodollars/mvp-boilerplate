@@ -1,12 +1,18 @@
 import { FUNCTIONS_URL, LOCAL } from './helpers/env';
+import { startSentryCapture } from './helpers/sentry-capture';
 
 /**
  * Warms the edge functions before any test runs. The local handle_user_modify
  * trigger (supabase/seed.sql) calls on_user_modify through pg_net with a 1s
  * timeout, and a cold function (first request after `functions serve` starts or
  * a file changes) takes longer than that to compile, so A2 would flake.
+ *
+ * Also starts the local Sentry capture server the web server reports to, and
+ * returns its teardown.
  */
 export default async function globalSetup() {
+  const sentryCapture = await startSentryCapture();
+
   const call = async (name: string, init: RequestInit) => {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
@@ -41,4 +47,6 @@ export default async function globalSetup() {
     call('stripe_webhook', { method: 'POST', headers: { 'Stripe-Signature': 't=1,v1=x' }, body: '{}' }),
     call('get_stripe_url', { method: 'OPTIONS' })
   ]);
+
+  return () => new Promise<void>((resolve) => sentryCapture.close(() => resolve()));
 }

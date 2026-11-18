@@ -25,6 +25,7 @@
     "supabase:generate-migration": "npx supabase db diff | npx supabase migration new",
     "supabase:generate-seed": "npx supabase db dump --data-only -f supabase/seed.sql",
     "supabase:push": "npx supabase push",
+    "supabase:deploy-functions": "cd .. && npx supabase secrets set SENTRY_RELEASE=$(git rev-parse HEAD) && npx supabase functions deploy",
     "supabase:pull": "npx supabase pull"
   },
   "dependencies": {

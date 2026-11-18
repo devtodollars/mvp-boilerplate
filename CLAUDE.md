@@ -240,6 +240,7 @@ Things to know:
 - **Run Supabase as `SUPABASE_PROJECT_ID=mvp-boilerplate-local`** (`start-stack.sh` does this). Other local repos reuse `project_id = "devtodollars"`, and a plain `supabase start` here restores *their* database volume.
 - Edge function secrets for tests live in the gitignored `supabase/.env.local` (template: `tests/env.local.example`). Stripe tests need a **test-mode** `sk_test_` key and are skipped without one. The suites refuse live keys.
 - Stripe webhooks are tested by signing payloads locally with `STRIPE_WEBHOOK_SIGNING_SECRET`, so `stripe listen` isn't needed.
+- Sentry: test runs never report to the real Sentry projects. Playwright points the web server at a local capture server (`nextjs/e2e/helpers/sentry-capture.ts`) and the edge functions reach it through `SENTRY_DSN` in `supabase/.env.local`. Keep it that way; `sentry.spec.ts` asserts on the captured events.
 - When a test exposes a bug, leave it failing (asserting the intended behaviour) and record it in `tests/README.md`. Don't loosen or skip it.
 - New tables need explicit `GRANT`s for `anon` / `authenticated` / `service_role` (see `supabase/migrations/20261117000000_grant_data_api_access.sql`). Supabase no longer exposes new tables to the Data API by default.
 

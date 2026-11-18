@@ -2,10 +2,10 @@
 // The config you add here will be used whenever the server handles a request.
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 import * as Sentry from '@sentry/nextjs';
+import { SENTRY_TUNNEL_PATH, sharedSentryOptions } from '@/utils/sentry';
 
 Sentry.init({
-  // Sentry is disabled when the DSN is not set
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  // Capture 100% of transactions in development, 10% in production
-  tracesSampleRate: process.env.NODE_ENV === 'development' ? 1.0 : 0.1
+  ...sharedSentryOptions,
+  // Forwards the browser's events from SENTRY_TUNNEL_PATH to Sentry
+  integrations: [Sentry.serveTunnelIntegration({ path: SENTRY_TUNNEL_PATH })]
 });

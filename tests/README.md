@@ -141,6 +141,26 @@ bug is fixed. "Fixed" notes say what was broken before.
 | C1b | …and the card's billing address / payment method are copied to `public.users` | ✅ fixed: `copyBillingDetailsToCustomer` used to require a phone, which Checkout never collects |
 | SY | `sync-stripe.ts` loads active Stripe products/prices into the DB (`tests/run-all.sh`) | ✅ (was ❌ before the grants migration) |
 
+### Sentry error reporting (`nextjs/e2e/sentry.spec.ts`)
+
+The web server and the edge functions report to a local capture server
+(`nextjs/e2e/helpers/sentry-capture.ts`, port 9997) instead of Sentry, so test
+errors never reach the real projects and the tests read exactly what would be
+sent. The edge functions reach it through `SENTRY_DSN` in `supabase/.env.local`
+(see `tests/env.local.example`); the SF cases are skipped when it points elsewhere.
+
+| ID | Case | Status |
+|---|---|---|
+| SE1 | A browser error is sent through the `/monitoring` tunnel, tagged with `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | ✅ |
+| SE2 | A signed-in user's errors carry `user: { id }` only (no email); cleared after sign-out | ✅ |
+| SE3 | An unexpected `/api/auth_callback` failure is reported (tags `auth_route`, `auth_error_code`); one-time tokens and error text are filtered out of the URL | ✅ |
+| SE4 | User-caused auth link failures (`otp_expired`, link opened in another browser: `pkce_code_verifier_not_found`) are not reported | ✅ |
+| SE5 | Events carry no cookies, request bodies, auth tokens or passwords | ✅ |
+| SE6 | A checkout request that never reaches `get_stripe_url` (network/CORS/not deployed) is reported with `billing_action`; with no synced price, the missing price is reported as a warning | ✅ |
+| SF1 | `stripe_webhook` with a bad signature → one grouped warning (`webhook_failure: invalid_signature`), no request body | ✅ (found Sentry's Dedupe dropping repeats of the same failure within one function instance; disabled for the edge functions) |
+| SF2 | `stripe_webhook` without a `Stripe-Signature` header (not from Stripe) is not reported | ✅ |
+| SF3 | A `get_stripe_url` failure after sign-in carries `user: { id }` only; no email or access token | ✅ |
+
 ### Edge function unit tests (`supabase/functions/_tests/`)
 
 | ID | Case | Status |
@@ -155,6 +175,10 @@ bug is fixed. "Fixed" notes say what was broken before.
 |---|---|---|
 | M1–M5 | `SubscriptionWithPrice` / `UserMetadata` parse PostgREST rows, round-trip, tolerate nulls | ✅ |
 | W1–W4 | `EmailForm`: default sign-up mode, required fields, invalid email / short password / mismatch, sign-up ⇄ login toggle | ✅ |
+| FE1–FE3 | `reportAuthError`: skips 4xx (user mistakes), reports 5xx as errors and no-status (network) as warnings, tagged with the action | ✅ |
+| FE4–FE5 | `reportBillingError`: skips 4xx from `get_stripe_url` (reported by the function), reports 5xx and network errors | ✅ |
+| FE6 | `setSentryUser` sets the Supabase id only and clears it on sign-out | ✅ |
+| FE7–FE8 | `scrubUrl` filters `code`, tokens and `email` from URLs and keeps other parameters | ✅ |
 | F-I1 | Web e2e (`test/e2e/`, real app in Chrome): logged-out app opens on the login screen | ✅ |
 | F-I2 | Sign-up via EmailForm → "Check your Email!" dialog; `public.users` row created | ✅ |
 | F-I3 | Login before confirming → "Email not confirmed" | ✅ |
