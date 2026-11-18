@@ -1,6 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { PASSWORD, uniqueEmail } from './helpers/env';
-import { createSignedInUser, sql, waitForAuthLink } from './helpers/services';
+import { admin, createSignedInUser, sql, waitForAuthLink } from './helpers/services';
 
 const toast = (page: Page, text: string | RegExp) =>
   page.locator('li[role="status"], [data-state="open"]').filter({ hasText: text }).first();
@@ -169,5 +169,24 @@ test.describe('Duplicate sign-up', () => {
     // 422 user_already_exists. AuthForm handles both (fixed 2026-11-17).
     await expect(toast(page, 'Email Already Registered')).toBeVisible();
     await expect(page.getByText('Verify Your Email')).toHaveCount(0);
+  });
+
+  test('A8b signing up again with a registered but UNCONFIRMED email resends verification', async ({
+    page
+  }) => {
+    const email = uniqueEmail('dup-unconfirmed');
+    // An account created an hour ago that never confirmed its email.
+    const { error } = await admin.auth.admin.createUser({
+      email,
+      password: PASSWORD,
+      email_confirm: false
+    });
+    expect(error).toBeNull();
+    await sql`update auth.users set created_at = now() - interval '1 hour' where email = ${email}`;
+
+    await fillSignup(page, email);
+    // Supabase re-sends the confirmation email and returns the existing user;
+    // AuthForm spots it from created_at vs confirmation_sent_at.
+    await expect(toast(page, 'not yet verified')).toBeVisible();
   });
 });

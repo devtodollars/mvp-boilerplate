@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
+  sentry_flutter
   url_launcher_windows
 )
 

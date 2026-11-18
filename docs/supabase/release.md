@@ -17,6 +17,8 @@ Each function declares its own dependencies in `supabase/functions/<name>/deno.j
 supabase functions deploy
 ```
 
+To also tag Sentry errors with the deploy they came from, deploy with `pnpm supabase:deploy-functions` from `nextjs/` instead. It sets the `SENTRY_RELEASE` secret to the current git commit, then runs `supabase functions deploy` (see [Error Logging](../sentry.md)).
+
 To deploy a single function, pass its name, for example `supabase functions deploy stripe_webhook`. Functions whose `config.toml` entry sets `verify_jwt = false` (the Stripe webhook and `get_stripe_url`) keep that setting on deploy.
 
 ### Set supabase secrets from .env file

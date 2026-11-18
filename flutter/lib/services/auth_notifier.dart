@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:devtodollars/services/error_reporting.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
@@ -23,6 +24,9 @@ class Auth extends _$Auth {
     final streamSub = client.auth.onAuthStateChange.listen((authState) async {
       final session = authState.session;
       authStateController.add(session);
+
+      // Attribute errors to the signed-in user (by id only) in Sentry
+      await setSentryUser(session?.user);
 
       // capture posthog events for analytics
       if (session != null) {

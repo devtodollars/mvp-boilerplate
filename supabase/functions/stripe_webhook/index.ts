@@ -1,4 +1,5 @@
 import { processWebhookRequest } from "../_shared/stripe.ts";
+import { captureException } from "../_shared/sentry.ts";
 import Stripe from "stripe";
 import {
   deletePriceRecord,
@@ -29,6 +30,23 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.log(`❌ Error message: ${message}`);
+    // A request without a Stripe-Signature header is not from Stripe (scanners,
+    // stray requests), so it is not worth reporting. A signed request that fails
+    // verification usually means STRIPE_WEBHOOK_SIGNING_SECRET does not match
+    // the endpoint in Stripe, and then every real webhook fails and
+    // subscriptions stop syncing. These are grouped into one issue as warnings,
+    // so a Sentry alert on its frequency catches a wrong secret after a deploy.
+    if (!Deno.env.get("STRIPE_WEBHOOK_SIGNING_SECRET")) {
+      await captureException(err, {
+        tags: { webhook_failure: "missing_signing_secret" },
+      });
+    } else if (req.headers.get("Stripe-Signature")) {
+      await captureException(err, {
+        level: "warning",
+        tags: { webhook_failure: "invalid_signature" },
+        fingerprint: ["stripe-webhook-invalid-signature"],
+      });
+    }
     return new Response(`Webhook Error: ${message}`, { status: 400 });
   }
 
@@ -78,6 +96,9 @@ Deno.serve(async (req) => {
       }
     } catch (error) {
       console.log(error);
+      await captureException(error, {
+        tags: { stripe_event_type: event.type, stripe_event_id: event.id },
+      });
       return new Response(
         "Webhook handler failed. View your supabase function logs.",
         {

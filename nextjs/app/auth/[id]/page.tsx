@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { getUser } from '@/utils/supabase/queries';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/landing/Navbar';
 import { AuthForm } from '@/components/misc/AuthForm';
@@ -18,9 +19,7 @@ export default async function SignIn(
 
   // Check if the user is already logged in and redirect to the account page if so
   const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const user = await getUser(supabase);
 
   if (user && currState !== 'update_password') {
     return redirect('/');

@@ -6,6 +6,7 @@ import { PHProvider } from './providers';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/toaster';
 import PostHogPageViewWrapper from '@/components/misc/PostHogPageViewWrapper';
+import SentryUser from '@/components/misc/SentryUser';
 
 const meta = {
   title: 'DevToDollars',
@@ -60,6 +61,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
         >
           <PHProvider>
             <PostHogPageViewWrapper />
+            <SentryUser />
             <main
               id="skip"
               className="min-h-[calc(100dvh-4rem)] md:min-h-[calc(100dvh-5rem)]"

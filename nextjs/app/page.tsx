@@ -8,14 +8,12 @@ import { Navbar } from '@/components/landing/Navbar';
 import { Pricing } from '@/components/landing/Pricing';
 import { Stats } from '@/components/landing/Stats';
 import { createClient } from '@/utils/supabase/server';
-import { getSubscription } from '@/utils/supabase/queries';
+import { getSubscription, getUser } from '@/utils/supabase/queries';
 
 export default async function LandingPage() {
   const supabase = await createClient();
 
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const user = await getUser(supabase);
 
   const subscription = await getSubscription(supabase);
 

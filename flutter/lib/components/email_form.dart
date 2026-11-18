@@ -1,3 +1,4 @@
+import 'package:devtodollars/services/error_reporting.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -96,7 +97,8 @@ class _EmailFormState extends ConsumerState<EmailForm> {
           }
         }
         if (mounted) setState(() => loading = false);
-      } on AuthException catch (e) {
+      } on AuthException catch (e, stackTrace) {
+        reportAuthError(e, stackTrace, 'email_form');
         setState(() {
           loading = false;
           errorMessage = e.message;

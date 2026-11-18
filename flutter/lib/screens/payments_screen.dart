@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:devtodollars/services/auth_notifier.dart';
+import 'package:devtodollars/services/error_reporting.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -21,10 +22,12 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       final authNotif = ref.read(authProvider.notifier);
       try {
         url = await authNotif.getUserStripeLink(price: widget.price);
-      } on FunctionException catch (e) {
+      } catch (e, stackTrace) {
+        await reportBillingError(e, stackTrace);
         if (!mounted) return;
-        var msg =
-            e.details?["message"] ?? "Error retrieving stripe redirect url";
+        final details = e is FunctionException ? e.details : null;
+        var msg = (details is Map ? details["message"] : null) ??
+            "Error retrieving stripe redirect url";
         showDialog(
           context: context,
           builder: (_) => AlertDialog(

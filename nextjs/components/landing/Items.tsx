@@ -8,7 +8,8 @@ import {
   ShieldIcon,
   ZapIcon,
   BarChartIcon,
-  MailIcon
+  MailIcon,
+  BugIcon
 } from 'lucide-react';
 import { ReactNode } from 'react';
 import { Item, ItemDescription, ItemIcon, ItemTitle } from '@/components/ui/item';
@@ -60,6 +61,11 @@ const items: ItemProps[] = [
     title: 'Transactional email',
     description: 'Postmark setup for password resets and notification emails',
     icon: <MailIcon className="size-5 stroke-1" />
+  },
+  {
+    title: 'Error logging',
+    description: 'Sentry integration capturing client, server, and edge errors',
+    icon: <BugIcon className="size-5 stroke-1" />
   }
 ];
 

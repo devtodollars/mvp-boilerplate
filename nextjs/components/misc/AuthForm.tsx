@@ -52,11 +52,12 @@ export function AuthForm({ state }: { state: AuthState }) {
   const [captchaToken, setCaptchaToken] = useState<string>();
   const captchaRef = useRef<HCaptcha>(null);
 
-  const showEmailAlreadyRegistered = () =>
+  const showEmailAlreadyRegistered = (
+    description = 'This email is already associated with an account. Please sign in or use a different email.'
+  ) =>
     toast({
       title: 'Email Already Registered',
-      description:
-        'This email is already associated with an account. Please sign in or use a different email.',
+      description,
       variant: 'destructive',
       duration: 5000
     });
@@ -157,13 +158,24 @@ export function AuthForm({ state }: { state: AuthState }) {
       try {
         const res = await api.passwordSignup({ email, password }, captchaToken);
 
-        // Older Supabase Auth signals a duplicate email with an empty identities array.
-        if (
-          res.user &&
-          res.user.identities &&
-          res.user.identities.length === 0
-        ) {
-          showEmailAlreadyRegistered();
+        // Some Supabase Auth versions don't return an error for a duplicate
+        // sign-up (to avoid leaking which emails have an account):
+        // - confirmed account: a fake user with an empty identities array
+        // - unconfirmed account: the existing user, with the confirmation email
+        //   re-sent, so created_at is well before confirmation_sent_at
+        const isConfirmedDuplicate = res.user?.identities?.length === 0;
+        const isUnconfirmedDuplicate =
+          !!res.user?.created_at &&
+          !!res.user?.confirmation_sent_at &&
+          Date.parse(res.user.confirmation_sent_at) -
+            Date.parse(res.user.created_at) >
+            10_000;
+        if (isConfirmedDuplicate || isUnconfirmedDuplicate) {
+          showEmailAlreadyRegistered(
+            isConfirmedDuplicate
+              ? undefined
+              : 'This email is already registered but not yet verified. We sent a new verification link to your inbox.'
+          );
           setLoading(false);
           return;
         }
@@ -175,8 +187,12 @@ export function AuthForm({ state }: { state: AuthState }) {
           changeAuthState(AuthState.VerifyEmail);
         }
       } catch (e) {
-        // Newer Supabase Auth rejects a duplicate email with this error code.
-        if (isAuthError(e) && e.code === 'user_already_exists') {
+        // Newer Supabase Auth (and any version with email confirmation off)
+        // rejects a duplicate email with an error instead.
+        if (
+          (isAuthError(e) && e.code === 'user_already_exists') ||
+          (e instanceof Error && e.message.includes('already registered'))
+        ) {
           showEmailAlreadyRegistered();
         } else if (e instanceof Error) {
           toast({

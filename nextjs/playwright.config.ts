@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 import { LOCAL } from './e2e/helpers/env';
+import {
+  SENTRY_CAPTURE_DSN,
+  SENTRY_CAPTURE_ENVIRONMENT
+} from './e2e/helpers/sentry-capture';
 
 /**
  * End-to-end suite for the Next.js app, the Supabase schema and the edge
@@ -33,7 +37,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
     // Process env wins over .env files, so tests never hit cloud Supabase,
-    // real hCaptcha, or the production PostHog project.
+    // real hCaptcha, the production PostHog project, or the real Sentry project
+    // (events go to the local capture server in e2e/helpers/sentry-capture.ts).
     env: {
       NEXT_PUBLIC_SITE_URL: `http://localhost:${PORT}`,
       NEXT_PUBLIC_SUPABASE_URL: LOCAL.supabaseUrl,
@@ -41,7 +46,11 @@ export default defineConfig({
       SUPABASE_SERVICE_ROLE_KEY: LOCAL.serviceRoleKey,
       NEXT_PUBLIC_HCAPTCHA_SITE_KEY: '',
       NEXT_PUBLIC_POSTHOG_KEY: 'phc_e2e_disabled',
-      NEXT_PUBLIC_POSTHOG_HOST: 'http://127.0.0.1:9'
+      NEXT_PUBLIC_POSTHOG_HOST: 'http://127.0.0.1:9',
+      NEXT_PUBLIC_SENTRY_DSN: SENTRY_CAPTURE_DSN,
+      NEXT_PUBLIC_SENTRY_ENVIRONMENT: SENTRY_CAPTURE_ENVIRONMENT,
+      // No source map upload from test runs
+      SENTRY_AUTH_TOKEN: ''
     }
   }
 });
