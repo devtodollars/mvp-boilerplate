@@ -2,6 +2,8 @@
 
 [Supabase](https://supabase.com) Backend configured with stripe integration, posthog analytics, and Loops.so transactional emails.
 
+Migration pull requests run [RattleCheck](../.github/workflows/rattlecheck.yml) on both the standard backend and the schema assembled by the Monero installer. The check uses `rattlecheck@latest` and flags high or critical permission findings introduced or worsened by the change. It reads the SQL files without connecting to Supabase.
+
 # Start local supabase server
 
 ```

@@ -1,0 +1,31 @@
+name: Review Supabase migrations
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*.sql"
+      - "supabase/config.toml"
+      - "monero/supabase/migrations/*.sql"
+      - "monero/patches/supabase/config.toml"
+      - "rattlecheck.config.json"
+
+permissions:
+  contents: read
+
+jobs:
+  standard:
+    name: Standard backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: chaseakub/rattlecheck-action/review-pr@1e433760918c46cf6cfef7f544542e4b8f118a8b
+
+  monero:
+    name: Backend with Monero installed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: chaseakub/rattlecheck-action/review-pr@1e433760918c46cf6cfef7f544542e4b8f118a8b
+        with:
+          additional-migrations-directory: monero/supabase/migrations
+          supabase-config: monero/patches/supabase/config.toml
